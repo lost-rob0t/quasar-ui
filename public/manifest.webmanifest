@@ -1,0 +1,10 @@
+{
+  "name": "Quasar Investigation Workspace",
+  "short_name": "Quasar",
+  "description": "Offline-first StarIntel document and graph workspace",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#07111f",
+  "theme_color": "#07111f",
+  "icons": []
+}
