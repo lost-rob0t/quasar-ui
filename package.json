@@ -17,7 +17,7 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.1",
-    "starintel_doc": "github:lost-rob0t/starintel_doc.js#agent/starintel-v0.9-browser"
+    "starintel_doc": "github:lost-rob0t/starintel_doc.js#f4ba14086b76fa43a11c9e864e6c209f630916bd"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.3",
