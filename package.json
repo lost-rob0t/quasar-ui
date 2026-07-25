@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && cp dist/index.html dist/404.html",
     "preview": "vite preview",
     "test": "vitest run",
-    "check": "node --check vite.config.js && node --check src/lib/db.js && node --check src/lib/importer.js && node --check src/lib/graph.js && node --check src/lib/actors.js"
+    "check": "node --check vite.config.js && node --check src/lib/db.js && node --check src/lib/importer.js && node --check src/lib/graph.js && node --check src/lib/actors.js && node --check src/lib/operations.js"
   },
   "dependencies": {
     "cytoscape": "^3.34.0",
