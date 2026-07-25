@@ -66,10 +66,10 @@ npm test
 npm run build
 ```
 
-The `starintel_doc` dependency currently tracks the v0.9 port branch:
+The application pins the tested v0.9 runtime commit from `starintel_doc.js`:
 
 ```text
-github:lost-rob0t/starintel_doc.js#agent/starintel-v0.9-browser
+github:lost-rob0t/starintel_doc.js#f4ba14086b76fa43a11c9e864e6c209f630916bd
 ```
 
 Switch it to the released package or merged default branch after the specification PR lands.
