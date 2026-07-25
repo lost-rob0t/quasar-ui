@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { QuasarProvider } from "./store";
 import "./styles.css";
+import "./dashboard.css";
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
 
