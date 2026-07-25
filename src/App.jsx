@@ -14,7 +14,8 @@ import {
 import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { useQuasar } from "./store";
 import GraphPage from "./components/GraphPage";
-import { DocumentEditor, DocumentPage, DocumentsPage } from "./components/Documents";
+import { DocumentPage, DocumentsPage } from "./components/Documents";
+import DocumentEditor from "./components/DocumentEditor";
 import { ImportPage, SettingsPage } from "./components/ImportSettings";
 import StatsPage from "./components/StatsPage";
 
