@@ -128,8 +128,21 @@ export function SettingsPage() {
   }
 
   async function sync(direction) {
-    try { await synchronize(direction); }
-    catch (error) { setNotice({ kind: "error", message: error.message }); }
+    try {
+      await persistSettings(form);
+      await synchronize(direction, form);
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
+  }
+
+  async function beginLiveSync() {
+    try {
+      await persistSettings(form);
+      startSync(form);
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
   }
 
   function addActor() {
@@ -164,7 +177,7 @@ export function SettingsPage() {
           <button className="button" onClick={() => sync("pull")} disabled={!form.couchUrl}>Pull once</button>
           <button className="button" onClick={() => sync("push")} disabled={!form.couchUrl}>Push once</button>
           <button className="button" onClick={() => sync("both")} disabled={!form.couchUrl}>Sync once</button>
-          <button className="button primary" onClick={startSync} disabled={!form.couchUrl}><Play size={15} /> Start live sync</button>
+          <button className="button primary" onClick={beginLiveSync} disabled={!form.couchUrl}><Play size={15} /> Start live sync</button>
           <button className="button danger" onClick={stopSync}>Stop</button>
         </div>
       </section>
