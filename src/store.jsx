@@ -67,7 +67,11 @@ export function QuasarProvider({ children }) {
 
   const executeBatch = useCallback(async (nextDocuments, label = "Save documents") => {
     const applied = await saveDocumentBatch(nextDocuments, label);
-    record({ label, inverse: applied.inverse, redo: operation.batch(nextDocuments.map(operation.save), label) });
+    record({
+      label,
+      inverse: applied.inverse,
+      redo: operation.batch(applied.savedDocuments.map(operation.save), label)
+    });
     await refresh();
     return applied.result;
   }, [record, refresh]);
@@ -78,7 +82,7 @@ export function QuasarProvider({ children }) {
     const applied = await applyOperation(entry.inverse);
     setHistory((current) => ({
       undo: current.undo.slice(0, -1),
-      redo: [...current.redo, { label: entry.label, inverse: applied.inverse, redo: entry.inverse }]
+      redo: [...current.redo, { label: entry.label, inverse: applied.inverse }]
     }));
     await refresh();
   }, [history.undo, refresh]);
@@ -88,19 +92,20 @@ export function QuasarProvider({ children }) {
     if (!entry) return;
     const applied = await applyOperation(entry.inverse);
     setHistory((current) => ({
-      undo: [...current.undo, { label: entry.label, inverse: applied.inverse, redo: entry.inverse }],
+      undo: [...current.undo, { label: entry.label, inverse: applied.inverse }],
       redo: current.redo.slice(0, -1)
     }));
     await refresh();
   }, [history.redo, refresh]);
 
   const importFileSet = useCallback(async (files, options = {}) => {
-    const report = await importFiles(files, async (candidates) => {
-      const applied = await saveDocumentBatch(candidates, `Import ${candidates.length} documents`);
+    const report = await importFiles(files, async (candidates, importOptions) => {
+      const label = `Import ${candidates.length} documents`;
+      const applied = await saveDocumentBatch(candidates, label, { replace: Boolean(importOptions.replace) });
       record({
-        label: `Import ${candidates.length} documents`,
+        label,
         inverse: applied.inverse,
-        redo: operation.batch(candidates.map(operation.save), "Redo import")
+        redo: operation.batch(applied.savedDocuments.map(operation.save), "Redo import")
       });
       return applied.result;
     }, options);
@@ -109,14 +114,14 @@ export function QuasarProvider({ children }) {
   }, [record, refresh]);
 
   const persistSettings = useCallback(async (next) => {
-    const normalized = { ...settings, ...next };
+    const normalized = { ...(settings || {}), ...next };
     setSettings(normalized);
     await saveSettings(normalized);
     return normalized;
   }, [settings]);
 
   const persistWorkspace = useCallback((next) => {
-    const normalized = { ...workspace, ...next };
+    const normalized = { ...(workspace || {}), ...next };
     setWorkspace(normalized);
     if (next.selectedIds) setSelectedIds(next.selectedIds);
     clearTimeout(workspaceTimer.current);
@@ -126,12 +131,16 @@ export function QuasarProvider({ children }) {
     return normalized;
   }, [workspace]);
 
-  const select = useCallback((ids) => persistWorkspace({ selectedIds: [...new Set(ids)] }), [persistWorkspace]);
+  const select = useCallback((ids) => {
+    const normalized = [...new Set(ids)];
+    if (normalized.length === selectedIds.length && normalized.every((id, index) => id === selectedIds[index])) return workspace;
+    return persistWorkspace({ selectedIds: normalized });
+  }, [persistWorkspace, selectedIds, workspace]);
 
-  const startSync = useCallback(() => {
+  const startSync = useCallback((configuration = settings) => {
     syncRef.current?.cancel?.();
     setSyncStatus({ state: "connecting", message: "Connecting to CouchDB" });
-    syncRef.current = startLiveSync(settings, {
+    syncRef.current = startLiveSync(configuration, {
       onActive: () => setSyncStatus({ state: "active", message: "Replicating" }),
       onPaused: (error) => setSyncStatus({ state: error ? "retrying" : "synced", message: error ? error.message : "Up to date" }),
       onDenied: (error) => setSyncStatus({ state: "denied", message: error.message }),
@@ -146,10 +155,10 @@ export function QuasarProvider({ children }) {
     setSyncStatus({ state: "offline", message: "Local only" });
   }, []);
 
-  const synchronize = useCallback(async (direction = "both") => {
+  const synchronize = useCallback(async (direction = "both", configuration = settings) => {
     setSyncStatus({ state: "active", message: `${direction} synchronization` });
     try {
-      const result = await syncOnce(settings, direction);
+      const result = await syncOnce(configuration, direction);
       setSyncStatus({ state: "synced", message: "Synchronization complete" });
       await refresh();
       return result;
