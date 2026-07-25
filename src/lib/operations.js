@@ -50,18 +50,24 @@ export async function applyOperation(command) {
   throw new TypeError(`Unknown operation type: ${command.type}`);
 }
 
-export async function saveDocumentBatch(documents, label = "Save documents") {
+export async function saveDocumentBatch(documents, label = "Save documents", { replace = true } = {}) {
   const previous = new Map();
   for (const document of documents) previous.set(document._id, await getDocument(document._id));
-  const report = await bulkSaveDocuments(documents, { replace: true });
+  const report = await bulkSaveDocuments(documents, { replace });
   if (report.errors.length) {
     const error = new Error(`Batch rejected ${report.errors.length} document(s)`);
     error.report = report;
     throw error;
   }
-  const inverse = documents.map((document) => {
+  const savedIds = new Set(report.saved.map((item) => item.id));
+  const savedDocuments = documents.filter((document) => savedIds.has(document._id));
+  const inverse = savedDocuments.map((document) => {
     const old = previous.get(document._id);
     return old ? operation.save(old) : operation.remove(document._id);
   }).reverse();
-  return { result: report, inverse: operation.batch(inverse, `Undo ${label}`) };
+  return {
+    result: report,
+    savedDocuments,
+    inverse: inverse.length ? operation.batch(inverse, `Undo ${label}`) : null
+  };
 }
