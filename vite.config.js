@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 const eventsPolyfill = fileURLToPath(new URL("./node_modules/events/events.js", import.meta.url));
+const cryptoPolyfill = fileURLToPath(new URL("./src/shims/node-crypto.js", import.meta.url));
 
 export default defineConfig({
   base: "/quasar-ui/",
@@ -10,7 +11,8 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: /^events$/, replacement: eventsPolyfill },
-      { find: /^node:events$/, replacement: eventsPolyfill }
+      { find: /^node:events$/, replacement: eventsPolyfill },
+      { find: /^node:crypto$/, replacement: cryptoPolyfill }
     ]
   },
   optimizeDeps: {
