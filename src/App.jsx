@@ -20,12 +20,12 @@ import { ImportPage, SettingsPage } from "./components/ImportSettings";
 import StatsPage from "./components/StatsPage";
 
 const navigation = [
-  ["/graph", "Graph", Network],
-  ["/documents", "Documents", TableProperties],
-  ["/documents/new", "Add document", FilePlus2],
-  ["/import", "Import", FolderInput],
-  ["/stats", "Statistics", Activity],
-  ["/settings", "Settings", Settings]
+  { to: "/", label: "Dashboard", Icon: Activity, end: true },
+  { to: "/graph", label: "Graph", Icon: Network },
+  { to: "/documents", label: "Documents", Icon: TableProperties },
+  { to: "/documents/new", label: "Add document", Icon: FilePlus2 },
+  { to: "/import", label: "Import", Icon: FolderInput },
+  { to: "/settings", label: "Settings", Icon: Settings }
 ];
 
 function SyncBadge() {
@@ -54,8 +54,8 @@ function WorkbenchShell({ children }) {
           </div>
         </div>
         <nav>
-          {navigation.map(([to, label, Icon]) => (
-            <NavLink key={to} to={to} className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
+          {navigation.map(({ to, label, Icon, end }) => (
+            <NavLink key={to} to={to} end={end} className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
               <Icon size={18} />
               <span>{label}</span>
             </NavLink>
@@ -103,7 +103,7 @@ function NotFound() {
   return (
     <section className="empty-state">
       <h1>Route not found</h1>
-      <NavLink className="button primary" to="/graph">Open graph</NavLink>
+      <NavLink className="button primary" to="/">Open dashboard</NavLink>
     </section>
   );
 }
@@ -112,14 +112,14 @@ export default function App() {
   return (
     <WorkbenchShell>
       <Routes>
-        <Route path="/" element={<Navigate to="/graph" replace />} />
+        <Route path="/" element={<StatsPage />} />
         <Route path="/graph" element={<GraphPage />} />
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/documents/new" element={<DocumentEditor mode="create" />} />
         <Route path="/documents/:id" element={<DocumentPage />} />
         <Route path="/documents/:id/edit" element={<DocumentEditor mode="edit" />} />
         <Route path="/import" element={<ImportPage />} />
-        <Route path="/stats" element={<StatsPage />} />
+        <Route path="/stats" element={<Navigate to="/" replace />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
