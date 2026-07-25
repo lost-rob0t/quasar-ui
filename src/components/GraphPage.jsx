@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import cytoscape from "cytoscape";
-import { ExternalLink, Focus, Link2, Network, Play, Plus, Search, X } from "lucide-react";
+import { ArrowLeft, ExternalLink, Focus, Link2, Network, Play, Plus, Search, TriangleAlert, X } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { assertDocument, createDocument, createRelation, dtypes, documentLabel } from "starintel_doc";
-import { buildGraph, filterGraph, findPaths } from "../lib/graph";
+import { buildGraph, filterGraph, findPaths, partitionDocumentsByReview } from "../lib/graph";
 import { operation } from "../lib/operations";
 import { useQuasar } from "../store";
 
@@ -116,7 +116,7 @@ function GraphCanvas({ graph, layout, selectedIds, onSelection, onMove, onViewpo
         if (position) node.position(position);
       });
     });
-    if (!graph.nodes.some((node) => node.position)) {
+    if (graph.nodes.length && !graph.nodes.some((node) => node.position)) {
       cy.layout({ name: layout || "cose", animate: false, padding: 50, randomize: true }).run();
     }
     cy.nodes().unselect();
@@ -168,6 +168,7 @@ function QuickAdd({ selectedDataset, onClose }) {
         <label className="field"><span>Document ID</span><input value={form.id} onChange={update("id")} placeholder="Generated when blank" /></label>
         <label className="field"><span>Title</span><input value={form.title} onChange={update("title")} autoFocus /></label>
         <label className="field"><span>Typed data JSON</span><textarea className="code-editor" value={form.data} onChange={update("data")} /></label>
+        <p className="muted graph-form-note">New records remain unreviewed until verification metadata marks them reviewed.</p>
         <div className="form-actions"><button type="button" className="button" onClick={onClose}>Cancel</button><button className="button primary">Create and select</button></div>
       </form>
     </Modal>
@@ -207,6 +208,7 @@ function RelationAdd({ ids, documents, onClose }) {
         <label className="field"><span>Predicate</span><input value={predicate} onChange={(event) => setPredicate(event.target.value)} autoFocus required /></label>
         <label className="field"><span>Dataset</span><input value={dataset} onChange={(event) => setDataset(event.target.value)} required /></label>
         <label className="checkbox"><input type="checkbox" checked={directed} onChange={(event) => setDirected(event.target.checked)} /> Directed relation</label>
+        <p className="muted graph-form-note">The new relation is unreviewed until verification metadata marks it reviewed.</p>
         <div className="form-actions"><button type="button" className="button" onClick={onClose}>Cancel</button><button className="button primary">Create relation</button></div>
       </form>
     </Modal>
@@ -222,6 +224,9 @@ export default function GraphPage() {
   const apiRef = useRef(null);
   const [query, setQuery] = useState("");
   const [dtype, setDtype] = useState("");
+  const [dataset, setDataset] = useState("");
+  const [predicate, setPredicate] = useState("");
+  const [reviewStatus, setReviewStatus] = useState("reviewed");
   const [labels, setLabels] = useState(true);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showRelation, setShowRelation] = useState(false);
@@ -230,10 +235,27 @@ export default function GraphPage() {
   const [paths, setPaths] = useState([]);
   const [activePath, setActivePath] = useState(-1);
 
-  const graph = useMemo(() => buildGraph(documents, workspace?.positions || {}), [documents, workspace?.positions]);
-  const visibleGraph = useMemo(() => filterGraph(graph, query, dtype), [graph, query, dtype]);
-  const nodeOptions = graph.nodes.slice().sort((left, right) => left.data.label.localeCompare(right.data.label));
-  const selected = selectedDocuments[0];
+  const reviewGroups = useMemo(() => partitionDocumentsByReview(documents), [documents]);
+  const graphDocuments = reviewStatus === "all" ? documents : reviewGroups.reviewed;
+  const graph = useMemo(() => buildGraph(graphDocuments, workspace?.positions || {}), [graphDocuments, workspace?.positions]);
+  const visibleGraph = useMemo(
+    () => filterGraph(graph, { query, dtype, dataset, predicate }),
+    [graph, query, dtype, dataset, predicate]
+  );
+  const datasets = useMemo(
+    () => [...new Set(graphDocuments.map((document) => document.dataset || "unknown"))].sort(),
+    [graphDocuments]
+  );
+  const predicates = useMemo(
+    () => [...new Set(graph.edges.map((edge) => edge.data.predicate).filter(Boolean))].sort(),
+    [graph.edges]
+  );
+  const graphDocumentIds = useMemo(() => new Set(graph.nodes.map((node) => node.data.id)), [graph.nodes]);
+  const nodeOptions = graph.nodes
+    .filter((node) => !node.data.unresolved)
+    .slice()
+    .sort((left, right) => left.data.label.localeCompare(right.data.label));
+  const selected = selectedDocuments.find((document) => graphDocumentIds.has(document._id));
 
   const onMove = useMemo(() => (id, position) => {
     persistWorkspace({ positions: { ...(workspace?.positions || {}), [id]: position } });
@@ -242,14 +264,24 @@ export default function GraphPage() {
   const onSelection = useMemo(() => (ids) => select(ids), [select]);
 
   useEffect(() => {
+    const retained = selectedIds.filter((id) => graphDocumentIds.has(id));
+    if (retained.length !== selectedIds.length) select(retained);
+  }, [graphDocumentIds, select, selectedIds]);
+
+  useEffect(() => {
     const node = params.get("node");
-    if (!node || !documents.some((document) => document._id === node)) return;
+    const document = documents.find((item) => item._id === node);
+    if (!node || !document) return;
+    if (!graphDocumentIds.has(node) && reviewStatus === "reviewed") {
+      setReviewStatus("all");
+      return;
+    }
     select([node]);
     setTimeout(() => {
       const element = apiRef.current?.getElementById(node);
       if (element?.length) apiRef.current.animate({ fit: { eles: element, padding: 160 }, duration: 350 });
     }, 100);
-  }, [documents, params, select]);
+  }, [documents, graphDocumentIds, params, reviewStatus, select]);
 
   function fit() {
     apiRef.current?.animate({ fit: { eles: apiRef.current.elements(), padding: 60 }, duration: 280 });
@@ -296,10 +328,18 @@ export default function GraphPage() {
     cy.animate({ fit: { eles: neighborhood, padding: 100 }, duration: 300 });
   }
 
+  function clearFilters() {
+    setQuery("");
+    setDtype("");
+    setDataset("");
+    setPredicate("");
+  }
+
   return (
     <section className="graph-page">
+      <Link className="back-link" to="/"><ArrowLeft size={14} /> Statistics dashboard</Link>
       <div className="page-heading graph-heading">
-        <div><span className="eyebrow">Investigation graph</span><h1>Graph workbench</h1><p>Create and connect canonical documents directly in the browser.</p></div>
+        <div><span className="eyebrow">Investigation graph</span><h1>Graph explorer</h1><p>Search, filter, and inspect the relationship network. Reviewed records are shown by default.</p></div>
         <div className="button-row">
           <button className="button" onClick={() => setShowRelation(true)} disabled={selectedIds.length !== 2}><Link2 size={16} /> Connect selected</button>
           <button className="button primary" onClick={() => setShowQuickAdd(true)}><Plus size={16} /> Add graph document</button>
@@ -307,9 +347,24 @@ export default function GraphPage() {
       </div>
 
       <div className="graph-toolbar">
-        <label className="graph-search"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter graph" /></label>
-        <select value={dtype} onChange={(event) => setDtype(event.target.value)}><option value="">All dtypes</option>{dtypes.map((name) => <option key={name}>{name}</option>)}</select>
-        <select value={workspace?.layout || "cose"} onChange={(event) => runLayout(event.target.value)}>
+        <label className="graph-search"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search graph" /></label>
+        <select aria-label="Dataset filter" value={dataset} onChange={(event) => setDataset(event.target.value)}>
+          <option value="">All datasets</option>
+          {datasets.map((name) => <option key={name} value={name}>{name}</option>)}
+        </select>
+        <select aria-label="Document type filter" value={dtype} onChange={(event) => setDtype(event.target.value)}>
+          <option value="">All dtypes</option>
+          {dtypes.map((name) => <option key={name}>{name}</option>)}
+        </select>
+        <select aria-label="Predicate filter" value={predicate} onChange={(event) => setPredicate(event.target.value)}>
+          <option value="">All predicates</option>
+          {predicates.map((name) => <option key={name} value={name}>{name}</option>)}
+        </select>
+        <select aria-label="Reviewed status filter" value={reviewStatus} onChange={(event) => setReviewStatus(event.target.value)}>
+          <option value="reviewed">Reviewed only</option>
+          <option value="all">Reviewed + unreviewed</option>
+        </select>
+        <select aria-label="Graph layout" value={workspace?.layout || "cose"} onChange={(event) => runLayout(event.target.value)}>
           <option value="cose">Force</option><option value="breadthfirst">Hierarchy</option><option value="circle">Circle</option><option value="concentric">Concentric</option><option value="grid">Grid</option>
         </select>
         <button className="button small" onClick={fit}>Fit</button>
@@ -317,6 +372,13 @@ export default function GraphPage() {
         <label className="checkbox compact"><input type="checkbox" checked={labels} onChange={(event) => setLabels(event.target.checked)} /> Labels</label>
         <span className="graph-count">{visibleGraph.nodes.length} nodes · {visibleGraph.edges.length} edges</span>
       </div>
+
+      {reviewStatus === "all" && reviewGroups.unreviewed.length > 0 && (
+        <div className="graph-review-warning">
+          <TriangleAlert size={17} />
+          <span>Unreviewed data is enabled. {reviewGroups.unreviewed.length.toLocaleString()} unreviewed records are displayed alongside reviewed records.</span>
+        </div>
+      )}
 
       <div className="graph-workbench">
         <div className="graph-stage">
@@ -330,6 +392,14 @@ export default function GraphPage() {
             apiRef={apiRef}
             labels={labels}
           />
+          {!visibleGraph.nodes.length && (
+            <div className="graph-empty-state">
+              <Network size={38} />
+              <h2>No graph nodes match</h2>
+              <p>{graph.nodes.length ? "Change or clear the active filters." : "No reviewed graph records are available."}</p>
+              {graph.nodes.length ? <button className="button small" onClick={clearFilters}>Clear filters</button> : <Link className="button small" to="/import">Import documents</Link>}
+            </div>
+          )}
         </div>
 
         <aside className="graph-inspector">
@@ -338,9 +408,15 @@ export default function GraphPage() {
             {!selectedIds.length && <p className="muted">Select nodes with click, Shift-click, or box selection. Double-click opens a document route.</p>}
             {selected && (
               <>
-                <span className={`dtype dtype-${selected.dtype}`}>{selected.dtype}</span>
+                <div className="selection-badges">
+                  <span className={`dtype dtype-${selected.dtype}`}>{selected.dtype}</span>
+                  <span className={`review-badge review-badge-${selected.verification?.verified === true ? "reviewed" : "unreviewed"}`}>
+                    {selected.verification?.verified === true ? "reviewed" : "unreviewed"}
+                  </span>
+                </div>
                 <h3>{documentLabel(selected)}</h3>
                 <code>{selected._id}</code>
+                <small className="inspector-dataset">Dataset: {selected.dataset || "unknown"}</small>
                 {selected.summary && <p>{selected.summary}</p>}
                 <div className="inspector-actions">
                   <Link className="button small" to={`/documents/${encodeURIComponent(selected._id)}`}><ExternalLink size={14} /> Open</Link>
