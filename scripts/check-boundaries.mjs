@@ -46,7 +46,7 @@ function normalizeSourcePath(value) {
 
 function zoneFor(sourcePath) {
   const normalized = normalizeSourcePath(sourcePath);
-  const match = /^src\/([^/]+)\//.exec(normalized);
+  const match = /^src\/([^/]+)(?:\/|$)/.exec(normalized);
   return match && ZONES.includes(match[1]) ? match[1] : null;
 }
 
@@ -60,12 +60,12 @@ export function validateImport(fromPath, specifier) {
   const fromZone = zoneFor(normalizedFrom);
   if (!fromZone) return null;
 
-  if (RENDERER_IMPORTS.has(specifier) && normalizedFrom !== GRAPH_ADAPTER) {
-    return `${specifier} may only be imported by ${GRAPH_ADAPTER}`;
-  }
-
   if (fromZone === "core" && CORE_PLATFORM_IMPORTS.has(specifier)) {
     return `core must remain platform-independent and cannot import ${specifier}`;
+  }
+
+  if (RENDERER_IMPORTS.has(specifier) && normalizedFrom !== GRAPH_ADAPTER) {
+    return `${specifier} may only be imported by ${GRAPH_ADAPTER}`;
   }
 
   const targetPath = resolvedImportPath(normalizedFrom, specifier);
