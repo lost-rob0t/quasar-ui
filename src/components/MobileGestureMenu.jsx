@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   Activity,
   Bot,
@@ -25,16 +25,15 @@ const navigation = [
 const OPEN_DISTANCE = 28;
 const CLOSE_DISTANCE = 44;
 
-export default function MobileGestureMenu() {
-  const [open, setOpen] = useState(false);
+export default function MobileGestureMenu({ open, onOpenChange }) {
   const pointer = useRef(null);
 
   useEffect(() => {
     if (!open) return undefined;
-    const close = (event) => event.key === "Escape" && setOpen(false);
+    const close = (event) => event.key === "Escape" && onOpenChange(false);
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
-  }, [open]);
+  }, [onOpenChange, open]);
 
   function beginGesture(event) {
     if (event.pointerType === "mouse" && event.button !== 0) return;
@@ -46,7 +45,7 @@ export default function MobileGestureMenu() {
     if (pointer.current?.id !== event.pointerId) return;
     if (pointer.current.y - event.clientY >= OPEN_DISTANCE) {
       pointer.current = null;
-      setOpen(true);
+      onOpenChange(true);
     }
   }
 
@@ -54,7 +53,7 @@ export default function MobileGestureMenu() {
     if (pointer.current?.id !== event.pointerId) return;
     if (event.clientY - pointer.current.y >= CLOSE_DISTANCE) {
       pointer.current = null;
-      setOpen(false);
+      onOpenChange(false);
     }
   }
 
@@ -69,7 +68,7 @@ export default function MobileGestureMenu() {
         type="button"
         aria-label="Open navigation"
         aria-expanded={open}
-        onClick={() => setOpen(true)}
+        onClick={() => onOpenChange(true)}
         onPointerDown={beginGesture}
         onPointerMove={moveLauncher}
         onPointerUp={endGesture}
@@ -79,7 +78,7 @@ export default function MobileGestureMenu() {
       </button>
 
       {open && (
-        <div className="mobile-gesture-backdrop" onPointerDown={(event) => event.target === event.currentTarget && setOpen(false)}>
+        <div className="mobile-gesture-backdrop" onPointerDown={(event) => event.target === event.currentTarget && onOpenChange(false)}>
           <section
             className="mobile-gesture-sheet"
             role="dialog"
@@ -93,7 +92,7 @@ export default function MobileGestureMenu() {
             <header>
               <span className="mobile-gesture-grip" aria-hidden="true" />
               <strong><Menu size={17} /> Menu</strong>
-              <button className="icon-button" type="button" aria-label="Close navigation" onClick={() => setOpen(false)}>
+              <button className="icon-button" type="button" aria-label="Close navigation" onClick={() => onOpenChange(false)}>
                 <X size={18} />
               </button>
             </header>
@@ -104,7 +103,7 @@ export default function MobileGestureMenu() {
                   to={to}
                   end={end}
                   className={({ isActive }) => isActive ? "mobile-gesture-link active" : "mobile-gesture-link"}
-                  onClick={() => setOpen(false)}
+                  onClick={() => onOpenChange(false)}
                 >
                   <Icon size={22} aria-hidden="true" />
                   <span>{label}</span>
