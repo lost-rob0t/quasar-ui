@@ -288,11 +288,11 @@ function applyUpdateNode(
     properties:
       command.patch.properties === undefined
         ? current.properties
-        : cloneValue(command.patch.properties),
+        : cloneValue(command.patch.properties as Record<string, unknown>),
     extensions:
       command.patch.extensions === undefined
         ? current.extensions
-        : cloneValue(command.patch.extensions)
+        : cloneValue(command.patch.extensions as Record<string, unknown>)
   };
   touchGraph(graph, at);
   const effects = emptyEffects();
@@ -377,11 +377,11 @@ function applyUpdateEdge(
     properties:
       command.patch.properties === undefined
         ? current.properties
-        : cloneValue(command.patch.properties),
+        : cloneValue(command.patch.properties as Record<string, unknown>),
     extensions:
       command.patch.extensions === undefined
         ? current.extensions
-        : cloneValue(command.patch.extensions)
+        : cloneValue(command.patch.extensions as Record<string, unknown>)
   };
   touchGraph(graph, at);
   const effects = emptyEffects();
@@ -487,7 +487,7 @@ function applySetView(
     extensions:
       command.patch.extensions === undefined
         ? graph.view.extensions
-        : cloneValue(command.patch.extensions),
+        : cloneValue(command.patch.extensions as Record<string, unknown>),
     selectedIds:
       command.patch.selectedIds === undefined
         ? graph.view.selectedIds
