@@ -16,7 +16,7 @@ test("uses a full-screen graph canvas with three mobile controls", async ({ page
 
   await expect(page.getByRole("button", { name: "Graph tools" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Add graph document" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Import documents" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Import", exact: true })).toBeVisible();
   await expect(page.locator(".graph-mobile-primary-button")).toHaveCount(3);
   await expect(page.getByRole("button", { name: "Search graph" })).toBeHidden();
   await expect(page.getByRole("button", { name: "Cycle layout" })).toBeHidden();
