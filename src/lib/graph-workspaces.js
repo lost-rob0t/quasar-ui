@@ -80,6 +80,11 @@ export function getActiveGraph(workspace) {
   return normalized.graphs.find((graph) => graph.id === normalized.activeGraphId);
 }
 
+export function activeGraphMembershipKey(workspace) {
+  const documentIds = getActiveGraph(workspace).documentIds;
+  return documentIds === null ? "*" : JSON.stringify([...documentIds].sort());
+}
+
 export function updateActiveGraph(workspace, changes = {}) {
   const normalized = normalizeGraphWorkspace(workspace);
   const graphs = normalized.graphs.map((graph) => graph.id === normalized.activeGraphId
