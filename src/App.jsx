@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Activity,
   Database,
+  Download,
   FilePlus2,
   FolderInput,
   Network,
@@ -20,13 +21,15 @@ import { ImportPage, SettingsPage } from "./components/ImportSettings";
 import StatsPage from "./components/StatsPage";
 
 const navigation = [
-  { to: "/", label: "Dashboard", Icon: Activity, end: true },
-  { to: "/graph", label: "Graph", Icon: Network },
-  { to: "/documents", label: "Documents", Icon: TableProperties },
-  { to: "/documents/new", label: "Add document", Icon: FilePlus2 },
+  { to: "/", label: "Dashboard", mobileLabel: "Home", Icon: Activity, end: true },
+  { to: "/graph", label: "Graph", mobileLabel: "Graph", Icon: Network },
+  { to: "/documents", label: "Documents", mobileLabel: "Docs", Icon: TableProperties },
+  { to: "/documents/new", label: "Add document", mobileLabel: "Add", Icon: FilePlus2 },
   { to: "/import", label: "Import", Icon: FolderInput },
-  { to: "/settings", label: "Settings", Icon: Settings }
+  { to: "/settings", label: "Settings", mobileLabel: "Settings", Icon: Settings }
 ];
+
+const mobileNavigation = navigation.filter(({ mobileLabel }) => mobileLabel);
 
 function SyncBadge() {
   const { syncStatus, serverStatus, queueStatus } = useQuasar();
@@ -37,6 +40,51 @@ function SyncBadge() {
       {queueStatus.state !== "offline" && <span className={`sync-badge sync-${queueStatus.state}`} title={queueStatus.message}>queue {queueStatus.state}</span>}
     </div>
   );
+}
+
+function InstallButton() {
+  const [installPrompt, setInstallPrompt] = useState(null);
+
+  useEffect(() => {
+    function captureInstallPrompt(event) {
+      event.preventDefault();
+      setInstallPrompt(event);
+    }
+    function clearInstallPrompt() {
+      setInstallPrompt(null);
+    }
+    window.addEventListener("beforeinstallprompt", captureInstallPrompt);
+    window.addEventListener("appinstalled", clearInstallPrompt);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", captureInstallPrompt);
+      window.removeEventListener("appinstalled", clearInstallPrompt);
+    };
+  }, []);
+
+  if (!installPrompt) return null;
+
+  async function install() {
+    await installPrompt.prompt();
+    await installPrompt.userChoice;
+    setInstallPrompt(null);
+  }
+
+  return (
+    <button className="button install-button" type="button" onClick={install} title="Install Quasar">
+      <Download size={17} />
+      <span>Install</span>
+    </button>
+  );
+}
+
+function NavigationLinks({ mobile = false }) {
+  const links = mobile ? mobileNavigation : navigation;
+  return links.map(({ to, label, mobileLabel, Icon, end }) => (
+    <NavLink key={to} to={to} end={end} className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
+      <Icon size={mobile ? 21 : 18} aria-hidden="true" />
+      <span>{mobile ? mobileLabel : label}</span>
+    </NavLink>
+  ));
 }
 
 function WorkbenchShell({ children }) {
@@ -59,14 +107,7 @@ function WorkbenchShell({ children }) {
             <span>StarIntel workspace</span>
           </div>
         </div>
-        <nav>
-          {navigation.map(({ to, label, Icon, end }) => (
-            <NavLink key={to} to={to} end={end} className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
-              <Icon size={18} />
-              <span>{label}</span>
-            </NavLink>
-          ))}
-        </nav>
+        <nav aria-label="Primary navigation"><NavigationLinks /></nav>
         <div className="sidebar-foot">
           <div><Database size={15} /> {documents.length} documents</div>
           <div><SyncBadge /></div>
@@ -76,24 +117,25 @@ function WorkbenchShell({ children }) {
 
       <section className="workbench">
         <header className="topbar">
-          <form className="global-search" onSubmit={submitSearch}>
-            <Search size={17} />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search IDs, titles, data, sources…" />
+          <form className="global-search" onSubmit={submitSearch} role="search">
+            <Search size={17} aria-hidden="true" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search workspace" placeholder="Search IDs, titles, data, sources…" />
           </form>
           <div className="top-actions">
-            <button className="icon-button" disabled={!canUndo} onClick={() => undo().catch((error) => setNotice({ kind: "error", message: error.message }))} title="Undo">
+            <InstallButton />
+            <button className="icon-button" disabled={!canUndo} onClick={() => undo().catch((error) => setNotice({ kind: "error", message: error.message }))} title="Undo" aria-label="Undo">
               <Undo2 size={18} />
             </button>
-            <button className="icon-button" disabled={!canRedo} onClick={() => redo().catch((error) => setNotice({ kind: "error", message: error.message }))} title="Redo">
+            <button className="icon-button" disabled={!canRedo} onClick={() => redo().catch((error) => setNotice({ kind: "error", message: error.message }))} title="Redo" aria-label="Redo">
               <Redo2 size={18} />
             </button>
           </div>
         </header>
 
         {notice && (
-          <div className={`notice notice-${notice.kind || "info"}`}>
+          <div className={`notice notice-${notice.kind || "info"}`} role="status">
             <span>{notice.message}</span>
-            <button onClick={() => setNotice(null)}>×</button>
+            <button onClick={() => setNotice(null)} aria-label="Dismiss notification">×</button>
           </div>
         )}
 
@@ -101,6 +143,10 @@ function WorkbenchShell({ children }) {
           {loading ? <div className="loading-panel">Opening local workspace…</div> : children}
         </main>
       </section>
+
+      <nav className="mobile-nav" aria-label="Mobile navigation">
+        <NavigationLinks mobile />
+      </nav>
     </div>
   );
 }
