@@ -39,6 +39,8 @@ describe("schema field controls", () => {
     expect(html).toContain("Reporter");
     expect(html).toContain("Editor");
     expect(html).toContain("Add value");
+    expect(html).toContain('role="group"');
+    expect(html).toContain('aria-labelledby="schema-field-occupations"');
     expect(html).not.toContain("<textarea");
   });
 

@@ -192,6 +192,7 @@ export function SchemaField({ name, fieldSchema, required, value, onChange }) {
   const resolved = effectiveFieldSchema(fieldSchema);
   const enumValues = resolved.enum || fieldSchema.enum;
   const hint = resolved.description || fieldSchema.description || resolved.format || resolved.type || "value";
+  const labelId = `schema-field-${String(name).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 
   if (enumValues) {
     return (
@@ -222,8 +223,8 @@ export function SchemaField({ name, fieldSchema, required, value, onChange }) {
 
   if (resolved.type === "object" || resolved.type === "array" || !resolved.type) {
     return (
-      <div className="field full dtype-data-field">
-        <span><code>{name}</code>{required ? " *" : ""}</span>
+      <div className="field full dtype-data-field" role="group" aria-labelledby={labelId}>
+        <span id={labelId}><code>{name}</code>{required ? " *" : ""}</span>
         <StructuredValueEditor
           fieldSchema={fieldSchema}
           value={structuredValue(value, resolved.type === "array" ? "array" : "object")}
