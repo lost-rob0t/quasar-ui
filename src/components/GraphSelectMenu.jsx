@@ -1,5 +1,5 @@
 import { Check, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 function findSelect(label) {
   return document.querySelector(`select[aria-label="${label}"]`);
@@ -72,15 +72,12 @@ export default function GraphSelectMenu({
     };
   }, [open, selectLabel]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open || !options.length) return;
-    const frame = requestAnimationFrame(() => {
-      const selected = listRef.current?.querySelector('[role="option"][aria-selected="true"]');
-      const first = listRef.current?.querySelector('[role="option"]');
-      (selected || first)?.focus();
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [open, options.length]);
+    const selected = listRef.current?.querySelector('[role="option"][aria-selected="true"]');
+    const first = listRef.current?.querySelector('[role="option"]');
+    (selected || first)?.focus();
+  }, [open, options]);
 
   if (!open) return null;
 
