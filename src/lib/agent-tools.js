@@ -222,6 +222,88 @@ export function createAgentToolRegistry(environment) {
   });
 
   define({
+    name: "web_search",
+    description: "Search the public web with Brave Search and return bounded source results.",
+    permission: "sources.external",
+    parameters: {
+      type: "object",
+      required: ["query"],
+      properties: {
+        query: { type: "string" },
+        count: { type: "integer", minimum: 1, maximum: 20 },
+        country: { type: "string" },
+        freshness: { type: "string" }
+      },
+      additionalProperties: false
+    },
+    execute(args, context) {
+      return environment.webSearch(args, context);
+    }
+  });
+
+  define({
+    name: "fetch_url",
+    description: "Fetch and extract bounded public URL content for inspection and sourcing.",
+    permission: "sources.external",
+    parameters: {
+      type: "object",
+      required: ["url"],
+      properties: { url: { type: "string" } },
+      additionalProperties: false
+    },
+    execute(args, context) {
+      return environment.fetchUrl(args.url, context);
+    }
+  });
+
+  define({
+    name: "mcp_call",
+    description: "Call an allowed tool on a configured remote MCP server.",
+    permission: "server.use",
+    parameters: {
+      type: "object",
+      required: ["serverId", "toolName"],
+      properties: {
+        serverId: { type: "string" },
+        toolName: { type: "string" },
+        arguments: { type: "object" }
+      },
+      additionalProperties: false
+    },
+    execute(args, context) {
+      return environment.callMcp(args.serverId, args.toolName, args.arguments || {}, context);
+    }
+  });
+
+  define({
+    name: "build_graph",
+    description: "Create and populate a named custom graph from document IDs or a bounded database query.",
+    permission: "graph.edit",
+    parameters: {
+      type: "object",
+      required: ["name"],
+      properties: {
+        name: { type: "string" },
+        documentIds: { type: "array", items: { type: "string" }, maxItems: 500 },
+        query: {
+          type: "object",
+          properties: {
+            text: { type: "string" },
+            objectTypes: { type: "array", items: { type: "string" } },
+            datasets: { type: "array", items: { type: "string" } }
+          }
+        },
+        layout: { type: "string" },
+        includeRelations: { type: "boolean" }
+      },
+      additionalProperties: false
+    },
+    execute(args, context) {
+      return environment.buildCustomGraph(args, context);
+    }
+  });
+
+  define({
     name: "propose_graph_operations",
     description: "Validate and preview declared graph operations. Applying the preview is a separate approved action.",
     permission: "graph.edit",

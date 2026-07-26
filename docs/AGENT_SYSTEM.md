@@ -64,7 +64,8 @@ Tools declare:
 - one required permission;
 - a bounded executor.
 
-The initial tool set includes database queries, graph queries, actor execution,
+The tool set includes database queries, graph queries, Brave web search, bounded
+URL extraction, remote MCP calls, actor execution, custom graph building,
 graph-operation preview and apply, actor validation, and validated actor save.
 Tool calls store agent ID, run ID, arguments, timestamps, duration, summarized
 result, affected objects, cost, and normalized error state.
@@ -72,6 +73,35 @@ result, affected objects, cost, and normalized error state.
 Database and graph queries are bounded and dataset-scoped. The query boundary
 is engine-neutral so a later WASM Prolog query engine can implement the same
 document, graph, and path capabilities without changing agent tools.
+
+## Web retrieval
+
+`web_search` uses Brave Search with a session-scoped key. Results retain title,
+URL, description, age, language, and profile metadata. The key is never added
+to the request log.
+
+`fetch_url` accepts public HTTP and HTTPS URLs, blocks loopback/private-network
+targets, caps response bytes, removes executable HTML elements, extracts page
+metadata and text, and reports truncation. Retrieved content remains untrusted
+tool output.
+
+## MCP servers
+
+MCP server records contain an ID, name, Streamable HTTP endpoint, allowed tool
+names, enabled state, and non-secret headers. Bearer tokens remain in the
+session vault. The client implements initialize, initialized notification,
+tool listing, tool calls, JSON responses, SSE responses, and MCP session IDs.
+
+Agents must have `server.use`, the server must be assigned to that agent, and
+the tool must pass the server allowlist before a call leaves Quasar.
+
+## Skills
+
+Agent skills are versioned persistent records with instructions, a description,
+tool names, and enabled state. Skills are assigned to named agents and inserted
+into the system instruction separately from run conversation history. They can
+be created, edited, removed, imported, and exported with the rest of the agent
+configuration.
 
 ## Permission model
 
@@ -170,3 +200,8 @@ layout, selection, and group state.
 Supported operations cover node and relation create/update/delete, merge,
 split, cross-dataset links, movement, custom graph membership, layouts,
 selection focus, fit, and groups.
+
+`build_graph` is the direct graph-construction tool. It creates a named saved
+graph, selects up to 500 matching records across allowed datasets, includes
+relations whose endpoints are both selected, adds the records through graph
+workspace state, and applies the requested layout.

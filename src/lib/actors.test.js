@@ -5,8 +5,11 @@ import {
   actorApplicability,
   generateUsernameCandidatesActor,
   isBuiltinActor,
+  markUnverifiedActor,
   normalizeActorManifest,
-  prepareWhatsMyNameSearchesActor
+  normalizeNamesActor,
+  prepareWhatsMyNameSearchesActor,
+  relationsFromRelatedIdsActor
 } from "./actors";
 
 const stamp = "2026-07-26T00:00:00.000Z";
@@ -114,5 +117,31 @@ describe("username actors", () => {
     expect(searches.documents.length).toBeLessThanOrEqual(16 * 16 * 2);
     expect(candidates.message).toContain("first 8 selected documents");
     expect(searches.message).toContain("first 16 selected documents");
+  });
+});
+
+describe("operator actors", () => {
+  it("normalizes names as an update transform", () => {
+    const result = normalizeNamesActor({ selection: [{ ...person, title: "  Jane   Q. Doe " }] });
+    expect(result.operations[0].op).toBe("update_document");
+    expect(result.operations[0].document.title).toBe("Jane Q. Doe");
+  });
+
+  it("builds valid explicit relations from related IDs", () => {
+    const result = relationsFromRelatedIdsActor({
+      selection: [{ ...person, related_ids: ["starintel:org:example"] }],
+      documents: [person]
+    });
+    expect(result.operations).toHaveLength(1);
+    expect(() => assertDocument(result.operations[0].document)).not.toThrow();
+  });
+
+  it("marks documents unverified without dropping fields", () => {
+    const result = markUnverifiedActor({ selection: [person] });
+    expect(result.operations[0].document.verification).toMatchObject({
+      verified: false,
+      status: "unverified"
+    });
+    expect(result.operations[0].document.data).toEqual(person.data);
   });
 });

@@ -15,7 +15,9 @@ export const AGENT_RECORD_TYPES = Object.freeze({
   loopEvent: "quasar.loop-event",
   recoveryEvent: "quasar.recovery-event",
   memory: "quasar.agent-memory",
-  generatedActor: "quasar.agent-generated-actor"
+  generatedActor: "quasar.agent-generated-actor",
+  skill: "quasar.agent-skill",
+  mcpServer: "quasar.mcp-server"
 });
 
 export const AGENT_STATUSES = Object.freeze([
@@ -203,6 +205,8 @@ export function normalizeAgent(input) {
   agent.graphAccess = [...new Set((input.graphAccess || ["*"]).map(String))];
   agent.targetAccess = [...new Set((input.targetAccess || ["*"]).map(String))];
   agent.actorAccess = [...new Set((input.actorAccess || ["*"]).map(String))];
+  agent.skillIds = [...new Set((input.skillIds || []).map(String))];
+  agent.mcpServerIds = [...new Set((input.mcpServerIds || []).map(String))];
   agent.enabled = input.enabled !== false;
   agent.loop = {
     maxIterations: 20,
@@ -323,7 +327,9 @@ export async function exportAgentSystemRecords({ includeRuns = false } = {}) {
     AGENT_RECORD_TYPES.role,
     AGENT_RECORD_TYPES.provider,
     AGENT_RECORD_TYPES.model,
-    AGENT_RECORD_TYPES.budget
+    AGENT_RECORD_TYPES.budget,
+    AGENT_RECORD_TYPES.skill,
+    AGENT_RECORD_TYPES.mcpServer
   ]);
   if (includeRuns) {
     [
@@ -343,7 +349,11 @@ export async function exportAgentSystemRecords({ includeRuns = false } = {}) {
     version: AGENT_SCHEMA_VERSION,
     exportedAt: now(),
     secretsIncluded: false,
-    records: records.map(({ secret, apiKey, ...record }) => record)
+    records: records.map(({ secret, apiKey, ...record }) => {
+      if (record.recordType !== AGENT_RECORD_TYPES.mcpServer) return record;
+      const headers = Object.fromEntries(Object.entries(record.headers || {}).filter(([name]) => !/authorization|api[-_]?key|token|secret/i.test(name)));
+      return { ...record, headers };
+    })
   };
 }
 

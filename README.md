@@ -35,6 +35,9 @@ The [JavaScript-only deployment roadmap](docs/ROADMAP.md) defines the target arc
 - persistent operator agents with editable roles and scoped memory
 - OpenRouter, OpenAI, Anthropic, OpenAI-compatible, and local provider adapters
 - permissioned database, graph, actor, and graph-mutation tools
+- Brave web search, bounded URL extraction, and remote MCP tools
+- persistent per-agent skills and MCP server assignments
+- direct custom graph building from document IDs or database queries
 - persisted autonomous runs with checkpoints, recovery, loop detection, budgets, and cost logs
 - draggable desktop/mobile agent bubble and full run console
 - runtime service worker for offline reopening
@@ -189,10 +192,11 @@ structured memory, runs, tool logs, checkpoints, loop warnings, usage, and
 cost.
 
 Agents query the StarIntel database and graph through declared permissioned
-tools. They can run existing actors, test generated actors in Web Workers, and
-apply validated graph plans through the normal history and undo path. Provider
-keys remain session-scoped and are excluded from stored records and normal JSON
-exports.
+tools. They can search with Brave, fetch public URL content, call assigned MCP
+servers, build saved graphs, run existing actors, test generated actors in Web
+Workers, and apply validated graph plans through the normal history and undo
+path. Provider, Brave, and MCP keys remain session-scoped and are excluded from
+stored records and normal JSON exports.
 
 See [Agent system](docs/AGENT_SYSTEM.md) for provider, tool, permission, state
 machine, recovery, loop detection, budget, context, and actor-generation

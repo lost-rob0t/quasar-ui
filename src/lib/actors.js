@@ -278,6 +278,102 @@ export function prepareWhatsMyNameSearchesActor(context) {
   };
 }
 
+export function normalizeNamesActor(context) {
+  const selection = Array.isArray(context.selection) ? context.selection.slice(0, 32) : [];
+  const operations = selection.map((source) => {
+    const data = { ...(source.data || {}) };
+    const parts = [
+      data.fname || data.first_name || data.given_name,
+      data.mname || data.middle_name,
+      data.lname || data.last_name || data.family_name
+    ].map((value) => String(value || "").trim()).filter(Boolean);
+    const name = String(data.full_name || data.name || source.title || parts.join(" ")).trim().replace(/\s+/g, " ");
+    if (source.dtype === "person" && name) data.full_name = name;
+    else if (name) data.name = name;
+    return {
+      op: "update_document",
+      document: {
+        ...source,
+        version: Number(source.version || 0) + 1,
+        date_updated: new Date().toISOString(),
+        title: name || source.title,
+        data,
+        extensions: {
+          ...(source.extensions || {}),
+          "quasar.actor": { actor_id: "quasar.actor.normalize-names", input_ids: [source._id] }
+        }
+      }
+    };
+  });
+  return { operations, message: `Normalized ${operations.length} name(s).` };
+}
+
+export function relationsFromRelatedIdsActor(context) {
+  const selection = Array.isArray(context.selection) ? context.selection.slice(0, 32) : [];
+  const operations = [];
+  const hash = (value) => {
+    let state = 0x811c9dc5;
+    for (let index = 0; index < value.length; index += 1) {
+      state ^= value.charCodeAt(index);
+      state = Math.imul(state, 0x01000193);
+    }
+    return (state >>> 0).toString(36);
+  };
+  const existing = new Set((context.documents || []).map((document) => document._id));
+  for (const source of selection) {
+    for (const target of (source.related_ids || []).slice(0, 64)) {
+      const id = `starintel:relation:related:${hash(`${source._id}\0${target}`)}`;
+      if (existing.has(id)) continue;
+      const stamp = new Date().toISOString();
+      operations.push({
+        op: "create_relation",
+        document: {
+          _id: id,
+          dataset: source.dataset || "default",
+          dtype: "relation",
+          schema_version: "0.9.0",
+          version: 1,
+          date_added: stamp,
+          date_updated: stamp,
+          title: "related-to",
+          sources: source.sources || [],
+          evidence: source.evidence || [],
+          data: { subject: source._id, predicate: "related-to", object: target, directed: false },
+          extensions: {
+            "quasar.actor": { actor_id: "quasar.actor.related-id-relations", input_ids: [source._id] }
+          }
+        }
+      });
+      existing.add(id);
+    }
+  }
+  return { operations, message: `Built ${operations.length} relation(s) from related IDs.` };
+}
+
+export function markUnverifiedActor(context) {
+  const selection = Array.isArray(context.selection) ? context.selection.slice(0, 32) : [];
+  return {
+    operations: selection.map((source) => ({
+      op: "update_document",
+      document: {
+        ...source,
+        version: Number(source.version || 0) + 1,
+        date_updated: new Date().toISOString(),
+        verification: {
+          ...(source.verification || {}),
+          verified: false,
+          status: "unverified"
+        },
+        extensions: {
+          ...(source.extensions || {}),
+          "quasar.actor": { actor_id: "quasar.actor.mark-unverified", input_ids: [source._id] }
+        }
+      }
+    })),
+    message: `Marked ${selection.length} document(s) unverified.`
+  };
+}
+
 export const BUILTIN_ACTORS = Object.freeze([
   {
     id: "quasar.actor.derive-node",
@@ -346,6 +442,36 @@ export const BUILTIN_ACTORS = Object.freeze([
     minSelection: 1,
     maxSelection: 16,
     source: prepareWhatsMyNameSearchesActor.toString()
+  },
+  {
+    id: "quasar.actor.normalize-names",
+    label: "Normalize names",
+    description: "Normalize selected person and entity names without replacing provenance.",
+    version: 1,
+    accepts: ["person", "org", "entity"],
+    minSelection: 1,
+    maxSelection: 32,
+    source: normalizeNamesActor.toString()
+  },
+  {
+    id: "quasar.actor.related-id-relations",
+    label: "Build related-ID relations",
+    description: "Convert related IDs into explicit related-to relation documents.",
+    version: 1,
+    accepts: ["*"],
+    minSelection: 1,
+    maxSelection: 32,
+    source: relationsFromRelatedIdsActor.toString()
+  },
+  {
+    id: "quasar.actor.mark-unverified",
+    label: "Mark unverified",
+    description: "Mark selected documents unverified for review.",
+    version: 1,
+    accepts: ["*"],
+    minSelection: 1,
+    maxSelection: 32,
+    source: markUnverifiedActor.toString()
   }
 ]);
 

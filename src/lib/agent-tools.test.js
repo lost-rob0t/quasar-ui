@@ -69,4 +69,12 @@ describe("agent tools", () => {
     });
     expect(runActor).toHaveBeenCalledWith("actor:test", ["person:1"]);
   });
+
+  it("builds a custom graph through the declared environment", async () => {
+    const buildCustomGraph = vi.fn(async () => ({ graphId: "graph:1" }));
+    const registry = createAgentToolRegistry({ buildCustomGraph });
+    const context = { agent: { permissions: ["graph.edit"] } };
+    await registry.execute("build_graph", { name: "Case graph", documentIds: ["person:1"] }, context);
+    expect(buildCustomGraph).toHaveBeenCalledWith(expect.objectContaining({ name: "Case graph" }), context);
+  });
 });

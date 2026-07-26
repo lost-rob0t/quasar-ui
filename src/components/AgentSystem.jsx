@@ -36,6 +36,7 @@ import { buildAgentContext, systemPromptForAgent } from "../lib/agent-context";
 import { getProviderSecret, hasProviderSecret, setProviderSecret } from "../lib/agent-secrets";
 import { AgentSupervisor, runStateFingerprint } from "../lib/agent-supervisor";
 import { createAgentToolRegistry } from "../lib/agent-tools";
+import { braveWebSearch, fetchUrlContent } from "../lib/agent-web";
 import {
   applyAgentGraphPlan,
   previewAgentGraphOperations
@@ -46,11 +47,12 @@ import {
   normalizeProviderConfig,
   testProviderConnection
 } from "../lib/provider-adapters";
+import { McpHttpClient, testMcpServer } from "../lib/mcp-client";
 import { useQuasar } from "../store";
 
 const AgentSystemContext = createContext(null);
 const BUBBLE_POSITION_KEY = "quasar:agent-bubble-position";
-const SLASH_COMMANDS = ["/run", "/pause", "/resume", "/stop", "/retry", "/budget", "/cost", "/target", "/dataset", "/graph", "/actor", "/role", "/tools", "/inspect", "/checkpoint", "/rollback", "/clear"];
+const SLASH_COMMANDS = ["/run", "/pause", "/resume", "/stop", "/retry", "/budget", "/cost", "/target", "/dataset", "/graph", "/actor", "/role", "/skill", "/mcp", "/web", "/tools", "/inspect", "/checkpoint", "/rollback", "/clear"];
 let initializationPromise = null;
 
 function initializeAgentRecords() {
@@ -113,6 +115,8 @@ export function AgentSystemProvider({ children }) {
   const [runs, setRuns] = useState([]);
   const [memories, setMemories] = useState([]);
   const [costs, setCosts] = useState([]);
+  const [skills, setSkills] = useState([]);
+  const [mcpServers, setMcpServers] = useState([]);
   const [activeAgentId, setActiveAgentId] = useState("");
   const [activeRunId, setActiveRunId] = useState("");
   const [ready, setReady] = useState(false);
@@ -120,13 +124,15 @@ export function AgentSystemProvider({ children }) {
   quasarRef.current = quasar;
 
   const refresh = useCallback(async () => {
-    const [nextAgents, nextRoles, nextProviders, nextRuns, nextMemories, nextCosts] = await Promise.all([
+    const [nextAgents, nextRoles, nextProviders, nextRuns, nextMemories, nextCosts, nextSkills, nextMcpServers] = await Promise.all([
       listAgentRecords(AGENT_RECORD_TYPES.agent),
       listAgentRecords(AGENT_RECORD_TYPES.role),
       listAgentRecords(AGENT_RECORD_TYPES.provider),
       listAgentRecords(AGENT_RECORD_TYPES.run),
       listAgentRecords(AGENT_RECORD_TYPES.memory),
-      listAgentRecords(AGENT_RECORD_TYPES.cost)
+      listAgentRecords(AGENT_RECORD_TYPES.cost),
+      listAgentRecords(AGENT_RECORD_TYPES.skill),
+      listAgentRecords(AGENT_RECORD_TYPES.mcpServer)
     ]);
     setAgents(nextAgents);
     setRoles(nextRoles);
@@ -134,6 +140,8 @@ export function AgentSystemProvider({ children }) {
     setRuns(nextRuns);
     setMemories(nextMemories);
     setCosts(nextCosts);
+    setSkills(nextSkills);
+    setMcpServers(nextMcpServers);
     setActiveAgentId((current) => current || nextAgents[0]?.id || "");
     setActiveRunId((current) => current || nextRuns[0]?.id || "");
   }, []);
@@ -160,6 +168,67 @@ export function AgentSystemProvider({ children }) {
           ...result.documents.map((document) => ({ id: document._id, objectType: document.dtype, action: "save" })),
           ...result.removedIds.map((id) => ({ id, action: "remove" }))
         ]
+      };
+    },
+    webSearch(args) {
+      return braveWebSearch(args.query, {
+        apiKey: getProviderSecret("brave-search"),
+        count: args.count,
+        country: args.country,
+        freshness: args.freshness
+      });
+    },
+    fetchUrl(url) {
+      return fetchUrlContent(url);
+    },
+    async callMcp(serverId, toolName, args, context) {
+      const allowed = new Set(context.agent.mcpServerIds || []);
+      if (!allowed.has(serverId)) throw new Error(`MCP server access denied: ${serverId}`);
+      const server = await getAgentRecord(AGENT_RECORD_TYPES.mcpServer, serverId);
+      if (!server?.enabled) throw new Error(`MCP server is disabled: ${serverId}`);
+      if (server.allowedTools?.length && !server.allowedTools.includes(toolName)) throw new Error(`MCP tool access denied: ${toolName}`);
+      const client = new McpHttpClient(server, getProviderSecret(`mcp:${serverId}`));
+      await client.initialize();
+      const result = await client.callTool(toolName, args);
+      return {
+        serverId,
+        toolName,
+        content: result.content || [],
+        isError: Boolean(result.isError)
+      };
+    },
+    async buildCustomGraph(args, context) {
+      const current = quasarRef.current;
+      const allowedDatasets = new Set(context.agent.datasetAccess || ["*"]);
+      const query = args.query || {};
+      let selected = current.documents.filter((document) => (
+        (allowedDatasets.has("*") || allowedDatasets.has(document.dataset))
+        && (!query.datasets?.length || query.datasets.includes(document.dataset))
+        && (!query.objectTypes?.length || query.objectTypes.includes(document.dtype))
+        && (!query.text || JSON.stringify(document).toLowerCase().includes(String(query.text).toLowerCase()))
+      ));
+      if (args.documentIds?.length) {
+        const ids = new Set(args.documentIds);
+        selected = current.documents.filter((document) => ids.has(document._id) && (allowedDatasets.has("*") || allowedDatasets.has(document.dataset)));
+      }
+      selected = selected.filter((document) => document.dtype !== "relation").slice(0, 500);
+      const ids = new Set(selected.map((document) => document._id));
+      if (args.includeRelations !== false) {
+        current.documents.filter((document) => {
+          if (document.dtype !== "relation") return false;
+          const source = document.data?.subject || document.data?.source;
+          const target = document.data?.object || document.data?.target;
+          return typeof source === "string" && typeof target === "string" && ids.has(source) && ids.has(target);
+        }).forEach((document) => ids.add(document._id));
+      }
+      const graph = current.createGraph(args.name);
+      current.addDocumentsToActiveGraph([...ids], { layout: args.layout || "cose" });
+      window.dispatchEvent(new CustomEvent("quasar:agent-graph-command", { detail: { op: "apply_layout", layout: args.layout || "cose" } }));
+      return {
+        graphId: graph.activeGraphId,
+        name: args.name,
+        documentCount: ids.size,
+        affected: [...ids].map((id) => ({ id, action: "add-to-graph" }))
       };
     },
     async previewGraphOperations(operations, context) {
@@ -306,6 +375,10 @@ export function AgentSystemProvider({ children }) {
     toolRegistry,
     contextFor: async (agent, run) => {
       const role = await getAgentRecord(AGENT_RECORD_TYPES.role, agent.roleId);
+      const assignedSkills = (await listAgentRecords(AGENT_RECORD_TYPES.skill))
+        .filter((skill) => agent.skillIds?.includes(skill.id) && skill.enabled !== false);
+      const assignedMcpServers = (await listAgentRecords(AGENT_RECORD_TYPES.mcpServer))
+        .filter((server) => agent.mcpServerIds?.includes(server.id) && server.enabled !== false);
       const current = quasarRef.current;
       const context = buildAgentContext({
         documents: current.documents,
@@ -315,7 +388,14 @@ export function AgentSystemProvider({ children }) {
         graph: current.activeGraph,
         filters: run.filters
       });
-      return { context, systemPrompt: systemPromptForAgent(agent, role, context) };
+      const skillInstructions = assignedSkills.map((skill) => `Skill: ${skill.name}\n${skill.instructions}`).join("\n\n");
+      const mcpInstructions = assignedMcpServers.length
+        ? `Assigned MCP servers:\n${assignedMcpServers.map((server) => `- ${server.id}: ${(server.allowedTools || []).join(", ") || "tools discovered at runtime"}`).join("\n")}`
+        : "";
+      return {
+        context,
+        systemPrompt: [systemPromptForAgent(agent, role, context), skillInstructions, mcpInstructions].filter(Boolean).join("\n\n")
+      };
     },
     pricingFor: (_providerId, modelId) => {
       const configured = quasarRef.current.settings?.agentModelPricing?.[modelId];
@@ -432,6 +512,8 @@ export function AgentSystemProvider({ children }) {
     runs,
     memories,
     costs,
+    skills,
+    mcpServers,
     activeAgent,
     activeRun,
     activeAgentId,
@@ -470,6 +552,43 @@ export function AgentSystemProvider({ children }) {
       await refresh();
       return saved;
     },
+    saveSkill: async (skill) => {
+      const saved = await saveAgentRecord({
+        ...skill,
+        id: String(skill.id || "").trim(),
+        name: String(skill.name || "").trim(),
+        instructions: String(skill.instructions || "").trim(),
+        toolNames: [...new Set((skill.toolNames || []).map(String))],
+        enabled: skill.enabled !== false,
+        recordType: AGENT_RECORD_TYPES.skill
+      }, AGENT_RECORD_TYPES.skill);
+      await refresh();
+      return saved;
+    },
+    removeSkill: async (id) => {
+      await removeAgentRecord(AGENT_RECORD_TYPES.skill, id);
+      await refresh();
+    },
+    saveMcpServer: async (server, secret) => {
+      const saved = await saveAgentRecord({
+        ...server,
+        id: String(server.id || "").trim(),
+        name: String(server.name || "").trim(),
+        url: String(server.url || "").trim(),
+        allowedTools: [...new Set((server.allowedTools || []).map(String))],
+        enabled: server.enabled !== false,
+        recordType: AGENT_RECORD_TYPES.mcpServer
+      }, AGENT_RECORD_TYPES.mcpServer);
+      if (secret) setProviderSecret(`mcp:${saved.id}`, secret);
+      await refresh();
+      return saved;
+    },
+    removeMcpServer: async (id) => {
+      await removeAgentRecord(AGENT_RECORD_TYPES.mcpServer, id);
+      await refresh();
+    },
+    testMcpServer: (server, secret) => testMcpServer(server, secret || getProviderSecret(`mcp:${server.id}`)),
+    setBraveKey: (secret) => setProviderSecret("brave-search", secret),
     clearMemory: async (id) => {
       await removeAgentRecord(AGENT_RECORD_TYPES.memory, id);
       await refresh();
@@ -493,7 +612,7 @@ export function AgentSystemProvider({ children }) {
       return result;
     }
   }), [
-    ready, agents, roles, providers, runs, memories, costs, activeAgent, activeRun, activeAgentId, activeRunId,
+    ready, agents, roles, providers, runs, memories, costs, skills, mcpServers, activeAgent, activeRun, activeAgentId, activeRunId,
     refresh, command, supervisor
   ]);
 
@@ -646,7 +765,7 @@ function RunControls({ run }) {
   );
 }
 
-function AgentEditor({ agent, roles, providers, onSave, onDelete }) {
+function AgentEditor({ agent, roles, providers, skills, mcpServers, onSave, onDelete }) {
   const initial = agent || defaultAgentInput(roles[0] || DEFAULT_ROLES[0], providers[0] || DEFAULT_PROVIDER_CONFIGS[0]);
   const [form, setForm] = useState(initial);
   useEffect(() => setForm(agent || initial), [agent]);
@@ -676,6 +795,8 @@ function AgentEditor({ agent, roles, providers, onSave, onDelete }) {
         <label className="field full"><span>System prompt</span><textarea value={form.systemPrompt || ""} onChange={(event) => setForm({ ...form, systemPrompt: event.target.value })} /></label>
       </div>
       <fieldset className="agent-permissions"><legend>Tool permissions</legend>{AGENT_PERMISSIONS.map((permission) => <label className="checkbox" key={permission}><input type="checkbox" checked={form.permissions?.includes(permission)} onChange={() => togglePermission(permission)} /> {permission}</label>)}</fieldset>
+      <fieldset className="agent-permissions"><legend>Skills</legend>{skills.map((skill) => <label className="checkbox" key={skill.id}><input type="checkbox" checked={form.skillIds?.includes(skill.id)} onChange={() => setForm((current) => ({ ...current, skillIds: current.skillIds?.includes(skill.id) ? current.skillIds.filter((id) => id !== skill.id) : [...(current.skillIds || []), skill.id] }))} /> {skill.name}</label>)}</fieldset>
+      <fieldset className="agent-permissions"><legend>MCP servers</legend>{mcpServers.map((server) => <label className="checkbox" key={server.id}><input type="checkbox" checked={form.mcpServerIds?.includes(server.id)} onChange={() => setForm((current) => ({ ...current, mcpServerIds: current.mcpServerIds?.includes(server.id) ? current.mcpServerIds.filter((id) => id !== server.id) : [...(current.mcpServerIds || []), server.id] }))} /> {server.name}</label>)}</fieldset>
       <div className="form-grid">
         <label className="field"><span>Max cost (USD)</span><input type="number" min="0" step="0.01" value={form.budget?.maxCostUsd ?? 2} onChange={(event) => setForm({ ...form, budget: { ...form.budget, maxCostUsd: Number(event.target.value) } })} /></label>
         <label className="field"><span>Max iterations</span><input type="number" min="1" value={form.loop?.maxIterations ?? 20} onChange={(event) => setForm({ ...form, loop: { ...form.loop, maxIterations: Number(event.target.value) }, budget: { ...form.budget, maxIterations: Number(event.target.value) } })} /></label>
@@ -687,6 +808,93 @@ function AgentEditor({ agent, roles, providers, onSave, onDelete }) {
         <button className="button primary">Save agent</button>
       </div>
     </form>
+  );
+}
+
+function SkillEditor({ skill, onSave, onDelete }) {
+  const [form, setForm] = useState(skill || {
+    id: `skill-${crypto.randomUUID().slice(0, 8)}`,
+    name: "New skill",
+    description: "",
+    instructions: "",
+    toolNames: [],
+    enabled: true
+  });
+  return (
+    <form className="agent-editor" onSubmit={(event) => { event.preventDefault(); onSave(form); }}>
+      <div className="form-grid">
+        <label className="field"><span>ID</span><input value={form.id} disabled={Boolean(skill)} onChange={(event) => setForm({ ...form, id: event.target.value })} /></label>
+        <label className="field"><span>Name</span><input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
+        <label className="field full"><span>Description</span><input value={form.description || ""} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
+        <label className="field full"><span>Instructions</span><textarea className="code-editor" value={form.instructions || ""} onChange={(event) => setForm({ ...form, instructions: event.target.value })} /></label>
+        <label className="field full"><span>Tool names</span><input value={(form.toolNames || []).join(", ")} onChange={(event) => setForm({ ...form, toolNames: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} /></label>
+        <label className="checkbox"><input type="checkbox" checked={form.enabled !== false} onChange={(event) => setForm({ ...form, enabled: event.target.checked })} /> Enabled</label>
+      </div>
+      <div className="form-actions">{skill && <button type="button" className="button danger" onClick={() => onDelete(skill.id)}>Delete</button>}<button className="button primary">Save skill</button></div>
+    </form>
+  );
+}
+
+function McpServerEditor({ server, onSave, onDelete, onTest }) {
+  const [form, setForm] = useState(server || {
+    id: `mcp-${crypto.randomUUID().slice(0, 8)}`,
+    name: "MCP server",
+    url: "",
+    allowedTools: [],
+    enabled: true
+  });
+  const [secret, setSecret] = useState("");
+  const [status, setStatus] = useState("");
+  return (
+    <form className="agent-editor" onSubmit={async (event) => { event.preventDefault(); await onSave(form, secret); setSecret(""); setStatus("Saved"); }}>
+      <div className="form-grid">
+        <label className="field"><span>ID</span><input value={form.id} disabled={Boolean(server)} onChange={(event) => setForm({ ...form, id: event.target.value })} /></label>
+        <label className="field"><span>Name</span><input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
+        <label className="field full"><span>Streamable HTTP URL</span><input value={form.url} onChange={(event) => setForm({ ...form, url: event.target.value })} placeholder="https://mcp.example.org/mcp" /></label>
+        <label className="field full"><span>Bearer token</span><input type="password" value={secret} onChange={(event) => setSecret(event.target.value)} autoComplete="off" /></label>
+        <label className="field full"><span>Allowed tools</span><input value={(form.allowedTools || []).join(", ")} onChange={(event) => setForm({ ...form, allowedTools: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} placeholder="Empty allows all listed tools" /></label>
+        <label className="checkbox"><input type="checkbox" checked={form.enabled !== false} onChange={(event) => setForm({ ...form, enabled: event.target.checked })} /> Enabled</label>
+      </div>
+      <div className="form-actions">
+        {status && <span className="muted">{status}</span>}
+        {server && <button type="button" className="button danger" onClick={() => onDelete(server.id)}>Delete</button>}
+        <button type="button" className="button" onClick={async () => {
+          setStatus("Testing");
+          try {
+            const result = await onTest(form, secret);
+            setStatus(`Connected · ${result.tools.length} tools`);
+          } catch (error) {
+            setStatus(error.message);
+          }
+        }}>Test</button>
+        <button className="button primary">Save server</button>
+      </div>
+    </form>
+  );
+}
+
+function WebToolsPanel({ onSaveKey }) {
+  const [key, setKey] = useState("");
+  const [query, setQuery] = useState("");
+  const [url, setUrl] = useState("");
+  const [result, setResult] = useState("");
+  return (
+    <section className="panel agent-editor">
+      <div className="section-heading"><h2>Web tools</h2></div>
+      <div className="form-grid">
+        <label className="field full"><span>Brave Search key</span><input type="password" value={key} onChange={(event) => setKey(event.target.value)} autoComplete="off" /></label>
+      </div>
+      <div className="button-row"><button className="button primary" onClick={() => { onSaveKey(key); setKey(""); setResult("Brave key set for this session"); }}>Save key</button></div>
+      <div className="form-grid">
+        <label className="field full"><span>Test search</span><input value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+        <label className="field full"><span>Test URL fetch</span><input value={url} onChange={(event) => setUrl(event.target.value)} /></label>
+      </div>
+      <div className="button-row">
+        <button className="button" onClick={async () => setResult(JSON.stringify(await braveWebSearch(query, { apiKey: getProviderSecret("brave-search"), count: 5 }), null, 2))}>Search</button>
+        <button className="button" onClick={async () => setResult(JSON.stringify(await fetchUrlContent(url), null, 2))}>Fetch URL</button>
+      </div>
+      {result && <pre className="agent-web-result">{result}</pre>}
+    </section>
   );
 }
 
@@ -812,12 +1020,16 @@ export function AgentConsole() {
   const [roleId, setRoleId] = useState(system.roles[0]?.id || "");
   const [roleDraft, setRoleDraft] = useState(null);
   const [memoryId, setMemoryId] = useState("");
+  const [skillId, setSkillId] = useState("");
+  const [mcpServerId, setMcpServerId] = useState("");
   const [commandText, setCommandText] = useState("");
   const run = system.activeRun;
   const agent = system.agents.find((item) => item.id === agentId) || null;
   const provider = system.providers.find((item) => item.id === providerId) || system.providers[0] || null;
   const role = system.roles.find((item) => item.id === roleId) || null;
   const memory = system.memories.find((item) => item.id === memoryId) || null;
+  const skill = system.skills.find((item) => item.id === skillId) || null;
+  const mcpServer = system.mcpServers.find((item) => item.id === mcpServerId) || null;
   const remaining = run ? remainingBudget(run.budget, run.usage) : null;
   const today = new Date().toISOString().slice(0, 10);
   const month = today.slice(0, 7);
@@ -848,7 +1060,7 @@ export function AgentConsole() {
         </div>
       </header>
       <nav className="agent-console-tabs">
-        {["run", "agents", "roles", "providers", "memory"].map((item) => <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{item}</button>)}
+        {["run", "agents", "roles", "providers", "web", "mcp", "skills", "memory"].map((item) => <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{item}</button>)}
       </nav>
       {tab === "run" && (
         <div className="agent-console-grid">
@@ -898,7 +1110,7 @@ export function AgentConsole() {
       {tab === "agents" && (
         <div className="agent-management-grid">
           <aside className="panel agent-record-list"><button className={!agentId ? "active" : ""} onClick={() => setAgentId("")}>Create agent</button>{system.agents.map((item) => <button className={agentId === item.id ? "active" : ""} key={item.id} onClick={() => setAgentId(item.id)}><StatusDot status={item.enabled ? "idle" : "stopped"} /><span><strong>{item.name}</strong><small>{item.id}</small></span></button>)}</aside>
-          <section className="panel"><AgentEditor key={agent?.id || "new"} agent={agent} roles={system.roles} providers={system.providers} onSave={system.saveAgent} onDelete={system.removeAgent} /></section>
+          <section className="panel"><AgentEditor key={agent?.id || "new"} agent={agent} roles={system.roles} providers={system.providers} skills={system.skills} mcpServers={system.mcpServers} onSave={system.saveAgent} onDelete={system.removeAgent} /></section>
         </div>
       )}
       {tab === "roles" && (
@@ -934,6 +1146,19 @@ export function AgentConsole() {
             {system.memories.map((item) => <button className={memoryId === item.id ? "active" : ""} key={item.id} onClick={() => setMemoryId(item.id)}><span><strong>{item.scope}</strong><small>{item.scopeId}</small></span></button>)}
           </aside>
           <section className="panel"><MemoryEditor key={memory?.id || "new-memory"} memory={memory} agents={system.agents} run={run} onSave={system.saveMemory} onClear={system.clearMemory} /></section>
+        </div>
+      )}
+      {tab === "web" && <WebToolsPanel onSaveKey={system.setBraveKey} />}
+      {tab === "skills" && (
+        <div className="agent-management-grid">
+          <aside className="panel agent-record-list"><button className={!skillId ? "active" : ""} onClick={() => setSkillId("")}>Create skill</button>{system.skills.map((item) => <button className={skillId === item.id ? "active" : ""} key={item.id} onClick={() => setSkillId(item.id)}><span><strong>{item.name}</strong><small>{item.id}</small></span></button>)}</aside>
+          <section className="panel"><SkillEditor key={skill?.id || "new-skill"} skill={skill} onSave={system.saveSkill} onDelete={system.removeSkill} /></section>
+        </div>
+      )}
+      {tab === "mcp" && (
+        <div className="agent-management-grid">
+          <aside className="panel agent-record-list"><button className={!mcpServerId ? "active" : ""} onClick={() => setMcpServerId("")}>Add server</button>{system.mcpServers.map((item) => <button className={mcpServerId === item.id ? "active" : ""} key={item.id} onClick={() => setMcpServerId(item.id)}><span><strong>{item.name}</strong><small>{item.id}</small></span></button>)}</aside>
+          <section className="panel"><McpServerEditor key={mcpServer?.id || "new-mcp"} server={mcpServer} onSave={system.saveMcpServer} onDelete={system.removeMcpServer} onTest={system.testMcpServer} /></section>
         </div>
       )}
     </section>
