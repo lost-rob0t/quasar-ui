@@ -7,18 +7,22 @@ import { actorApplicability, isBuiltinActor } from "../lib/actors";
 import { buildGraph, filterGraph, findPaths, importedGraphNodeIds, partitionDocumentsByReview } from "../lib/graph";
 import { documentsForActiveGraph } from "../lib/graph-workspaces";
 import { GRAPH_STYLE } from "../lib/graph-style";
+import { clampRenderedPosition } from "../lib/graph-viewport";
 import { operation } from "../lib/operations";
 import { useQuasar } from "../store";
 
 function GraphCanvas({ graph, layout, selectedIds, onSelection, onMove, onViewport, apiRef, labels }) {
   const containerRef = useRef(null);
   const lastTap = useRef({ id: null, at: 0 });
+  const callbacks = useRef({});
   const navigate = useNavigate();
+  callbacks.current = { onSelection, onMove, onViewport };
 
   useEffect(() => {
     if (!containerRef.current) return undefined;
+    const container = containerRef.current;
     const cy = cytoscape({
-      container: containerRef.current,
+      container,
       elements: [],
       style: GRAPH_STYLE,
       minZoom: 0.05,
@@ -29,12 +33,12 @@ function GraphCanvas({ graph, layout, selectedIds, onSelection, onMove, onViewpo
     apiRef.current = cy;
 
     let viewportTimer = null;
-    const emitSelection = () => onSelection(cy.$("node:selected").map((node) => node.id()));
+    const emitSelection = () => callbacks.current.onSelection(cy.$("node:selected").map((node) => node.id()));
     cy.on("select unselect", "node", emitSelection);
     cy.on("tap", (event) => {
       if (event.target === cy) {
         cy.$("node:selected").unselect();
-        onSelection([]);
+        callbacks.current.onSelection([]);
         return;
       }
       if (!event.target.isNode()) return;
@@ -45,10 +49,26 @@ function GraphCanvas({ graph, layout, selectedIds, onSelection, onMove, onViewpo
       }
       lastTap.current = { id, at: now };
     });
-    cy.on("dragfree", "node", (event) => onMove(event.target.id(), event.target.position()));
+    cy.on("dragfree", "node", (event) => {
+      const bounds = container.getBoundingClientRect();
+      const rendered = clampRenderedPosition(event.target.renderedPosition(), bounds.width, bounds.height);
+      event.target.renderedPosition(rendered);
+      callbacks.current.onMove(event.target.id(), event.target.position());
+    });
     cy.on("pan zoom", () => {
       clearTimeout(viewportTimer);
-      viewportTimer = setTimeout(() => onViewport({ pan: cy.pan(), zoom: cy.zoom() }), 140);
+      viewportTimer = setTimeout(() => {
+        const activeNode = cy.$("node:selected").first();
+        if (activeNode.length) {
+          const bounds = container.getBoundingClientRect();
+          const rendered = activeNode.renderedPosition();
+          const clamped = clampRenderedPosition(rendered, bounds.width, bounds.height);
+          if (clamped.x !== rendered.x || clamped.y !== rendered.y) {
+            cy.panBy({ x: clamped.x - rendered.x, y: clamped.y - rendered.y });
+          }
+        }
+        callbacks.current.onViewport({ pan: cy.pan(), zoom: cy.zoom() });
+      }, 140);
     });
 
     return () => {
@@ -56,7 +76,7 @@ function GraphCanvas({ graph, layout, selectedIds, onSelection, onMove, onViewpo
       apiRef.current = null;
       cy.destroy();
     };
-  }, [apiRef, navigate, onMove, onSelection, onViewport]);
+  }, [apiRef, navigate]);
 
   useEffect(() => {
     const cy = apiRef.current;
