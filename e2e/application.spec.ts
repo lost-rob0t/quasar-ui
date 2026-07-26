@@ -99,7 +99,7 @@ test("creates documents and manages a custom full-screen graph", async ({ page }
   await expect(page.locator(".graph-count")).toContainText("1 nodes");
 
   await page.getByRole("button", { name: "Remove from graph" }).click();
-  await expect(page.getByRole("heading", { name: "Start a blank graph" })).toBeVisible();
+  await expect(page.locator(".graph-count")).toContainText("0 nodes");
 
   await page.getByRole("button", { name: "Cycle active graph" }).click();
   await expect(page.getByLabel("Active graph", { exact: true })).toHaveValue("all-documents");
