@@ -1,0 +1,12 @@
+
+> quasar-ui@0.1.0 typecheck
+> tsc --noEmit
+
+src/core/graph-commands.ts(288,5): error TS2322: Type '{} | null' is not assignable to type 'Record<string, unknown>'.
+  Type 'null' is not assignable to type 'Record<string, unknown>'.
+src/core/graph-commands.ts(292,5): error TS2322: Type '{} | null' is not assignable to type 'GraphExtensionFields'.
+  Type 'null' is not assignable to type 'GraphExtensionFields'.
+src/core/graph-commands.ts(377,5): error TS2322: Type '{} | null' is not assignable to type 'Record<string, unknown>'.
+  Type 'null' is not assignable to type 'Record<string, unknown>'.
+src/core/graph-commands.ts(381,5): error TS2322: Type '{} | null' is not assignable to type 'GraphExtensionFields'.
+  Type 'null' is not assignable to type 'GraphExtensionFields'.
