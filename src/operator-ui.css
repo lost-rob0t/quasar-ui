@@ -145,7 +145,7 @@
     position: fixed;
     top: calc(env(safe-area-inset-top) + 48px);
     right: max(.4rem, env(safe-area-inset-right));
-    z-index: 75;
+    z-index: 95;
     display: inline-flex;
     width: 48px;
     height: 44px;
