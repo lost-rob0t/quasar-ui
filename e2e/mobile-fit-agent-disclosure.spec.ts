@@ -1,24 +1,45 @@
 import { expect, test } from "@playwright/test";
 
-test("fits the graph canvas with direct controls and a radial blank-canvas menu", async ({ page }) => {
+test("uses a full-screen graph canvas with only compact buttons", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/graph");
 
   await expect(page.locator(".topbar")).toBeHidden();
-  await expect(page.getByRole("button", { name: "More graph controls" })).toHaveCount(0);
+  await expect(page.locator(".sidebar")).toBeHidden();
+  await expect(page.locator(".graph-toolbar")).toBeHidden();
+  await expect(page.locator(".graph-list-panel")).toBeHidden();
+  await expect(page.locator(".graph-inspector")).toBeHidden();
+  await expect(page.getByLabel("Dataset filter")).toBeHidden();
+  await expect(page.getByLabel("Graph layout")).toBeHidden();
+  await expect(page.getByLabel("Active graph")).toBeHidden();
+
+  await expect(page.getByRole("button", { name: "Search graph" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cycle active graph" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cycle dataset" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cycle layout" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Add graph document" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Fit graph" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Focus selection" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Toggle labels" })).toBeVisible();
-  await expect(page.getByLabel("Dataset filter")).toBeVisible();
-  await expect(page.getByLabel("Document type filter")).toBeHidden();
 
   const stage = await page.locator(".graph-stage").boundingBox();
   expect(stage).not.toBeNull();
-  expect(stage?.height).toBeGreaterThan(560);
-  expect((stage?.y || 0) + (stage?.height || 0)).toBeLessThanOrEqual(844);
+  expect(stage?.x).toBe(0);
+  expect(stage?.y).toBe(0);
+  expect(stage?.width).toBe(390);
+  expect(stage?.height).toBe(844);
 
-  await page.locator(".graph-stage").click({ button: "right", position: { x: 180, y: 260 } });
+  await page.getByRole("button", { name: "Search graph" }).click();
+  await expect(page.getByRole("textbox", { name: "Graph search overlay" })).toBeVisible();
+  await page.getByRole("textbox", { name: "Graph search overlay" }).fill("Jane");
+  await expect(page.locator(".graph-search input")).toHaveValue("Jane");
+  await page.getByRole("button", { name: "Close graph search" }).click();
+
+  await expect(page.getByLabel("Graph layout")).toHaveValue("cose");
+  await page.getByRole("button", { name: "Cycle layout" }).click();
+  await expect(page.getByLabel("Graph layout")).toHaveValue("breadthfirst");
+
+  await page.locator(".graph-stage").click({ button: "right", position: { x: 180, y: 360 } });
   const radial = page.locator(".graph-context-menu.canvas-actions.radial-root");
   await expect(radial).toBeVisible();
   await expect(radial.getByRole("menuitem", { name: /Create node/ })).toBeVisible();
