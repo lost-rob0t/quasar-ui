@@ -1,0 +1,33 @@
+name: Format issue 8
+
+on:
+  push:
+    branches:
+      - agent/issue-8-command-engine
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/issue-8-command-engine
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prettier --write tests/unit/core/graph-commands.test.ts
+      - name: Commit formatting
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/unit/core/graph-commands.test.ts
+          git commit -m "format graph command tests"
+          git push origin HEAD:agent/issue-8-command-engine
