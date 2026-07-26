@@ -40,6 +40,14 @@ function hiddenGraphModeAction(label) {
   return document.querySelector(`.graph-mode-actions [aria-label="${label}"]`);
 }
 
+function removeStrayEmptyStateCount() {
+  document.querySelectorAll(".graph-empty-state .button-row").forEach((row) => {
+    [...row.childNodes].forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim() === "0") node.remove();
+    });
+  });
+}
+
 function ToolButton({ label, Icon, disabled = false, pressed, onClick }) {
   return (
     <button
@@ -91,6 +99,7 @@ export default function MobileGraphToolTray() {
       if (frame) return;
       frame = requestAnimationFrame(() => {
         frame = 0;
+        removeStrayEmptyStateCount();
         const nextStage = document.querySelector(".graph-stage");
         setStage((current) => (current === nextStage ? current : nextStage));
         setFocusDisabled(Boolean(hiddenGraphAction("Focus selection")?.disabled));
