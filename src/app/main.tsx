@@ -8,6 +8,7 @@ import { routerBasename } from "./base-path";
 import "../styles.css";
 import "../dashboard.css";
 import "../mobile.css";
+import "../mobile-editor.css";
 
 const rootElement = document.getElementById("root");
 
