@@ -37,6 +37,10 @@ test("creates a blank graph and runs a bundled actor", async ({ page }) => {
   await expect(page.getByLabel("mname")).toBeVisible();
   await expect(page.getByLabel("lname")).toBeVisible();
   await page.getByRole("combobox", { name: "Add another field" }).fill("nationalities");
+  const fieldOptions = page.locator(".field-picker-options");
+  await expect(fieldOptions).toBeVisible();
+  await expect(fieldOptions).toHaveCSS("z-index", "12");
+  await expect(page.locator(".simple-editor-form")).toHaveCSS("overflow", "visible");
   await page.getByRole("option", { name: /nationalities/ }).click();
   await expect(page.getByRole("group", { name: "nationalities" })).toBeVisible();
   await page.getByLabel("Object type").selectOption("org");
