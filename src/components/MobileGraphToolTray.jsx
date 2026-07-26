@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import {
+  CircleMinus,
   Database,
+  Eraser,
   Focus,
   FolderInput,
   LayoutGrid,
@@ -235,12 +237,12 @@ export default function MobileGraphToolTray() {
             />
             <ToolButton
               label="Clear"
-              Icon={Trash2}
+              Icon={Eraser}
               onClick={() => run(() => hiddenGraphAction("Clear graph")?.click())}
             />
             <ToolButton
               label="Remove"
-              Icon={Trash2}
+              Icon={CircleMinus}
               disabled={removeDisabled}
               onClick={() => run(() => hiddenGraphAction("Remove from graph")?.click())}
             />
