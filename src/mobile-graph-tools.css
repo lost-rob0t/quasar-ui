@@ -14,7 +14,7 @@
     position: absolute;
     top: .55rem;
     left: .55rem;
-    z-index: 24;
+    z-index: 181;
     display: flex;
     gap: .45rem;
     pointer-events: auto;
@@ -55,7 +55,7 @@
   .graph-mobile-tools-backdrop {
     position: absolute;
     inset: 0;
-    z-index: 22;
+    z-index: 179;
     display: block;
     padding: 0;
     border: 0;
@@ -67,7 +67,7 @@
     position: absolute;
     top: 4.15rem;
     left: .55rem;
-    z-index: 25;
+    z-index: 182;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: .45rem;
@@ -119,6 +119,7 @@
   .graph-search-overlay {
     top: 4.15rem;
     left: .55rem;
+    z-index: 182;
     width: calc(100% - 1.1rem);
   }
 
