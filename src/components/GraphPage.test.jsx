@@ -128,4 +128,67 @@ describe("graph local corpus status", () => {
     expect(html).toContain("2 nodes");
     expect(html).toContain("1 edges");
   });
+
+  it("renders named graphs as a persistent workbench list", () => {
+    const documents = [
+      { ...document("starintel:org:first", "org", { name: "First" }, true), dataset: "alpha" },
+      { ...document("starintel:person:second", "person", { name: "Second" }, true), dataset: "beta" }
+    ];
+    const allGraph = {
+      id: "all-documents",
+      name: "All documents",
+      documentIds: null,
+      positions: {},
+      viewport: null,
+      layout: "cose",
+      selectedIds: []
+    };
+    const customGraph = {
+      id: "cross-dataset-case",
+      name: "Cross-dataset case",
+      documentIds: documents.map((item) => item._id),
+      positions: {},
+      viewport: null,
+      layout: "cose",
+      selectedIds: []
+    };
+    context.current = {
+      documents,
+      workspace: {
+        graphs: [allGraph, customGraph],
+        activeGraphId: customGraph.id,
+        positions: {},
+        viewport: null,
+        layout: "cose",
+        selectedIds: []
+      },
+      graphs: [allGraph, customGraph],
+      activeGraph: customGraph,
+      selectedIds: [],
+      selectedDocuments: [],
+      select: vi.fn(),
+      persistWorkspace: vi.fn(),
+      actors: [],
+      runActor: vi.fn(),
+      settings: { actorsEnabled: false },
+      setNotice: vi.fn(),
+      switchGraph: vi.fn(),
+      renameGraph: vi.fn(),
+      deleteGraph: vi.fn(),
+      createGraph: vi.fn()
+    };
+
+    const html = renderToStaticMarkup(
+      <MemoryRouter initialEntries={["/graph"]}>
+        <Routes><Route path="/graph" element={<GraphPage />} /></Routes>
+      </MemoryRouter>
+    );
+
+    expect(html).toContain('aria-label="Graphs"');
+    expect(html).toContain("All documents");
+    expect(html).toContain("Entire corpus");
+    expect(html).toContain("Cross-dataset case");
+    expect(html).toContain("2 documents");
+    expect(html).toContain('aria-current="page"');
+  });
 });
