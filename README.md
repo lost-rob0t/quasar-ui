@@ -146,15 +146,17 @@ Bundled actors are available by default; user-supplied actor code is disabled un
 {
   "id": "quasar.actor.example",
   "label": "Example actor",
-  "description": "Describe what this actor returns.",
+  "description": "Update the selected document.",
   "version": 1,
   "accepts": ["org", "person"],
   "minSelection": 1,
-  "maxSelection": 8,
-  "source": "(context) => ({ documents: [], message: 'done' })"
+  "maxSelection": 1,
+  "source": "(context) => ({ operations: [{ op: 'update_document', document: { ...context.selection[0], title: 'Updated' } }], message: 'Updated selection' })"
 }
 ```
 
-Bundled actors are available without enabling custom actor code. The first built-ins generate username candidates from person/entity names and prepare `whatsmyname.app` enumeration links for existing or generated usernames. The live WhatsMyName check opens in its browser application because cross-origin profile sites cannot be reliably verified from a Quasar Web Worker.
+Actors receive cloned selection and corpus data. They return declarative transform plans rather than mutating Cytoscape or PouchDB directly. Supported operations are `create_document`, `update_document`, `upsert_document`, `remove_document`, `create_relation`, and `remove_relation`.
 
-Actors receive cloned selection/corpus data and return StarIntel documents. They cannot mutate the Cytoscape instance or PouchDB directly. Returned batches use the same validation and undo path as manual edits and imports. Selection bounds and accepted dtypes are checked before execution; actor output is capped before it reaches validation.
+Quasar validates the entire plan, checks create/update/remove preconditions against a projected corpus, and applies it as one undoable batch through the same mutation path as manual edits. Legacy actors that return `documents` remain compatible; each returned document is treated as an `upsert_document` transform.
+
+The first built-ins generate username candidates from person/entity names and prepare `whatsmyname.app` enumeration links for existing or generated usernames. The live WhatsMyName check opens in its browser application because cross-origin profile sites cannot be reliably verified from a Quasar Web Worker.
