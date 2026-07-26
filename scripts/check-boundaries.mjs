@@ -78,6 +78,7 @@ export function validateImport(fromPath, specifier) {
 
   if (
     targetPath.startsWith("src/lib/") &&
+    /\.tsx?$/.test(normalizedFrom) &&
     fromZone !== "app" &&
     path.posix.basename(normalizedFrom) !== "index.ts"
   ) {
