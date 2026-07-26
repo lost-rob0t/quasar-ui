@@ -6,11 +6,14 @@ import {
   FolderInput,
   Menu,
   Network,
+  Redo2,
   Settings,
   TableProperties,
+  Undo2,
   X
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { useQuasar } from "../store";
 
 const navigation = [
   { to: "/", label: "Home", Icon: Activity, end: true },
@@ -27,6 +30,7 @@ const CLOSE_DISTANCE = 44;
 
 export default function MobileGestureMenu({ open, onOpenChange }) {
   const pointer = useRef(null);
+  const { canUndo, canRedo, undo, redo, setNotice } = useQuasar();
 
   useEffect(() => {
     if (!open) return undefined;
@@ -59,6 +63,14 @@ export default function MobileGestureMenu({ open, onOpenChange }) {
 
   function endGesture(event) {
     if (pointer.current?.id === event.pointerId) pointer.current = null;
+  }
+
+  async function runHistory(action) {
+    try {
+      await action();
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
   }
 
   return (
@@ -96,6 +108,10 @@ export default function MobileGestureMenu({ open, onOpenChange }) {
                 <X size={18} />
               </button>
             </header>
+            <div className="mobile-gesture-actions" aria-label="History actions">
+              <button className="button" type="button" disabled={!canUndo} onClick={() => runHistory(undo)}><Undo2 size={18} /> Undo</button>
+              <button className="button" type="button" disabled={!canRedo} onClick={() => runHistory(redo)}><Redo2 size={18} /> Redo</button>
+            </div>
             <nav className="mobile-gesture-grid" aria-label="Mobile navigation">
               {navigation.map(({ to, label, Icon, end }) => (
                 <NavLink
