@@ -247,7 +247,7 @@ function GraphList({ graphs, activeGraph, onSwitch, onCreate, onRename, onDelete
     <aside className="graph-list-panel" aria-label="Graphs">
       <header>
         <span>Graphs</span>
-        <button className="icon-button" type="button" title="Create graph" aria-label="Create graph" onClick={onCreate}>
+        <button className="icon-button" type="button" title="Create graph from list" aria-label="Create graph from list" onClick={onCreate}>
           <Plus size={16} />
         </button>
       </header>
