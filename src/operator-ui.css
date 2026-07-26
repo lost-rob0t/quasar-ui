@@ -93,6 +93,10 @@
   min-height: 44px;
 }
 
+.graph-heading-actions > .button-row {
+  display: none;
+}
+
 .graph-canvas-actions {
   position: absolute;
   top: .7rem;
