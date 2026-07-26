@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import cytoscape from "cytoscape";
-import edgehandles from "cytoscape-edgehandles";
 import {
   ArrowLeft, BookOpen, Building2, CalendarDays, ChevronRight, CircleDot,
   Clipboard, Copy, Database, ExternalLink, FileText, Focus, FolderPlus,
@@ -9,6 +7,7 @@ import {
   TriangleAlert, UserRound, X
 } from "lucide-react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { createGraphAdapter } from "../graph/GraphAdapter";
 import {
   assertDocument,
   createDocument,
@@ -31,8 +30,6 @@ import {
   parseSchemaField
 } from "../lib/schema-form";
 import { useQuasar } from "../store";
-
-cytoscape.use(edgehandles);
 
 const QUICK_NODE_TYPES = [
   { dtype: "person", label: "Person", Icon: UserRound },
@@ -85,7 +82,7 @@ function GraphCanvas({
   useEffect(() => {
     if (!containerRef.current) return undefined;
     const container = containerRef.current;
-    const cy = cytoscape({
+    const cy = createGraphAdapter({
       container,
       elements: [],
       style: GRAPH_STYLE,
