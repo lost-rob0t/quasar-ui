@@ -108,8 +108,9 @@ test.describe("responsive application shell", () => {
 
     await expect(page.locator(".sidebar")).toBeHidden();
     await expect(page.locator(".mobile-nav")).toBeHidden();
+    await expect(page.getByRole("button", { name: "Open menu" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
-    await page.getByRole("button", { name: "Open navigation" }).click();
+    await page.getByRole("button", { name: "Open menu" }).click();
     const mobileNavigation = page.getByRole("navigation", { name: "Mobile navigation" });
     await expect(mobileNavigation).toBeVisible();
     await expect(mobileNavigation.getByText("Graph")).toBeVisible();
