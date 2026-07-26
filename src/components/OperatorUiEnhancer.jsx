@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Focus, Maximize2, Plus, Tags } from "lucide-react";
+import { Focus, Maximize2, Plus, Tags, Trash2 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
 
@@ -111,16 +111,22 @@ function prepareUi() {
   updatePersistentSecretCopy();
 }
 
-function clickToolbarButton(label) {
-  const button = [...document.querySelectorAll(".graph-toolbar .button.small")]
+function toolbarButton(label) {
+  return [...document.querySelectorAll(".graph-toolbar .button.small")]
     .find((candidate) => candidate.textContent.trim() === label);
-  button?.click();
+}
+
+function headingButton(label) {
+  return [...document.querySelectorAll(".graph-heading-actions button")]
+    .find((candidate) => candidate.textContent.trim() === label);
+}
+
+function clickToolbarButton(label) {
+  toolbarButton(label)?.click();
 }
 
 function clickHeadingButton(label) {
-  const button = [...document.querySelectorAll(".graph-heading-actions button")]
-    .find((candidate) => candidate.textContent.trim() === label);
-  button?.click();
+  headingButton(label)?.click();
 }
 
 function labelsInput() {
@@ -134,15 +140,15 @@ export default function OperatorUiEnhancer() {
   const [graphStage, setGraphStage] = useState(null);
   const [labelsOn, setLabelsOn] = useState(true);
   const [focusDisabled, setFocusDisabled] = useState(true);
+  const [removeDisabled, setRemoveDisabled] = useState(true);
 
   useEffect(() => {
     const apply = () => {
       prepareUi();
       const nextStage = graphRoute ? document.querySelector(".graph-stage") : null;
       setGraphStage((current) => current === nextStage ? current : nextStage);
-      const focus = [...document.querySelectorAll(".graph-toolbar .button.small")]
-        .find((button) => button.textContent.trim() === "Focus");
-      setFocusDisabled(Boolean(focus?.disabled));
+      setFocusDisabled(Boolean(toolbarButton("Focus")?.disabled));
+      setRemoveDisabled(Boolean(headingButton("Remove from graph")?.disabled));
       const input = labelsInput();
       if (input) setLabelsOn(input.checked);
     };
@@ -214,6 +220,16 @@ export default function OperatorUiEnhancer() {
         }}
       >
         <Tags size={18} aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        className="graph-canvas-action danger"
+        aria-label="Remove from graph"
+        title="Remove from graph"
+        disabled={removeDisabled}
+        onClick={() => clickHeadingButton("Remove from graph")}
+      >
+        <Trash2 size={18} aria-hidden="true" />
       </button>
     </div>,
     graphStage
