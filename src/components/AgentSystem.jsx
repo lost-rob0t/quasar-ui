@@ -9,6 +9,7 @@ import {
   Pause,
   Play,
   RotateCcw,
+  Search,
   Square,
   X
 } from "lucide-react";
@@ -31,6 +32,7 @@ import {
 import { actorWithTransformEnvelope, buildActorTransform } from "../lib/actor-transforms";
 import { normalizeActorManifest, runBrowserActor } from "../lib/actors";
 import { budgetState, remainingBudget } from "../lib/agent-budget";
+import { filterAgentChats } from "../lib/agent-chat-search";
 import { buildAgentContext, systemPromptForAgent } from "../lib/agent-context";
 import { getProviderSecret, hasProviderSecret, setProviderSecret } from "../lib/agent-secrets";
 import { AgentSupervisor, runStateFingerprint } from "../lib/agent-supervisor";
@@ -1029,6 +1031,92 @@ function MemoryEditor({ memory, agents, run, onSave, onClear }) {
   );
 }
 
+function AgentChatPicker({ runs, activeRun, onSelect }) {
+  const rootRef = useRef(null);
+  const searchRef = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const matches = useMemo(() => filterAgentChats(runs, query), [query, runs]);
+  const activeLabel = activeRun?.goal || activeRun?.id || "No chat selected";
+
+  useEffect(() => {
+    if (!open) return undefined;
+    searchRef.current?.focus();
+    const close = (event) => {
+      if (event.type === "keydown" && event.key === "Escape") {
+        setOpen(false);
+        return;
+      }
+      if (event.type === "pointerdown" && !rootRef.current?.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("keydown", close);
+    document.addEventListener("pointerdown", close);
+    return () => {
+      document.removeEventListener("keydown", close);
+      document.removeEventListener("pointerdown", close);
+    };
+  }, [open]);
+
+  function choose(runId) {
+    onSelect(runId);
+    setOpen(false);
+    setQuery("");
+  }
+
+  return (
+    <div className="agent-chat-picker" ref={rootRef}>
+      <button
+        className="agent-chat-picker-trigger"
+        type="button"
+        aria-label={`Other chats: ${activeLabel}`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls="agent-chat-options"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Search size={16} aria-hidden="true" />
+        <span><small>Other chats</small><strong>{activeLabel}</strong></span>
+        <ChevronDown size={15} aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="agent-chat-picker-popover">
+          <label className="agent-chat-picker-search">
+            <Search size={15} aria-hidden="true" />
+            <input
+              ref={searchRef}
+              value={query}
+              aria-label="Search chats"
+              placeholder="Search chats"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+          <div className="agent-chat-picker-options" id="agent-chat-options" role="listbox" aria-label="Other chats">
+            {matches.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                role="option"
+                aria-selected={item.id === activeRun?.id}
+                className={item.id === activeRun?.id ? "active" : ""}
+                onClick={() => choose(item.id)}
+              >
+                <MessageSquareCode size={15} aria-hidden="true" />
+                <span>
+                  <strong>{item.goal || item.id}</strong>
+                  <small>{item.status || "idle"} · {item.agentId || item.id}</small>
+                </span>
+              </button>
+            ))}
+            {!matches.length && <p className="muted">No chats found.</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AgentConsole() {
   const system = useAgentSystem();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1101,7 +1189,7 @@ export function AgentConsole() {
             <div className="section-heading agent-conversation-heading">
               <h2>Conversation</h2>
               <div className="agent-conversation-actions">
-                {run && <select value={run.id} onChange={(event) => system.setActiveRunId(event.target.value)}>{system.runs.map((item) => <option key={item.id} value={item.id}>{item.goal || item.id}</option>)}</select>}
+                <AgentChatPicker runs={system.runs} activeRun={run} onSelect={system.setActiveRunId} />
                 <div className="agent-mobile-run-controls"><RunControls run={run} /></div>
               </div>
             </div>
