@@ -16,7 +16,7 @@
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "vitest run src tests/unit",
+    "test:unit": "mkdir -p test-results && vitest run src tests/unit --reporter=json --outputFile=test-results/vitest-unit.json",
     "test:integration": "vitest run tests/integration",
     "test:e2e": "playwright test",
     "check:static": "node --check public/sw.js && node --check public/sw-runtime.js",
