@@ -1,5 +1,10 @@
 # Quasar browser-first architecture
 
+> This document describes the current PouchDB-based prototype. The
+> [JavaScript-only deployment roadmap](ROADMAP.md) defines the target
+> IndexedDB architecture and migration sequence; roadmap work must not treat
+> the prototype storage or replication model as the target contract.
+
 ## Product definition
 
 Quasar is a local-first typed investigation graph and StarIntel document workspace that runs entirely in the browser. It remains useful with no StarIntel server, Star-Lang runtime, actor system, or CouchDB connection.
