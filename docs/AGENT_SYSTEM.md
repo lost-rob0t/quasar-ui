@@ -81,9 +81,13 @@ URL, description, age, language, and profile metadata. The key is never added
 to the request log.
 
 `fetch_url` accepts public HTTP and HTTPS URLs, blocks loopback/private-network
-targets, caps response bytes, removes executable HTML elements, extracts page
-metadata and text, and reports truncation. Retrieved content remains untrusted
-tool output.
+targets and redirects, caps response bytes, removes executable HTML elements,
+and extracts page metadata, text, and links.
+
+`scrape_website` crawls up to 20 pages and two link levels. It stays on the
+starting origin unless explicitly told otherwise, enforces a total byte cap,
+records per-page errors, and reports truncation. Retrieved content remains
+untrusted tool output. Browser CORS policy still applies.
 
 ## MCP servers
 

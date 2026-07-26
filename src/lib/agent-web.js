@@ -1,6 +1,9 @@
 const MAX_RESULTS = 20;
 const MAX_CONTENT_BYTES = 1_000_000;
 const MAX_TEXT_LENGTH = 100_000;
+const MAX_SCRAPE_PAGES = 20;
+const MAX_SCRAPE_DEPTH = 2;
+const MAX_SCRAPE_BYTES = 3_000_000;
 
 function publicHttpUrl(value) {
   const url = new URL(String(value || ""));
@@ -66,19 +69,42 @@ export async function braveWebSearch(query, {
   };
 }
 
-function htmlText(html) {
+function htmlText(html, baseUrl) {
   if (typeof DOMParser !== "undefined") {
     const document = new DOMParser().parseFromString(html, "text/html");
     document.querySelectorAll("script,style,noscript,template,svg,canvas").forEach((node) => node.remove());
     const title = document.querySelector("title")?.textContent?.trim() || "";
     const description = document.querySelector('meta[name="description"]')?.getAttribute("content") || "";
     const text = document.body?.textContent?.replace(/\s+/g, " ").trim() || "";
-    return { title, description, text };
+    const links = [...document.querySelectorAll("a[href]")]
+      .map((node) => {
+        try {
+          const link = new URL(node.getAttribute("href"), baseUrl);
+          link.hash = "";
+          return ["http:", "https:"].includes(link.protocol) ? link.href : null;
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
+    return { title, description, text, links: [...new Set(links)] };
   }
+  const links = [...html.matchAll(/<a\b[^>]*\bhref\s*=\s*["']([^"']+)["']/gi)]
+    .map((match) => {
+      try {
+        const link = new URL(match[1], baseUrl);
+        link.hash = "";
+        return ["http:", "https:"].includes(link.protocol) ? link.href : null;
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
   return {
     title: /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1]?.replace(/\s+/g, " ").trim() || "",
     description: "",
-    text: html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+    text: html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
+    links: [...new Set(links)]
   };
 }
 
@@ -90,31 +116,92 @@ export async function fetchUrlContent(value, { signal, maxBytes = MAX_CONTENT_BY
     headers: { Accept: "text/html,application/xhtml+xml,application/json,text/plain;q=0.9,*/*;q=0.1" }
   });
   if (!response.ok) throw new Error(`URL fetch failed (${response.status})`);
+  const finalUrl = publicHttpUrl(response.url || url.href);
   const length = Number(response.headers.get("content-length") || 0);
   if (length > maxBytes) throw new RangeError(`URL content exceeds ${maxBytes} bytes`);
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (bytes.byteLength > maxBytes) throw new RangeError(`URL content exceeds ${maxBytes} bytes`);
   const contentType = response.headers.get("content-type") || "";
   const raw = new TextDecoder().decode(bytes);
-  const parsed = /html|xhtml/i.test(contentType) ? htmlText(raw) : {
+  const parsed = /html|xhtml/i.test(contentType) ? htmlText(raw, finalUrl.href) : {
     title: "",
     description: "",
-    text: raw
+    text: raw,
+    links: []
   };
   return {
     requestedUrl: url.href,
-    finalUrl: response.url || url.href,
+    finalUrl: finalUrl.href,
     contentType,
     bytes: bytes.byteLength,
     title: parsed.title,
     description: parsed.description,
     text: parsed.text.slice(0, MAX_TEXT_LENGTH),
-    truncated: parsed.text.length > MAX_TEXT_LENGTH
+    truncated: parsed.text.length > MAX_TEXT_LENGTH,
+    links: parsed.links.slice(0, 500)
+  };
+}
+
+export async function scrapeWebsite(value, {
+  signal,
+  maxPages = 10,
+  maxDepth = 1,
+  maxBytes = MAX_SCRAPE_BYTES,
+  sameOrigin = true
+} = {}) {
+  const start = publicHttpUrl(value);
+  const pageLimit = Math.min(MAX_SCRAPE_PAGES, Math.max(1, Number(maxPages) || 10));
+  const depthLimit = Math.min(MAX_SCRAPE_DEPTH, Math.max(0, Number(maxDepth) || 0));
+  const byteLimit = Math.min(MAX_SCRAPE_BYTES, Math.max(1, Number(maxBytes) || MAX_SCRAPE_BYTES));
+  const queue = [{ url: start.href, depth: 0 }];
+  const visited = new Set();
+  const queued = new Set([start.href]);
+  const pages = [];
+  const errors = [];
+  let totalBytes = 0;
+
+  while (queue.length && pages.length < pageLimit && totalBytes < byteLimit) {
+    if (signal?.aborted) throw signal.reason || new DOMException("Aborted", "AbortError");
+    const next = queue.shift();
+    if (visited.has(next.url)) continue;
+    visited.add(next.url);
+    try {
+      const page = await fetchUrlContent(next.url, {
+        signal,
+        maxBytes: Math.min(MAX_CONTENT_BYTES, byteLimit - totalBytes)
+      });
+      totalBytes += page.bytes;
+      pages.push({ ...page, depth: next.depth });
+      if (next.depth >= depthLimit) continue;
+      for (const href of page.links) {
+        if (queued.has(href)) continue;
+        const link = publicHttpUrl(href);
+        if (sameOrigin && link.origin !== start.origin) continue;
+        queued.add(link.href);
+        queue.push({ url: link.href, depth: next.depth + 1 });
+        if (queued.size >= pageLimit * 50) break;
+      }
+    } catch (error) {
+      errors.push({ url: next.url, message: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  return {
+    startUrl: start.href,
+    pages,
+    errors,
+    pageCount: pages.length,
+    totalBytes,
+    truncated: queue.length > 0 || totalBytes >= byteLimit,
+    limits: { maxPages: pageLimit, maxDepth: depthLimit, maxBytes: byteLimit, sameOrigin }
   };
 }
 
 export const WEB_LIMITS = Object.freeze({
   maxResults: MAX_RESULTS,
   maxContentBytes: MAX_CONTENT_BYTES,
-  maxTextLength: MAX_TEXT_LENGTH
+  maxTextLength: MAX_TEXT_LENGTH,
+  maxScrapePages: MAX_SCRAPE_PAGES,
+  maxScrapeDepth: MAX_SCRAPE_DEPTH,
+  maxScrapeBytes: MAX_SCRAPE_BYTES
 });

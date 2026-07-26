@@ -7,6 +7,7 @@ vi.mock("./db", () => ({
 }));
 import {
   AGENT_RECORD_TYPES,
+  DEFAULT_ROLES,
   normalizeAgent,
   normalizeRole
 } from "./agent-records";
@@ -32,5 +33,13 @@ describe("agent records", () => {
       name: "Bad",
       permissions: ["root.shell"]
     })).toThrow("Unknown permission");
+  });
+
+  it("gives the default operator roles graph editing and external sources", () => {
+    for (const roleId of ["researcher", "graph-analyst"]) {
+      const role = DEFAULT_ROLES.find((candidate) => candidate.id === roleId);
+      expect(role.permissions).toContain("graph.edit");
+      expect(role.permissions).toContain("sources.external");
+    }
   });
 });

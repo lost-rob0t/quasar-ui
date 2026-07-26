@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { braveWebSearch, fetchUrlContent } from "./agent-web";
+import { braveWebSearch, fetchUrlContent, scrapeWebsite } from "./agent-web";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -25,5 +25,24 @@ describe("agent web tools", () => {
 
   it("blocks private-network URLs", async () => {
     await expect(fetchUrlContent("http://127.0.0.1/admin")).rejects.toThrow("Private network");
+  });
+
+  it("crawls a bounded same-origin website", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      const href = String(url);
+      if (href.endsWith("/start")) {
+        return new Response('<html><title>Start</title><body><a href="/next">Next</a><a href="https://elsewhere.test/nope">External</a></body></html>', {
+          status: 200,
+          headers: { "content-type": "text/html" }
+        });
+      }
+      return new Response("<html><title>Next</title><body>Done</body></html>", {
+        status: 200,
+        headers: { "content-type": "text/html" }
+      });
+    });
+    const result = await scrapeWebsite("https://example.org/start", { maxPages: 5, maxDepth: 1 });
+    expect(result.pages.map((page) => page.title)).toEqual(["Start", "Next"]);
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 });

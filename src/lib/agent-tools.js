@@ -257,6 +257,26 @@ export function createAgentToolRegistry(environment) {
   });
 
   define({
+    name: "scrape_website",
+    description: "Crawl and extract a bounded public website. Same-origin crawling is the default.",
+    permission: "sources.external",
+    parameters: {
+      type: "object",
+      required: ["url"],
+      properties: {
+        url: { type: "string" },
+        maxPages: { type: "integer", minimum: 1, maximum: 20 },
+        maxDepth: { type: "integer", minimum: 0, maximum: 2 },
+        sameOrigin: { type: "boolean" }
+      },
+      additionalProperties: false
+    },
+    execute(args, context) {
+      return environment.scrapeWebsite(args, context);
+    }
+  });
+
+  define({
     name: "mcp_call",
     description: "Call an allowed tool on a configured remote MCP server.",
     permission: "server.use",

@@ -35,7 +35,7 @@ import { buildAgentContext, systemPromptForAgent } from "../lib/agent-context";
 import { getProviderSecret, hasProviderSecret, setProviderSecret } from "../lib/agent-secrets";
 import { AgentSupervisor, runStateFingerprint } from "../lib/agent-supervisor";
 import { createAgentToolRegistry } from "../lib/agent-tools";
-import { braveWebSearch, fetchUrlContent } from "../lib/agent-web";
+import { braveWebSearch, fetchUrlContent, scrapeWebsite } from "../lib/agent-web";
 import {
   applyAgentGraphPlan,
   previewAgentGraphOperations
@@ -180,6 +180,13 @@ export function AgentSystemProvider({ children }) {
     },
     fetchUrl(url) {
       return fetchUrlContent(url);
+    },
+    scrapeWebsite(args) {
+      return scrapeWebsite(args.url, {
+        maxPages: args.maxPages,
+        maxDepth: args.maxDepth,
+        sameOrigin: args.sameOrigin
+      });
     },
     async callMcp(serverId, toolName, args, context) {
       const allowed = new Set(context.agent.mcpServerIds || []);

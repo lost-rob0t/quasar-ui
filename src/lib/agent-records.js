@@ -1,6 +1,11 @@
 import { getState, putState, stateDb } from "./db";
 
 export const AGENT_SCHEMA_VERSION = 1;
+const DEFAULT_PERMISSION_PROFILE_VERSION = 2;
+const DEFAULT_PERMISSION_UPGRADES = Object.freeze({
+  researcher: ["graph.edit"],
+  "graph-analyst": ["sources.external"]
+});
 export const AGENT_RECORD_TYPES = Object.freeze({
   agent: "quasar.agent",
   role: "quasar.agent-role",
@@ -58,7 +63,7 @@ export const DEFAULT_ROLES = Object.freeze([
     id: "researcher",
     name: "Researcher",
     instructions: "Investigate the scoped target. Separate sourced facts, claims, inference, hypotheses, user conclusions, and unverified leads. Preserve provenance.",
-    permissions: ["documents.read", "documents.create", "documents.edit", "graph.read", "targets.read", "sources.external", "actors.run"],
+    permissions: ["documents.read", "documents.create", "documents.edit", "graph.read", "graph.edit", "targets.read", "sources.external", "actors.run"],
     actions: ["inspect", "research", "create", "relate", "verify"],
     accepts: ["*"],
     outputs: ["source", "claim", "relation", "person", "org", "event", "location"],
@@ -71,7 +76,7 @@ export const DEFAULT_ROLES = Object.freeze([
     id: "graph-analyst",
     name: "Graph analyst",
     instructions: "Inspect graph structure and propose precise, reversible graph operations. Explain evidence for relations.",
-    permissions: ["documents.read", "graph.read", "graph.edit", "targets.read"],
+    permissions: ["documents.read", "graph.read", "graph.edit", "targets.read", "sources.external"],
     actions: ["inspect", "relate", "merge", "layout", "focus"],
     accepts: ["*"],
     outputs: ["relation"],
@@ -182,6 +187,7 @@ export function normalizeRole(input) {
   role.actions = [...new Set((input.actions || []).map(String))];
   role.accepts = [...new Set((input.accepts || ["*"]).map(String))];
   role.outputs = [...new Set((input.outputs || []).map(String))];
+  role.permissionProfileVersion = Number(input.permissionProfileVersion || DEFAULT_PERMISSION_PROFILE_VERSION);
   if (!role.name) throw new TypeError("Role name is required");
   for (const permission of role.permissions) {
     if (!AGENT_PERMISSIONS.includes(permission)) throw new TypeError(`Unknown permission: ${permission}`);
@@ -201,6 +207,7 @@ export function normalizeAgent(input) {
   agent.providerId = cleanId(input.providerId || "openrouter", "Provider ID");
   agent.modelId = String(input.modelId || "").trim();
   agent.permissions = [...new Set((input.permissions || []).map(String))];
+  agent.permissionProfileVersion = Number(input.permissionProfileVersion || DEFAULT_PERMISSION_PROFILE_VERSION);
   agent.datasetAccess = [...new Set((input.datasetAccess || ["*"]).map(String))];
   agent.graphAccess = [...new Set((input.graphAccess || ["*"]).map(String))];
   agent.targetAccess = [...new Set((input.targetAccess || ["*"]).map(String))];
@@ -314,9 +321,31 @@ export async function removeAgentRecord(type, id) {
 }
 
 export async function ensureDefaultRoles() {
-  const existing = new Set((await listAgentRecords(AGENT_RECORD_TYPES.role)).map((role) => role.id));
+  const existingRoles = await listAgentRecords(AGENT_RECORD_TYPES.role);
+  const existing = new Map(existingRoles.map((role) => [role.id, role]));
   for (const role of DEFAULT_ROLES) {
-    if (!existing.has(role.id)) await saveRole(role);
+    const saved = existing.get(role.id);
+    if (!saved) {
+      await saveRole({ ...role, permissionProfileVersion: DEFAULT_PERMISSION_PROFILE_VERSION });
+      continue;
+    }
+    if (Number(saved.permissionProfileVersion || 0) < DEFAULT_PERMISSION_PROFILE_VERSION) {
+      await saveRole({
+        ...saved,
+        permissions: [...new Set([...(saved.permissions || []), ...(DEFAULT_PERMISSION_UPGRADES[role.id] || [])])],
+        permissionProfileVersion: DEFAULT_PERMISSION_PROFILE_VERSION
+      });
+    }
+  }
+  const agents = await listAgentRecords(AGENT_RECORD_TYPES.agent);
+  for (const agent of agents) {
+    const permissions = DEFAULT_PERMISSION_UPGRADES[agent.roleId];
+    if (!permissions || Number(agent.permissionProfileVersion || 0) >= DEFAULT_PERMISSION_PROFILE_VERSION) continue;
+    await saveAgent({
+      ...agent,
+      permissions: [...new Set([...(agent.permissions || []), ...permissions])],
+      permissionProfileVersion: DEFAULT_PERMISSION_PROFILE_VERSION
+    });
   }
   return listAgentRecords(AGENT_RECORD_TYPES.role);
 }

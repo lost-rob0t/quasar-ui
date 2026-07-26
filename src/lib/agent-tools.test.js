@@ -77,4 +77,19 @@ describe("agent tools", () => {
     await registry.execute("build_graph", { name: "Case graph", documentIds: ["person:1"] }, context);
     expect(buildCustomGraph).toHaveBeenCalledWith(expect.objectContaining({ name: "Case graph" }), context);
   });
+
+  it("scrapes websites only through the declared environment", async () => {
+    const scrapeWebsite = vi.fn(async () => ({ pageCount: 2, pages: [] }));
+    const registry = createAgentToolRegistry({ scrapeWebsite });
+    const context = { agent: { permissions: ["sources.external"] } };
+    await registry.execute("scrape_website", {
+      url: "https://example.org",
+      maxPages: 2,
+      maxDepth: 1
+    }, context);
+    expect(scrapeWebsite).toHaveBeenCalledWith(expect.objectContaining({
+      url: "https://example.org",
+      maxPages: 2
+    }), context);
+  });
 });
