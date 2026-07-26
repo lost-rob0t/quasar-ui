@@ -1,7 +1,6 @@
 import cytoscape from "cytoscape";
 import edgehandles from "cytoscape-edgehandles";
 
-const instances = new WeakMap();
 let pluginsRegistered = false;
 
 function registerPlugins() {
@@ -11,25 +10,12 @@ function registerPlugins() {
 }
 
 export class GraphAdapter {
-  constructor(options) {
+  static create(options) {
     registerPlugins();
-    instances.set(this, cytoscape(options));
-
-    return new Proxy(this, {
-      get(target, property) {
-        if (property in target) {
-          const value = Reflect.get(target, property, target);
-          return typeof value === "function" ? value.bind(target) : value;
-        }
-
-        const instance = instances.get(target);
-        const value = instance[property];
-        return typeof value === "function" ? value.bind(instance) : value;
-      }
-    });
+    return cytoscape(options);
   }
 }
 
 export function createGraphAdapter(options) {
-  return new GraphAdapter(options);
+  return GraphAdapter.create(options);
 }
