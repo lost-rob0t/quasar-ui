@@ -13,6 +13,7 @@ import {
   X
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import GraphSelectMenu from "./GraphSelectMenu.jsx";
 import { useLocation } from "react-router-dom";
 
 function isAgentDisclosure(entry) {
@@ -189,6 +190,7 @@ export default function OperatorUiEnhancer() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [datasetLabel, setDatasetLabel] = useState("All datasets");
+  const [datasetOpen, setDatasetOpen] = useState(false);
   const [layoutLabel, setLayoutLabel] = useState("Organic");
   const [graphLabel, setGraphLabel] = useState("All documents");
   const [countText, setCountText] = useState("");
@@ -254,7 +256,10 @@ export default function OperatorUiEnhancer() {
         toggleAgentEntry(entry);
         return;
       }
-      if (event.key === "Escape") setSearchOpen(false);
+      if (event.key === "Escape") {
+        setSearchOpen(false);
+        setDatasetOpen(false);
+      }
     };
     document.addEventListener("click", onClick);
     document.addEventListener("keydown", onKeyDown);
@@ -284,7 +289,10 @@ export default function OperatorUiEnhancer() {
           aria-label="Search graph"
           title="Search graph"
           aria-pressed={searchOpen}
-          onClick={() => setSearchOpen((value) => !value)}
+          onClick={() => {
+            setDatasetOpen(false);
+            setSearchOpen((value) => !value);
+          }}
         >
           <Search size={18} aria-hidden="true" />
           <span>Search</span>
@@ -306,12 +314,13 @@ export default function OperatorUiEnhancer() {
         <button
           type="button"
           className="graph-canvas-action"
-          aria-label="Cycle dataset"
-          title={`Dataset: ${datasetLabel}. Tap for next; right-click for previous.`}
-          onClick={() => cycleControl(selectControl("Dataset filter"), 1)}
-          onContextMenu={(event) => {
-            event.preventDefault();
-            cycleControl(selectControl("Dataset filter"), -1);
+          aria-label="Select dataset"
+          title={`Dataset: ${datasetLabel}. Choose dataset.`}
+          aria-haspopup="listbox"
+          aria-expanded={datasetOpen}
+          onClick={() => {
+            setSearchOpen(false);
+            setDatasetOpen((value) => !value);
           }}
         >
           <Database size={18} aria-hidden="true" />
@@ -332,6 +341,14 @@ export default function OperatorUiEnhancer() {
           <span>{shortLabel(layoutLabel, "Layout")}</span>
         </button>
       </div>
+
+      <GraphSelectMenu
+        open={datasetOpen}
+        selectLabel="Dataset filter"
+        title="Dataset"
+        listLabel="Datasets"
+        onClose={() => setDatasetOpen(false)}
+      />
 
       {searchOpen && (
         <label className="graph-search-overlay">

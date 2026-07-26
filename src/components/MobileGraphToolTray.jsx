@@ -14,6 +14,7 @@ import {
   Trash2
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import GraphSelectMenu from "./GraphSelectMenu.jsx";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const MOBILE_QUERY = "(max-width: 850px)";
@@ -74,6 +75,7 @@ export default function MobileGraphToolTray() {
   );
   const [stage, setStage] = useState(null);
   const [open, setOpen] = useState(false);
+  const [datasetOpen, setDatasetOpen] = useState(false);
   const [focusDisabled, setFocusDisabled] = useState(true);
   const [removeDisabled, setRemoveDisabled] = useState(true);
   const [labelsOn, setLabelsOn] = useState(true);
@@ -91,6 +93,7 @@ export default function MobileGraphToolTray() {
     if (!graphRoute || !mobile) {
       setStage(null);
       setOpen(false);
+      setDatasetOpen(false);
       return undefined;
     }
 
@@ -125,11 +128,15 @@ export default function MobileGraphToolTray() {
   }, [graphRoute, mobile]);
 
   useEffect(() => {
-    if (!open) return undefined;
-    const close = (event) => event.key === "Escape" && setOpen(false);
+    if (!open && !datasetOpen) return undefined;
+    const close = (event) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      setDatasetOpen(false);
+    };
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
-  }, [open]);
+  }, [datasetOpen, open]);
 
   if (!graphRoute || !mobile || !stage) return null;
 
@@ -197,7 +204,10 @@ export default function MobileGraphToolTray() {
             <ToolButton
               label="Dataset"
               Icon={Database}
-              onClick={() => run(() => cycleControl(selectControl("Dataset filter")))}
+              onClick={() => {
+                setOpen(false);
+                setDatasetOpen(true);
+              }}
             />
             <ToolButton
               label="Layout"
@@ -230,6 +240,13 @@ export default function MobileGraphToolTray() {
           </div>
         </>
       )}
+      <GraphSelectMenu
+        open={datasetOpen}
+        selectLabel="Dataset filter"
+        title="Dataset"
+        listLabel="Datasets"
+        onClose={() => setDatasetOpen(false)}
+      />
     </>,
     stage
   );

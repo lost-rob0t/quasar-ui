@@ -442,3 +442,118 @@ body:has(.graph-page) .content {
     margin-top: .45rem;
   }
 }
+
+
+.graph-select-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 183;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: #0004;
+  backdrop-filter: blur(1px);
+}
+
+.graph-select-picker {
+  position: absolute;
+  top: .7rem;
+  left: 6.75rem;
+  z-index: 184;
+  display: grid;
+  width: min(340px, calc(100% - 7.45rem));
+  max-height: min(70dvh, 560px);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--line) 78%, var(--accent));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--panel) 97%, transparent);
+  box-shadow: 0 18px 48px #000c;
+  backdrop-filter: blur(16px);
+}
+
+.graph-select-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  min-height: 46px;
+  padding: .55rem .65rem .55rem .8rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.graph-select-picker-header strong {
+  font-size: .8rem;
+  letter-spacing: .03em;
+}
+
+.graph-select-picker-header button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.graph-select-picker-header button:hover,
+.graph-select-picker-header button:focus-visible {
+  outline: none;
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.graph-select-options {
+  display: grid;
+  gap: .35rem;
+  padding: .55rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.graph-select-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: .6rem;
+  width: 100%;
+  min-height: 44px;
+  padding: .55rem .65rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+  color: var(--text);
+  text-align: left;
+}
+
+.graph-select-option > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graph-select-option:hover,
+.graph-select-option:focus-visible,
+.graph-select-option[aria-selected="true"] {
+  outline: none;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--panel-2) 72%, var(--accent));
+}
+
+.graph-select-option:disabled {
+  opacity: .4;
+}
+
+@media (max-width: 850px) {
+  .graph-select-picker {
+    top: 4.15rem;
+    left: .55rem;
+    width: calc(100% - 1.1rem);
+    max-height: calc(100dvh - 4.7rem);
+  }
+}

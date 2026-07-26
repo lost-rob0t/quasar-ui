@@ -31,7 +31,7 @@ test("creates documents and manages a custom full-screen graph", async ({ page }
   await expect(page.getByRole("button", { name: "Open menu", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Search graph" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Cycle active graph" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Cycle dataset" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Select dataset" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Cycle layout" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Add graph document" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Fit graph" })).toBeVisible();
@@ -127,7 +127,7 @@ test.describe("responsive application shell", () => {
     await expect(page.locator(".graph-inspector")).toBeHidden();
     await expect(page.getByRole("button", { name: "Open menu", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Cycle active graph" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Cycle dataset" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Select dataset" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Cycle layout" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Graph tools" })).toHaveCount(0);
 
@@ -174,7 +174,7 @@ test.describe("responsive application shell", () => {
     await expect(page.locator(".graph-mobile-primary-button")).toHaveCount(3);
     await expect(page.getByRole("button", { name: "Search graph" })).toBeHidden();
     await expect(page.getByRole("button", { name: "Cycle active graph" })).toBeHidden();
-    await expect(page.getByRole("button", { name: "Cycle dataset" })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Select dataset" })).toBeHidden();
     await expect(page.getByRole("button", { name: "Cycle layout" })).toBeHidden();
     await expect(page.getByRole("button", { name: "Fit graph" })).toBeHidden();
     await expect(page.getByRole("button", { name: "Focus selection" })).toBeHidden();
