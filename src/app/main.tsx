@@ -8,6 +8,7 @@ import { initializeTheme } from "../lib/themes.js";
 import { routerBasename } from "./base-path";
 import "../styles.css";
 import "../dashboard.css";
+import "../dashboard-theme.css";
 import "../mobile.css";
 import "../mobile-editor.css";
 import "../gesture-menu.css";
