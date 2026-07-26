@@ -119,10 +119,18 @@ html.graph-route #root {
 
 .graph-route .graph-workbench {
   flex: 1 1 auto;
+  width: 100%;
+  max-width: 100vw;
   height: auto;
+  min-width: 0;
   min-height: 0;
   border-width: 0;
   border-radius: 0;
+}
+
+.graph-route .graph-workbench > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .graph-route .notice {
@@ -175,6 +183,12 @@ html.graph-route #root {
 
   .graph-route .graph-toolbar {
     padding: .45rem;
+  }
+
+  .graph-route .graph-workbench {
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100vw;
+    max-width: 100vw;
   }
 
   .graph-route .agent-float {
