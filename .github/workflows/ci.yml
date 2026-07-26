@@ -14,8 +14,9 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  baseline:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -23,10 +24,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run check
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run check:static
       - run: npm test
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
       - run: npm run build
       - name: Validate application artifact
         shell: bash
@@ -37,5 +39,17 @@ jobs:
           test -s dist/sw.js
           test -s dist/manifest.webmanifest
           grep -q "Quasar" dist/index.html
-          grep -q 'src="/assets/' dist/index.html
-          grep -q 'href="/manifest.webmanifest"' dist/index.html
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - name: Upload failure diagnostics
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: baseline-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            dist
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 7

@@ -1,0 +1,12 @@
+dist/
+node_modules/
+playwright-report/
+test-results/
+package-lock.json
+public/
+e2e/
+src/**/*.js
+src/**/*.jsx
+src/**/*.css
+docs/**/*.md
+README.md
