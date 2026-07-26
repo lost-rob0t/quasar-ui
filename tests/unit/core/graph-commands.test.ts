@@ -140,9 +140,7 @@ describe("graph commands", () => {
 
     expect(result.graph).toBe(source);
     expect(result.errors[0]).toMatchObject({ code: "validation-failed" });
-    expect(result.errors[0].validation?.map((error) => error.code)).toContain(
-      "endpoint-violation"
-    );
+    expect(result.errors[0].validation?.map((error) => error.code)).toContain("endpoint-violation");
     expect(source.nodes[0].type).toBe("person");
   });
 
@@ -161,10 +159,7 @@ describe("graph commands", () => {
     expect(result.graph.edges).toEqual([]);
     expect(result.graph.view.selectedIds).toEqual([]);
     expect(result.effects.removedNodeIds).toEqual(["person:ada"]);
-    expect(result.effects.removedEdgeIds).toEqual([
-      "edge:membership",
-      "edge:participation"
-    ]);
+    expect(result.effects.removedEdgeIds).toEqual(["edge:membership", "edge:participation"]);
     expect(result.effects.viewChanged).toBe(true);
   });
 
@@ -201,13 +196,11 @@ describe("graph commands", () => {
     );
 
     expect(added.effects.addedEdgeIds).toEqual(["edge:organization-event"]);
-    expect(
-      updated.graph.edges.find((edge) => edge.id === "edge:organization-event")
-    ).toMatchObject({ label: "Organized", properties: { confidence: 0.9 } });
-    expect(updated.effects.updatedEdgeIds).toEqual(["edge:organization-event"]);
-    expect(removed.graph.edges.map((edge) => edge.id)).not.toContain(
-      "edge:organization-event"
+    expect(updated.graph.edges.find((edge) => edge.id === "edge:organization-event")).toMatchObject(
+      { label: "Organized", properties: { confidence: 0.9 } }
     );
+    expect(updated.effects.updatedEdgeIds).toEqual(["edge:organization-event"]);
+    expect(removed.graph.edges.map((edge) => edge.id)).not.toContain("edge:organization-event");
     expect(removed.effects.removedEdgeIds).toEqual(["edge:organization-event"]);
   });
 
@@ -231,10 +224,7 @@ describe("graph commands", () => {
     expect(
       result.graph.nodes.find((node) => node.id === "org:analytical-society")?.position
     ).toEqual({ x: 300, y: 100 });
-    expect(result.effects.movedNodeIds).toEqual([
-      "person:ada",
-      "org:analytical-society"
-    ]);
+    expect(result.effects.movedNodeIds).toEqual(["person:ada", "org:analytical-society"]);
     expect(source.nodes[0].position).toEqual({ x: 0, y: 0 });
   });
 
@@ -313,9 +303,7 @@ describe("graph commands", () => {
       })
     );
 
-    expect(missing.errors).toEqual([
-      expect.objectContaining({ code: "not-found", path: "id" })
-    ]);
+    expect(missing.errors).toEqual([expect.objectContaining({ code: "not-found", path: "id" })]);
     expect(duplicate.errors).toEqual([
       expect.objectContaining({ code: "already-exists", path: "node.id" })
     ]);
@@ -403,9 +391,7 @@ describe("atomic graph batches", () => {
         timestamp: NEXT_TIMESTAMP
       }
     ];
-    const result = expectRejection(
-      applyGraphBatch(source, commands, { label: "Rejected batch" })
-    );
+    const result = expectRejection(applyGraphBatch(source, commands, { label: "Rejected batch" }));
 
     expect(result.graph).toBe(source);
     expect(result.errors[0]).toMatchObject({
@@ -429,9 +415,7 @@ describe("atomic graph batches", () => {
     );
 
     expect(result.errors[0]).toMatchObject({ code: "source-invalid" });
-    expect(result.errors[0].validation?.map((error) => error.code)).toContain(
-      "dangling-edge"
-    );
+    expect(result.errors[0].validation?.map((error) => error.code)).toContain("dangling-edge");
     expect(result.graph).toBe(source);
   });
 
