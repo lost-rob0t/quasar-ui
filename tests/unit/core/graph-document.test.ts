@@ -84,9 +84,7 @@ describe("canonical graph document", () => {
       id: "future-entity",
       unknown: true
     });
-    expect(
-      roundTrip.nodes[0].extensions.starintelDocument.fixture_extension
-    ).toBe("preserve-me");
+    expect(roundTrip.nodes[0].extensions.starintelDocument.fixture_extension).toBe("preserve-me");
     expect(roundTrip.extensions.futureGraphField).toEqual({ enabled: true });
   });
 
@@ -250,9 +248,6 @@ describe("type registry", () => {
       ]
     });
 
-    expect(registry.listNodeTypes().map((definition) => definition.id)).toEqual([
-      "alpha",
-      "zeta"
-    ]);
+    expect(registry.listNodeTypes().map((definition) => definition.id)).toEqual(["alpha", "zeta"]);
   });
 });
