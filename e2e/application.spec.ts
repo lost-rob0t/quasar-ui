@@ -28,9 +28,15 @@ test("creates a blank graph and runs a bundled actor", async ({ page }) => {
   await page.goto("/graph");
 
   await expect(page.getByRole("heading", { name: "Start a blank graph" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "More graph controls" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add graph document" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Fit graph" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Focus selection" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Toggle labels" })).toBeVisible();
   await page.locator(".graph-stage").click({ button: "right", position: { x: 240, y: 220 } });
   await expect(page.getByRole("menu", { name: "canvas actions" })).toBeVisible();
   await expect(page.locator(".graph-context-menu")).toHaveClass(/expanded/);
+  await expect(page.locator(".graph-context-menu")).toHaveClass(/radial-root/);
   await expect(page.getByRole("menuitem", { name: "Create person here" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Create organization here" })).toBeVisible();
   await page.getByRole("menuitem", { name: /Ingest/ }).click();
@@ -131,17 +137,20 @@ test.describe("responsive application shell", () => {
     await expect(page.locator(".graph-inspector")).toBeHidden();
     await expect(page.locator(".graph-workbench")).toHaveCSS("grid-template-columns", "390px");
     await expect(page.locator(".graph-toolbar")).toHaveCSS("overflow-x", "visible");
-    await expect(page.getByRole("button", { name: "Fit", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Fit", exact: true })).toBeHidden();
     await expect(page.getByRole("button", { name: "Focus", exact: true })).toBeHidden();
-    await expect(page.getByRole("button", { name: "More graph controls" })).toBeVisible();
-    const controls = await page.locator(".graph-toolbar").evaluate((toolbar) => ({
-      toolbarRight: toolbar.getBoundingClientRect().right,
-      fitRight: toolbar.querySelector("button:nth-of-type(1)")?.getBoundingClientRect().right,
+    await expect(page.getByRole("button", { name: "More graph controls" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Fit graph" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Focus selection" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Toggle labels" })).toBeVisible();
+    const controls = await page.locator(".graph-stage").evaluate((stage) => ({
+      stageRight: stage.getBoundingClientRect().right,
+      actionsRight: stage.querySelector(".graph-canvas-actions")?.getBoundingClientRect().right,
       viewportWidth: window.innerWidth,
       pageWidth: document.documentElement.scrollWidth
     }));
-    expect(controls.toolbarRight).toBeLessThanOrEqual(controls.viewportWidth);
-    expect(controls.fitRight).toBeLessThanOrEqual(controls.viewportWidth);
+    expect(controls.stageRight).toBeLessThanOrEqual(controls.viewportWidth);
+    expect(controls.actionsRight).toBeLessThanOrEqual(controls.viewportWidth);
     expect(controls.pageWidth).toBe(controls.viewportWidth);
   });
 
