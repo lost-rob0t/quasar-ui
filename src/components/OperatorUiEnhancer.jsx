@@ -4,6 +4,7 @@ import {
   Focus,
   LayoutGrid,
   Maximize2,
+  Menu,
   Network,
   Plus,
   Search,
@@ -136,8 +137,16 @@ function selectControl(label) {
   return document.querySelector(`select[aria-label="${label}"]`);
 }
 
+function layoutControl() {
+  return selectControl("Maltego graph layout") || selectControl("Graph layout");
+}
+
 function searchControl() {
   return document.querySelector(".graph-search input");
+}
+
+function navigationButton() {
+  return document.querySelector('button[aria-label="Open menu"]');
 }
 
 function labelsInput() {
@@ -162,8 +171,7 @@ function setNativeInputValue(input, value) {
   input.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
-function cycleSelect(label, direction = 1) {
-  const select = selectControl(label);
+function cycleControl(select, direction = 1) {
   if (!select?.options?.length) return;
   const count = select.options.length;
   select.selectedIndex = (select.selectedIndex + direction + count) % count;
@@ -181,7 +189,7 @@ export default function OperatorUiEnhancer() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [datasetLabel, setDatasetLabel] = useState("All datasets");
-  const [layoutLabel, setLayoutLabel] = useState("Force");
+  const [layoutLabel, setLayoutLabel] = useState("Organic");
   const [graphLabel, setGraphLabel] = useState("All documents");
   const [countText, setCountText] = useState("");
 
@@ -201,7 +209,7 @@ export default function OperatorUiEnhancer() {
       const search = searchControl();
       if (search) setQuery(search.value || "");
       setDatasetLabel(optionLabel(selectControl("Dataset filter")) || "All datasets");
-      setLayoutLabel(optionLabel(selectControl("Graph layout")) || "Force");
+      setLayoutLabel(optionLabel(layoutControl()) || "Organic");
       setGraphLabel(optionLabel(selectControl("Active graph")) || "All documents");
       setCountText(document.querySelector(".graph-count")?.textContent?.trim() || "");
     };
@@ -263,6 +271,16 @@ export default function OperatorUiEnhancer() {
         <button
           type="button"
           className="graph-canvas-action"
+          aria-label="Open menu"
+          title="Open navigation"
+          onClick={() => navigationButton()?.click()}
+        >
+          <Menu size={18} aria-hidden="true" />
+          <span>Menu</span>
+        </button>
+        <button
+          type="button"
+          className="graph-canvas-action"
           aria-label="Search graph"
           title="Search graph"
           aria-pressed={searchOpen}
@@ -276,10 +294,10 @@ export default function OperatorUiEnhancer() {
           className="graph-canvas-action"
           aria-label="Cycle active graph"
           title={`Graph: ${graphLabel}. Tap for next; right-click for previous.`}
-          onClick={() => cycleSelect("Active graph", 1)}
+          onClick={() => cycleControl(selectControl("Active graph"), 1)}
           onContextMenu={(event) => {
             event.preventDefault();
-            cycleSelect("Active graph", -1);
+            cycleControl(selectControl("Active graph"), -1);
           }}
         >
           <Network size={18} aria-hidden="true" />
@@ -290,10 +308,10 @@ export default function OperatorUiEnhancer() {
           className="graph-canvas-action"
           aria-label="Cycle dataset"
           title={`Dataset: ${datasetLabel}. Tap for next; right-click for previous.`}
-          onClick={() => cycleSelect("Dataset filter", 1)}
+          onClick={() => cycleControl(selectControl("Dataset filter"), 1)}
           onContextMenu={(event) => {
             event.preventDefault();
-            cycleSelect("Dataset filter", -1);
+            cycleControl(selectControl("Dataset filter"), -1);
           }}
         >
           <Database size={18} aria-hidden="true" />
@@ -304,10 +322,10 @@ export default function OperatorUiEnhancer() {
           className="graph-canvas-action"
           aria-label="Cycle layout"
           title={`Layout: ${layoutLabel}. Tap for next; right-click for previous.`}
-          onClick={() => cycleSelect("Graph layout", 1)}
+          onClick={() => cycleControl(layoutControl(), 1)}
           onContextMenu={(event) => {
             event.preventDefault();
-            cycleSelect("Graph layout", -1);
+            cycleControl(layoutControl(), -1);
           }}
         >
           <LayoutGrid size={18} aria-hidden="true" />
