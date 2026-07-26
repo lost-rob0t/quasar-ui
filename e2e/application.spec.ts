@@ -32,10 +32,13 @@ test("creates a blank graph and runs a bundled actor", async ({ page }) => {
   await expect(page).toHaveURL(/\/documents\/new\?/);
   await expect(page.getByLabel("Object type")).toHaveValue("person");
   await expect(page.getByRole("heading", { name: "Fields for Person" })).toBeVisible();
-  await expect(page.getByText("Advanced fields and metadata…")).toBeVisible();
+  await expect(page.getByText("Advanced metadata and raw JSON…")).toBeVisible();
   await expect(page.getByLabel("fname")).toBeVisible();
   await expect(page.getByLabel("mname")).toBeVisible();
   await expect(page.getByLabel("lname")).toBeVisible();
+  await page.getByRole("combobox", { name: "Add another field" }).fill("nationalities");
+  await page.getByRole("option", { name: /nationalities/ }).click();
+  await expect(page.getByLabel("nationalities")).toBeVisible();
   await page.getByLabel("Object type").selectOption("org");
   await expect(page.getByRole("heading", { name: "Fields for Organization" })).toBeVisible();
   await expect(page.getByLabel("org_type")).toBeVisible();

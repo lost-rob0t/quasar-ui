@@ -89,8 +89,9 @@ describe("schema field controls", () => {
     expect(html).toContain("<code>fname</code>");
     expect(html).toContain("<code>mname</code>");
     expect(html).toContain("<code>lname</code>");
-    expect(html).toContain("Advanced fields and metadata");
-    expect(html).not.toContain("Advanced fields for Person");
+    expect(html).toContain("Add another field");
+    expect(html).toContain('role="combobox"');
+    expect(html).toContain("Advanced metadata and raw JSON");
     expect(html).not.toContain("<code>nationalities</code>");
     expect(html).not.toContain("schema fields");
   });
@@ -105,12 +106,12 @@ describe("schema field controls", () => {
     expect(html).not.toContain("<code>fname</code>");
   });
 
-  it("puts every secondary field behind one advanced level", () => {
+  it("keeps metadata and raw JSON behind one advanced level", () => {
     const html = renderEditor("/documents/new?dtype=person&advanced=1");
 
     expect(html).toContain("Fields for Person");
-    expect(html).toContain("Advanced fields for Person");
-    expect(html).toContain("<code>nationalities</code>");
+    expect(html).toContain(">Advanced</h2>");
+    expect(html).not.toContain("<code>nationalities</code>");
     expect(html).toContain("Document metadata");
     expect(html).toContain("Sources and evidence");
     expect(html).toContain("Edit raw JSON");

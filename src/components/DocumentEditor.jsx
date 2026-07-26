@@ -260,6 +260,9 @@ export default function DocumentEditor({ mode }) {
   const [rawMode, setRawMode] = useState(false);
   const [advanced, setAdvanced] = useState(params.get("advanced") === "1");
   const [saving, setSaving] = useState(false);
+  const [addedFields, setAddedFields] = useState([]);
+  const [fieldPickerQuery, setFieldPickerQuery] = useState("");
+  const [fieldPickerOpen, setFieldPickerOpen] = useState(false);
   const [dataValues, setDataValues] = useState({});
   const [form, setForm] = useState({
     id: "",
@@ -279,9 +282,28 @@ export default function DocumentEditor({ mode }) {
   const allFields = useMemo(() => dataFieldsForDtype(form.dtype), [form.dtype]);
   const essentialFields = useMemo(() => essentialDataFieldsForDtype(form.dtype), [form.dtype]);
   const essentialFieldSet = useMemo(() => new Set(essentialFields), [essentialFields]);
-  const advancedFields = useMemo(
-    () => allFields.filter((name) => !essentialFieldSet.has(name)),
-    [allFields, essentialFieldSet]
+  const visibleAddedFields = useMemo(
+    () => addedFields.filter((name) => allFields.includes(name) && !essentialFieldSet.has(name)),
+    [addedFields, allFields, essentialFieldSet]
+  );
+  const visibleAddedFieldSet = useMemo(() => new Set(visibleAddedFields), [visibleAddedFields]);
+  const availableFields = useMemo(
+    () => allFields.filter((name) => !essentialFieldSet.has(name) && !visibleAddedFieldSet.has(name)),
+    [allFields, essentialFieldSet, visibleAddedFieldSet]
+  );
+  const matchingAvailableFields = useMemo(() => {
+    const query = fieldPickerQuery.trim().toLowerCase();
+    return availableFields.filter((name) => {
+      if (!query) return true;
+      const fieldSchema = currentDataSchema.properties?.[name] || {};
+      return `${name} ${fieldSchema.title || ""} ${fieldSchema.description || ""}`
+        .toLowerCase()
+        .includes(query);
+    }).slice(0, 12);
+  }, [availableFields, currentDataSchema, fieldPickerQuery]);
+  const renderedFields = useMemo(
+    () => [...essentialFields, ...visibleAddedFields],
+    [essentialFields, visibleAddedFields]
   );
   const requiredFields = useMemo(() => new Set(currentDataSchema.required || []), [currentDataSchema]);
   const objectType = dtypeLabel(form.dtype);
@@ -306,14 +328,26 @@ export default function DocumentEditor({ mode }) {
   useEffect(() => {
     const source = existing?.dtype === form.dtype ? existing.data || {} : {};
     const properties = dataSchemaForDtype(form.dtype).properties || {};
+    const schemaFields = dataFieldsForDtype(form.dtype);
+    const commonFields = new Set(essentialDataFieldsForDtype(form.dtype));
     setDataValues((current) => Object.fromEntries(dataFieldsForDtype(form.dtype).map((name) => [
       name,
       name in source ? formatSchemaValue(source[name], properties[name]) : current[name] || ""
     ])));
+    setAddedFields(Object.keys(source).filter((name) => schemaFields.includes(name) && !commonFields.has(name)));
+    setFieldPickerQuery("");
+    setFieldPickerOpen(false);
   }, [existing, form.dtype]);
 
   const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
   const updateData = (name, value) => setDataValues((current) => ({ ...current, [name]: value }));
+
+  function addField(name) {
+    if (!availableFields.includes(name)) return;
+    setAddedFields((current) => [...current, name]);
+    setFieldPickerQuery("");
+    setFieldPickerOpen(false);
+  }
 
   function buildTypedData() {
     const properties = currentDataSchema.properties || {};
@@ -427,8 +461,55 @@ export default function DocumentEditor({ mode }) {
                 <h2>Fields for {objectType}</h2>
                 <span className={`dtype dtype-${form.dtype}`}>{form.dtype}</span>
               </div>
-              <div className="form-grid dtype-field-grid">{renderFields(essentialFields)}</div>
+              <div className="form-grid dtype-field-grid">{renderFields(renderedFields)}</div>
               {!essentialFields.length && <p className="muted">No common fields are defined for this object type.</p>}
+              {availableFields.length > 0 && (
+                <div
+                  className="field-picker"
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) setFieldPickerOpen(false);
+                  }}
+                >
+                  <label className="field">
+                    <span>Add another field</span>
+                    <input
+                      role="combobox"
+                      aria-autocomplete="list"
+                      aria-controls="schema-field-options"
+                      aria-expanded={fieldPickerOpen}
+                      value={fieldPickerQuery}
+                      placeholder={`Search ${availableFields.length} ${objectType.toLowerCase()} fields`}
+                      onFocus={() => setFieldPickerOpen(true)}
+                      onChange={(event) => {
+                        setFieldPickerQuery(event.target.value);
+                        setFieldPickerOpen(true);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" && matchingAvailableFields[0]) {
+                          event.preventDefault();
+                          addField(matchingAvailableFields[0]);
+                        }
+                        if (event.key === "Escape") setFieldPickerOpen(false);
+                      }}
+                    />
+                  </label>
+                  {fieldPickerOpen && (
+                    <div className="field-picker-options" id="schema-field-options" role="listbox">
+                      {matchingAvailableFields.map((name) => {
+                        const fieldSchema = currentDataSchema.properties?.[name] || {};
+                        const resolved = effectiveFieldSchema(fieldSchema);
+                        return (
+                          <button key={name} type="button" role="option" aria-selected="false" onClick={() => addField(name)}>
+                            <code>{name}</code>
+                            <small>{fieldSchema.description || resolved.type || "field"}</small>
+                          </button>
+                        );
+                      })}
+                      {!matchingAvailableFields.length && <span className="field-picker-empty">No matching fields</span>}
+                    </div>
+                  )}
+                </div>
+              )}
             </section>
 
             <button
@@ -440,19 +521,14 @@ export default function DocumentEditor({ mode }) {
                 setRawMode(false);
               }}
             >
-              {advanced ? "Hide advanced" : "Advanced fields and metadata…"}
+              {advanced ? "Hide advanced" : "Advanced metadata and raw JSON…"}
             </button>
 
             {advanced && (
               <section className="simple-editor-section advanced-editor-section">
                 <div className="simple-editor-section-heading">
-                  <h2>Advanced fields for {objectType}</h2>
+                  <h2>Advanced</h2>
                 </div>
-                <div className="form-grid dtype-field-grid details-field-grid">
-                  {renderFields(advancedFields)}
-                </div>
-                {!advancedFields.length && <p className="muted">No additional schema fields.</p>}
-
                 <h3>Document metadata</h3>
                 <div className="form-grid details-field-grid">
                   <label className="field full"><span>Title</span><input value={form.title} onChange={update("title")} /></label>
