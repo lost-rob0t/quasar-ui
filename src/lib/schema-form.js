@@ -1,5 +1,16 @@
 import { schema } from "starintel_doc";
 
+const ESSENTIAL_FIELD_PREFERENCES = {
+  person: ["fname", "mname", "lname", "full_name", "dob", "birthplace"],
+  org: ["name", "legal_name", "org_type", "industry", "headquarters", "website"],
+  event: ["name", "event_type", "start_date", "end_date", "location", "website"],
+  location: ["name", "location_type", "address", "city", "country", "coordinates"],
+  entity: ["name", "entity_type", "aliases", "website"],
+  document: ["name", "document_type", "published_at", "author", "url"],
+  source: ["name", "source_type", "publisher", "url"],
+  concept: ["name", "concept_type", "definition", "aliases"]
+};
+
 export function humanizeSchemaField(name) {
   return String(name)
     .replaceAll("_", " ")
@@ -14,6 +25,21 @@ export function dataSchemaForDtype(dtype) {
 
 export function dataFieldsForDtype(dtype) {
   return Object.keys(dataSchemaForDtype(dtype).properties || {});
+}
+
+export function essentialDataFieldsForDtype(dtype, limit = 6) {
+  const dataSchema = dataSchemaForDtype(dtype);
+  const properties = dataSchema.properties || {};
+  const fields = Object.keys(properties);
+  const preferred = ESSENTIAL_FIELD_PREFERENCES[dtype] || [];
+  const scalarFields = fields.filter((name) => {
+    const resolved = effectiveFieldSchema(properties[name]);
+    return resolved.type && resolved.type !== "array" && resolved.type !== "object";
+  });
+  return [...new Set([
+    ...preferred.filter((name) => name in properties),
+    ...scalarFields
+  ])].slice(0, limit);
 }
 
 export function effectiveFieldSchema(fieldSchema = {}) {

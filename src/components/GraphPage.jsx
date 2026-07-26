@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import cytoscape from "cytoscape";
+import edgehandles from "cytoscape-edgehandles";
 import {
   ArrowLeft, BookOpen, Building2, CalendarDays, CircleDot, Database,
   ExternalLink, FileText, Focus, FolderPlus, Lightbulb, Link2, MapPin,
@@ -7,14 +8,29 @@ import {
   Trash2, TriangleAlert, UserRound, X
 } from "lucide-react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { assertDocument, createRelation, dtypes, documentLabel } from "starintel_doc";
+import {
+  assertDocument,
+  createRelation,
+  dtypes,
+  documentLabel,
+  touchDocument
+} from "starintel_doc";
+import { SchemaField } from "./DocumentEditor";
 import { actorApplicability, isBuiltinActor } from "../lib/actors";
 import { buildGraph, filterGraph, findPaths, importedGraphNodeIds, partitionDocumentsByReview } from "../lib/graph";
 import { documentsForActiveGraph } from "../lib/graph-workspaces";
 import { GRAPH_STYLE } from "../lib/graph-style";
 import { clampRenderedPosition } from "../lib/graph-viewport";
 import { operation } from "../lib/operations";
+import {
+  dataSchemaForDtype,
+  essentialDataFieldsForDtype,
+  formatSchemaValue,
+  parseSchemaField
+} from "../lib/schema-form";
 import { useQuasar } from "../store";
+
+cytoscape.use(edgehandles);
 
 const QUICK_NODE_TYPES = [
   { dtype: "person", label: "Person", Icon: UserRound },
@@ -28,12 +44,32 @@ const QUICK_NODE_TYPES = [
 ];
 const COMPACT_NODE_TYPES = QUICK_NODE_TYPES.slice(0, 5);
 
-function GraphCanvas({ graph, layout, selectedIds, onSelection, onMove, onViewport, apiRef, labels }) {
+function GraphCanvas({
+  graph,
+  layout,
+  selectedIds,
+  onSelection,
+  onMove,
+  onViewport,
+  onCanvasContext,
+  onNodeContext,
+  onRelationDraft,
+  apiRef,
+  edgeHandlesRef,
+  labels
+}) {
   const containerRef = useRef(null);
   const lastTap = useRef({ id: null, at: 0 });
   const callbacks = useRef({});
   const navigate = useNavigate();
-  callbacks.current = { onSelection, onMove, onViewport };
+  callbacks.current = {
+    onSelection,
+    onMove,
+    onViewport,
+    onCanvasContext,
+    onNodeContext,
+    onRelationDraft
+  };
 
   useEffect(() => {
     if (!containerRef.current) return undefined;
@@ -48,8 +84,38 @@ function GraphCanvas({ graph, layout, selectedIds, onSelection, onMove, onViewpo
       boxSelectionEnabled: true
     });
     apiRef.current = cy;
+    const eh = cy.edgehandles({
+      canConnect: (sourceNode, targetNode) => (
+        sourceNode.id() !== targetNode.id()
+        && !sourceNode.data("unresolved")
+        && !targetNode.data("unresolved")
+      ),
+      edgeParams: (sourceNode, targetNode) => ({
+        data: {
+          id: `relation-preview-${sourceNode.id()}-${targetNode.id()}`,
+          source: sourceNode.id(),
+          target: targetNode.id()
+        }
+      }),
+      snap: true,
+      snapThreshold: 48,
+      hoverDelay: 120
+    });
+    edgeHandlesRef.current = eh;
 
     let viewportTimer = null;
+    const contextPosition = (event) => {
+      const rendered = event.renderedPosition || event.target?.renderedPosition?.() || { x: 12, y: 12 };
+      const bounds = container.getBoundingClientRect();
+      return {
+        rendered,
+        bounds: { width: bounds.width, height: bounds.height },
+        position: event.position || {
+          x: (rendered.x - cy.pan().x) / cy.zoom(),
+          y: (rendered.y - cy.pan().y) / cy.zoom()
+        }
+      };
+    };
     const emitSelection = () => callbacks.current.onSelection(cy.$("node:selected").map((node) => node.id()));
     cy.on("select unselect", "node", emitSelection);
     cy.on("tap", (event) => {
@@ -87,13 +153,29 @@ function GraphCanvas({ graph, layout, selectedIds, onSelection, onMove, onViewpo
         callbacks.current.onViewport({ pan: cy.pan(), zoom: cy.zoom() });
       }, 140);
     });
+    cy.on("cxttap", (event) => {
+      const context = contextPosition(event);
+      if (event.target === cy) callbacks.current.onCanvasContext(context);
+      else if (event.target.isNode()) callbacks.current.onNodeContext(event.target.id(), context);
+    });
+    cy.on("ehcomplete", (event, sourceNode, targetNode, addedEdge) => {
+      const context = contextPosition(event);
+      addedEdge.remove();
+      callbacks.current.onRelationDraft({
+        ids: [sourceNode.id(), targetNode.id()],
+        rendered: context.rendered,
+        bounds: context.bounds
+      });
+    });
 
     return () => {
       clearTimeout(viewportTimer);
+      eh.destroy();
+      edgeHandlesRef.current = null;
       apiRef.current = null;
       cy.destroy();
     };
-  }, [apiRef, navigate]);
+  }, [apiRef, edgeHandlesRef, navigate]);
 
   useEffect(() => {
     const cy = apiRef.current;
@@ -115,13 +197,13 @@ function GraphCanvas({ graph, layout, selectedIds, onSelection, onMove, onViewpo
     if (labels) cy.elements().removeClass("labels-hidden"); else cy.elements().addClass("labels-hidden");
   }, [apiRef, graph, labels, layout, selectedIds]);
 
-  return <div className="graph-canvas" ref={containerRef} />;
+  return <div className="graph-canvas" ref={containerRef} onContextMenu={(event) => event.preventDefault()} />;
 }
 
-function Modal({ title, children, onClose }) {
+function Modal({ title, children, onClose, className = "" }) {
   return (
     <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <div className="modal">
+      <div className={`modal ${className}`}>
         <header><h2>{title}</h2><button className="icon-button" onClick={onClose}><X size={18} /></button></header>
         {children}
       </div>
@@ -193,7 +275,7 @@ function GraphMembershipAdd({ documents, existingIds, onAdd, onClose }) {
   );
 }
 
-function RelationAdd({ ids, documents, onClose }) {
+function RelationAdd({ ids, documents, position, onClose }) {
   const { execute, setNotice, addDocumentsToActiveGraph } = useQuasar();
   const source = documents.find((document) => document._id === ids[0]);
   const target = documents.find((document) => document._id === ids[1]);
@@ -221,14 +303,100 @@ function RelationAdd({ ids, documents, onClose }) {
   }
 
   return (
-    <Modal title="Create relation document" onClose={onClose}>
-      <form className="modal-form" onSubmit={submit}>
+    <div
+      className="graph-relation-editor"
+      role="dialog"
+      aria-label="Create relation"
+      style={{
+        left: Math.max(8, Math.min(position?.rendered?.x || 16, (position?.bounds?.width || 600) - 330)),
+        top: Math.max(8, Math.min(position?.rendered?.y || 16, (position?.bounds?.height || 500) - 310))
+      }}
+    >
+      <header><strong>New relation</strong><button className="icon-button" type="button" onClick={onClose}><X size={15} /></button></header>
+      <form className="relation-editor-form" onSubmit={submit}>
         <div className="relation-preview"><strong>{documentLabel(source) || ids[0]}</strong><span>→</span><strong>{documentLabel(target) || ids[1]}</strong></div>
         <label className="field"><span>Predicate</span><input value={predicate} onChange={(event) => setPredicate(event.target.value)} autoFocus required /></label>
         <label className="field"><span>Dataset</span><input value={dataset} onChange={(event) => setDataset(event.target.value)} required /></label>
         <label className="checkbox"><input type="checkbox" checked={directed} onChange={(event) => setDirected(event.target.checked)} /> Directed relation</label>
-        <p className="muted graph-form-note">The new relation is unreviewed until verification metadata marks it reviewed.</p>
         <div className="form-actions"><button type="button" className="button" onClick={onClose}>Cancel</button><button className="button primary">Create relation</button></div>
+      </form>
+    </div>
+  );
+}
+
+function parseQuickJson(value, label, fallback) {
+  if (!String(value || "").trim()) return fallback;
+  try {
+    return JSON.parse(value);
+  } catch (error) {
+    throw new Error(`${label}: ${error.message}`);
+  }
+}
+
+function NodeQuickEditor({ document, onClose }) {
+  const navigate = useNavigate();
+  const { execute, setNotice } = useQuasar();
+  const fieldSchema = useMemo(() => dataSchemaForDtype(document.dtype), [document.dtype]);
+  const fields = useMemo(() => essentialDataFieldsForDtype(document.dtype), [document.dtype]);
+  const required = useMemo(() => new Set(fieldSchema.required || []), [fieldSchema]);
+  const [title, setTitle] = useState(document.title || "");
+  const [values, setValues] = useState(() => Object.fromEntries(fields.map((name) => [
+    name,
+    formatSchemaValue(document.data?.[name], fieldSchema.properties?.[name] || {})
+  ])));
+  const [saving, setSaving] = useState(false);
+
+  async function submit(event) {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const data = { ...(document.data || {}) };
+      for (const name of fields) {
+        const parsed = parseSchemaField(
+          name,
+          values[name],
+          fieldSchema.properties?.[name] || {},
+          parseQuickJson
+        );
+        if (parsed === undefined) delete data[name];
+        else data[name] = parsed;
+      }
+      const updated = assertDocument(touchDocument(document, { title, data }));
+      await execute(operation.save(updated), `Update ${document._id}`);
+      onClose();
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openAdvanced() {
+    onClose();
+    navigate(`/documents/${encodeURIComponent(document._id)}/edit`);
+  }
+
+  return (
+    <Modal title={`Edit ${documentLabel(document)}`} onClose={onClose} className="quick-edit-modal">
+      <form className="modal-form quick-edit-form" onSubmit={submit}>
+        <label className="field"><span>Title</span><input value={title} onChange={(event) => setTitle(event.target.value)} autoFocus /></label>
+        <div className="quick-edit-fields">
+          {fields.map((name) => (
+            <SchemaField
+              key={name}
+              name={name}
+              fieldSchema={fieldSchema.properties?.[name] || {}}
+              required={required.has(name)}
+              value={values[name] || ""}
+              onChange={(value) => setValues((current) => ({ ...current, [name]: value }))}
+            />
+          ))}
+        </div>
+        {!fields.length && <p className="muted">This document type has no compact scalar fields.</p>}
+        <div className="form-actions">
+          <button type="button" className="button" onClick={openAdvanced}>Advanced…</button>
+          <button className="button primary" disabled={saving}><Pencil size={14} /> {saving ? "Saving…" : "Save"}</button>
+        </div>
       </form>
     </Modal>
   );
@@ -245,6 +413,7 @@ export default function GraphPage() {
     createGraph, switchGraph, renameGraph, deleteGraph
   } = useQuasar();
   const apiRef = useRef(null);
+  const edgeHandlesRef = useRef(null);
   const importMembershipHandled = useRef(false);
   const importFocusHandled = useRef(false);
   const importedIds = useMemo(
@@ -257,7 +426,8 @@ export default function GraphPage() {
   const [predicate, setPredicate] = useState("");
   const [reviewStatus, setReviewStatus] = useState(location.state?.revealUnreviewed || !documents.length ? "all" : "reviewed");
   const [labels, setLabels] = useState(true);
-  const [showRelation, setShowRelation] = useState(false);
+  const [relationDraft, setRelationDraft] = useState(null);
+  const [quickEditDocument, setQuickEditDocument] = useState(null);
   const [showGraphCreate, setShowGraphCreate] = useState(false);
   const [showMembershipAdd, setShowMembershipAdd] = useState(false);
   const [canvasMenu, setCanvasMenu] = useState(null);
@@ -310,6 +480,8 @@ export default function GraphPage() {
 
   useEffect(() => {
     setCanvasMenu(null);
+    setRelationDraft(null);
+    setQuickEditDocument(null);
     setEmptyStateDismissed(false);
   }, [activeGraph?.id]);
 
@@ -429,23 +601,42 @@ export default function GraphPage() {
     navigate(`/documents/new?${editorParams}`);
   }
 
-  function openCanvasMenu(event) {
-    event.preventDefault();
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const rendered = {
-      x: event.clientX - bounds.left,
-      y: event.clientY - bounds.top
-    };
-    const cy = apiRef.current;
-    const pan = cy?.pan() || { x: 0, y: 0 };
-    const zoom = cy?.zoom() || 1;
+  function openCanvasMenu(context) {
     setEmptyStateDismissed(true);
     setCanvasMenu({
-      rendered,
-      bounds: { width: bounds.width, height: bounds.height },
-      position: {
-        x: (rendered.x - pan.x) / zoom,
-        y: (rendered.y - pan.y) / zoom
+      kind: "canvas",
+      ...context
+    });
+  }
+
+  function openNodeMenu(id, context) {
+    select([id]);
+    setCanvasMenu({ kind: "node", id, ...context });
+  }
+
+  function beginRelationFromNode(id) {
+    const node = apiRef.current?.getElementById(id);
+    setCanvasMenu(null);
+    if (node?.length) edgeHandlesRef.current?.start(node);
+  }
+
+  function openSelectedRelation() {
+    if (selectedIds.length !== 2) return;
+    const cy = apiRef.current;
+    const first = cy?.getElementById(selectedIds[0]);
+    const second = cy?.getElementById(selectedIds[1]);
+    const firstPosition = first?.length ? first.renderedPosition() : { x: 100, y: 100 };
+    const secondPosition = second?.length ? second.renderedPosition() : firstPosition;
+    const bounds = cy?.container()?.getBoundingClientRect();
+    setRelationDraft({
+      ids: [...selectedIds],
+      rendered: {
+        x: (firstPosition.x + secondPosition.x) / 2,
+        y: (firstPosition.y + secondPosition.y) / 2
+      },
+      bounds: {
+        width: bounds?.width || 600,
+        height: bounds?.height || 500
       }
     });
   }
@@ -457,11 +648,11 @@ export default function GraphPage() {
   const canvasMenuStyle = canvasMenu ? {
     left: Math.max(8, Math.min(
       canvasMenu.rendered.x,
-      canvasMenu.bounds.width - (canvasMenuCompact ? 216 : 270)
+      canvasMenu.bounds.width - (canvasMenu.kind === "node" || !canvasMenuCompact ? 270 : 216)
     )),
     top: Math.max(8, Math.min(
       canvasMenu.rendered.y,
-      canvasMenu.bounds.height - (canvasMenuCompact ? 52 : 390)
+      canvasMenu.bounds.height - (canvasMenu.kind === "node" ? 210 : canvasMenuCompact ? 52 : 390)
     ))
   } : undefined;
 
@@ -533,6 +724,17 @@ export default function GraphPage() {
     removeDocumentsFromActiveGraph([...selectedIds, ...relationIds]);
   }
 
+  function removeNodeFromGraph(id) {
+    if (activeGraph?.documentIds === null) return;
+    select([id]);
+    const relationIds = scopedDocuments
+      .filter((document) => document.dtype === "relation")
+      .filter((document) => document.data?.subject === id || document.data?.object === id)
+      .map((document) => document._id);
+    removeDocumentsFromActiveGraph([id, ...relationIds]);
+    setCanvasMenu(null);
+  }
+
   async function executeActor(actor) {
     setRunningActorId(actor.id);
     setLastActorRun(null);
@@ -583,7 +785,7 @@ export default function GraphPage() {
           <div className="button-row">
             {activeGraph?.documentIds !== null && <button className="button" onClick={() => setShowMembershipAdd(true)}><Plus size={16} /> Add from corpus</button>}
             {activeGraph?.documentIds !== null && <button className="button danger" onClick={removeSelectionFromGraph} disabled={!selectedIds.length}>Remove from graph</button>}
-            <button className="button" onClick={() => setShowRelation(true)} disabled={selectedIds.length !== 2}><Link2 size={16} /> Connect selected</button>
+            <button className="button" onClick={openSelectedRelation} disabled={selectedIds.length !== 2}><Link2 size={16} /> Connect selected</button>
             <button className="button primary" onClick={() => openQuickAdd()}><Plus size={16} /> Add graph document</button>
           </div>
         </div>
@@ -631,7 +833,6 @@ export default function GraphPage() {
       <div className="graph-workbench">
         <div
           className="graph-stage"
-          onContextMenu={openCanvasMenu}
           onPointerDown={closeCanvasMenu}
         >
           <GraphCanvas
@@ -641,7 +842,11 @@ export default function GraphPage() {
             onSelection={onSelection}
             onMove={onMove}
             onViewport={onViewport}
+            onCanvasContext={openCanvasMenu}
+            onNodeContext={openNodeMenu}
+            onRelationDraft={setRelationDraft}
             apiRef={apiRef}
+            edgeHandlesRef={edgeHandlesRef}
             labels={labels}
           />
           {!visibleGraph.nodes.length && !emptyStateDismissed && (
@@ -667,13 +872,27 @@ export default function GraphPage() {
           )}
           {canvasMenu && (
             <div
-              className={`graph-context-menu ${canvasMenuCompact ? "compact" : "expanded"}`}
+              className={`graph-context-menu ${canvasMenu.kind === "node" ? "node-actions" : canvasMenuCompact ? "compact" : "expanded"}`}
               role="menu"
-              aria-label="Graph canvas actions"
+              aria-label={canvasMenu.kind === "node" ? "Node actions" : "Graph canvas actions"}
               style={canvasMenuStyle}
               onContextMenu={(event) => event.preventDefault()}
             >
-              {canvasMenuCompact ? (
+              {canvasMenu.kind === "node" ? (() => {
+                const nodeDocument = documents.find((document) => document._id === canvasMenu.id);
+                return (
+                  <>
+                    <div className="graph-context-header">
+                      <strong>{nodeDocument ? documentLabel(nodeDocument) : canvasMenu.id}</strong>
+                    </div>
+                    {nodeDocument && <Link role="menuitem" to={`/documents/${encodeURIComponent(canvasMenu.id)}`}><ExternalLink size={15} /> Open</Link>}
+                    {nodeDocument && <button role="menuitem" onClick={() => { setCanvasMenu(null); setQuickEditDocument(nodeDocument); }}><Pencil size={15} /> Quick edit</button>}
+                    {nodeDocument && <Link role="menuitem" to={`/documents/${encodeURIComponent(canvasMenu.id)}/edit`}><MoreHorizontal size={15} /> Advanced edit</Link>}
+                    {nodeDocument && <button role="menuitem" onClick={() => beginRelationFromNode(canvasMenu.id)}><Link2 size={15} /> Drag a relation</button>}
+                    {activeGraph?.documentIds !== null && <button role="menuitem" className="danger" onClick={() => removeNodeFromGraph(canvasMenu.id)}><Trash2 size={15} /> Remove from graph</button>}
+                  </>
+                );
+              })() : canvasMenuCompact ? (
                 <div className="graph-context-palette" aria-label="Create node type">
                   {COMPACT_NODE_TYPES.map(({ dtype: nodeDtype, label, Icon }) => (
                     <button
@@ -712,6 +931,15 @@ export default function GraphPage() {
               )}
             </div>
           )}
+          {relationDraft && (
+            <RelationAdd
+              key={relationDraft.ids.join(":")}
+              ids={relationDraft.ids}
+              documents={scopedDocuments}
+              position={relationDraft}
+              onClose={() => setRelationDraft(null)}
+            />
+          )}
         </div>
 
         <aside className="graph-inspector">
@@ -732,7 +960,7 @@ export default function GraphPage() {
                 {selected.summary && <p>{selected.summary}</p>}
                 <div className="inspector-actions">
                   <Link className="button small" to={`/documents/${encodeURIComponent(selected._id)}`}><ExternalLink size={14} /> Open</Link>
-                  <Link className="button small" to={`/documents/${encodeURIComponent(selected._id)}/edit`}>Edit</Link>
+                  <button className="button small" onClick={() => setQuickEditDocument(selected)}><Pencil size={14} /> Edit</button>
                 </div>
               </>
             )}
@@ -795,7 +1023,7 @@ export default function GraphPage() {
           onClose={() => setShowMembershipAdd(false)}
         />
       )}
-      {showRelation && <RelationAdd ids={selectedIds} documents={scopedDocuments} onClose={() => setShowRelation(false)} />}
+      {quickEditDocument && <NodeQuickEditor document={quickEditDocument} onClose={() => setQuickEditDocument(null)} />}
     </section>
   );
 }

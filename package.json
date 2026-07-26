@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "cytoscape": "^3.34.0",
+    "cytoscape-edgehandles": "^4.0.1",
     "events": "^3.3.0",
     "lucide-react": "^1.25.0",
     "pouchdb-browser": "^9.0.0",

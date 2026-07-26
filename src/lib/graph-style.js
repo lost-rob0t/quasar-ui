@@ -43,5 +43,29 @@ export const GRAPH_STYLE = [
   { selector: "edge[!directed]", style: { "target-arrow-shape": "none" } },
   { selector: "edge:selected", style: { width: 3, "line-color": "#38bdf8", "target-arrow-color": "#38bdf8" } },
   { selector: "edge.path", style: { width: 4, "line-color": "#f59e0b", "target-arrow-color": "#f59e0b", "z-index": 20 } },
+  {
+    selector: ".eh-handle",
+    style: {
+      width: 13,
+      height: 13,
+      shape: "ellipse",
+      "background-color": "#38bdf8",
+      "border-width": 2,
+      "border-color": "#e0f2fe",
+      "overlay-opacity": 0
+    }
+  },
+  { selector: ".eh-source", style: { "border-color": "#38bdf8", "border-width": 4 } },
+  { selector: ".eh-target, .eh-hover", style: { "border-color": "#22c55e", "border-width": 4 } },
+  {
+    selector: ".eh-preview, .eh-ghost-edge",
+    style: {
+      width: 2,
+      "line-color": "#38bdf8",
+      "target-arrow-color": "#38bdf8",
+      "target-arrow-shape": "triangle",
+      "line-style": "dashed"
+    }
+  },
   { selector: ".labels-hidden", style: { label: "" } }
 ];
