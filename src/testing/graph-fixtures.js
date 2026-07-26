@@ -60,8 +60,7 @@ export function smallTypedGraphFixture() {
     "starintel:person:ada",
     "person",
     "people",
-    { full_name: "Ada Lovelace" },
-    { fixture_extension: { stable: true, ordinal: 1 } }
+    { full_name: "Ada Lovelace", fixture_extension: { stable: true, ordinal: 1 } }
   );
   const organization = baseDocument(
     "starintel:org:analytical-society",
