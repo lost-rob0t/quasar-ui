@@ -18,7 +18,7 @@ import {
 import { SchemaField } from "./DocumentEditor";
 import { actorApplicability, isBuiltinActor } from "../lib/actors";
 import { buildGraph, filterGraph, findPaths, importedGraphNodeIds, partitionDocumentsByReview } from "../lib/graph";
-import { documentsForActiveGraph } from "../lib/graph-workspaces";
+import { activeGraphMembershipKey } from "../lib/graph-workspaces";
 import { GRAPH_STYLE } from "../lib/graph-style";
 import { clampRenderedPosition } from "../lib/graph-viewport";
 import { operation } from "../lib/operations";
@@ -44,6 +44,12 @@ const QUICK_NODE_TYPES = [
 ];
 const COMPACT_NODE_TYPES = QUICK_NODE_TYPES.slice(0, 5);
 
+function fitElements(cy, elements, padding, duration) {
+  if (!cy || !elements?.length) return;
+  cy.stop();
+  cy.animate({ fit: { eles: elements, padding }, duration });
+}
+
 function GraphCanvas({
   graph,
   layout,
@@ -60,6 +66,7 @@ function GraphCanvas({
 }) {
   const containerRef = useRef(null);
   const lastTap = useRef({ id: null, at: 0 });
+  const syncingSelection = useRef(false);
   const callbacks = useRef({});
   const navigate = useNavigate();
   callbacks.current = {
@@ -116,7 +123,10 @@ function GraphCanvas({
         }
       };
     };
-    const emitSelection = () => callbacks.current.onSelection(cy.$("node:selected").map((node) => node.id()));
+    const emitSelection = () => {
+      if (syncingSelection.current) return;
+      callbacks.current.onSelection(cy.$("node:selected").map((node) => node.id()));
+    };
     cy.on("select unselect", "node", emitSelection);
     cy.on("tap", (event) => {
       if (event.target === cy) {
@@ -192,10 +202,29 @@ function GraphCanvas({
     if (graph.nodes.length && !graph.nodes.some((node) => node.position)) {
       cy.layout({ name: layout || "cose", animate: false, padding: 50, randomize: true }).run();
     }
-    cy.nodes().unselect();
-    selectedIds.forEach((id) => cy.getElementById(id).select());
-    if (labels) cy.elements().removeClass("labels-hidden"); else cy.elements().addClass("labels-hidden");
-  }, [apiRef, graph, labels, layout, selectedIds]);
+  }, [apiRef, graph, layout]);
+
+  useEffect(() => {
+    const cy = apiRef.current;
+    if (!cy) return;
+    const selected = new Set(selectedIds);
+    syncingSelection.current = true;
+    try {
+      cy.nodes().forEach((node) => {
+        if (selected.has(node.id()) && !node.selected()) node.select();
+        if (!selected.has(node.id()) && node.selected()) node.unselect();
+      });
+    } finally {
+      syncingSelection.current = false;
+    }
+  }, [apiRef, selectedIds]);
+
+  useEffect(() => {
+    const cy = apiRef.current;
+    if (!cy) return;
+    if (labels) cy.elements().removeClass("labels-hidden");
+    else cy.elements().addClass("labels-hidden");
+  }, [apiRef, labels]);
 
   return <div className="graph-canvas" ref={containerRef} onContextMenu={(event) => event.preventDefault()} />;
 }
@@ -438,10 +467,12 @@ export default function GraphPage() {
   const [runningActorId, setRunningActorId] = useState("");
   const [lastActorRun, setLastActorRun] = useState(null);
 
-  const scopedDocuments = useMemo(
-    () => documentsForActiveGraph(workspace || {}, documents),
-    [documents, workspace]
-  );
+  const membershipKey = activeGraphMembershipKey(workspace || {});
+  const scopedDocuments = useMemo(() => {
+    if (membershipKey === "*") return documents;
+    const allowed = new Set(JSON.parse(membershipKey));
+    return documents.filter((document) => allowed.has(document._id));
+  }, [documents, membershipKey]);
   const reviewGroups = useMemo(() => partitionDocumentsByReview(scopedDocuments), [scopedDocuments]);
   const graphDocuments = reviewStatus === "all" ? scopedDocuments : reviewGroups.reviewed;
   const graph = useMemo(() => buildGraph(graphDocuments, workspace?.positions || {}), [graphDocuments, workspace?.positions]);
@@ -513,7 +544,7 @@ export default function GraphPage() {
       if (!cy) return;
       const elements = cy.collection();
       importedFocusIds.forEach((id) => elements.merge(cy.getElementById(id)));
-      if (elements.length) cy.animate({ fit: { eles: elements, padding: 140 }, duration: 350 });
+      fitElements(cy, elements, 140, 350);
     }, 100);
     return () => clearTimeout(timer);
   }, [importedFocusIds, select]);
@@ -527,14 +558,17 @@ export default function GraphPage() {
       return;
     }
     select([node]);
-    setTimeout(() => {
-      const element = apiRef.current?.getElementById(node);
-      if (element?.length) apiRef.current.animate({ fit: { eles: element, padding: 160 }, duration: 350 });
+    const timer = setTimeout(() => {
+      const cy = apiRef.current;
+      const element = cy?.getElementById(node);
+      fitElements(cy, element, 160, 350);
     }, 100);
+    return () => clearTimeout(timer);
   }, [documents, graphDocumentIds, params, reviewStatus, select]);
 
   function fit() {
-    apiRef.current?.animate({ fit: { eles: apiRef.current.elements(), padding: 60 }, duration: 280 });
+    const cy = apiRef.current;
+    fitElements(cy, cy?.elements(), 60, 280);
   }
 
   function runLayout(name) {
@@ -568,14 +602,14 @@ export default function GraphPage() {
     if (!path) return;
     path.nodes.forEach((id) => cy.getElementById(id).addClass("path"));
     path.edges.forEach((edge) => cy.getElementById(edge.data.id).addClass("path"));
-    cy.animate({ fit: { eles: cy.$(".path"), padding: 120 }, duration: 300 });
+    fitElements(cy, cy.$(".path"), 120, 300);
   }
 
   function focusSelection() {
     const cy = apiRef.current;
     if (!cy || !selectedIds.length) return;
     const neighborhood = cy.$("node:selected").closedNeighborhood();
-    cy.animate({ fit: { eles: neighborhood, padding: 100 }, duration: 300 });
+    fitElements(cy, neighborhood, 100, 300);
   }
 
   function clearFilters() {
