@@ -284,6 +284,26 @@ td small { max-width: 65ch; color: var(--muted); }
 .agent-console-grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 1rem; }
 .agent-conversation { display: grid; grid-template-rows: auto minmax(360px, 1fr) auto; min-height: 650px; }
 .agent-conversation-actions { display: flex; align-items: center; gap: .45rem; min-width: 0; }
+.agent-chat-picker { position: relative; width: min(360px, 44vw); min-width: 220px; }
+.agent-chat-picker-trigger { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .55rem; width: 100%; min-height: 42px; padding: .42rem .55rem; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--text); text-align: left; cursor: pointer; }
+.agent-chat-picker-trigger:hover, .agent-chat-picker-trigger:focus-visible, .agent-chat-picker:has(.agent-chat-picker-popover) .agent-chat-picker-trigger { outline: none; border-color: var(--accent); background: var(--panel-2); }
+.agent-chat-picker-trigger > span, .agent-chat-picker-trigger small, .agent-chat-picker-trigger strong { display: block; min-width: 0; }
+.agent-chat-picker-trigger small { color: var(--muted); font-size: .58rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+.agent-chat-picker-trigger strong { margin-top: .08rem; overflow: hidden; font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
+.agent-chat-picker-trigger > svg:last-child { color: var(--muted); transition: transform .14s ease; }
+.agent-chat-picker-trigger[aria-expanded="true"] > svg:last-child { transform: rotate(180deg); }
+.agent-chat-picker-popover { position: absolute; top: calc(100% + .4rem); right: 0; z-index: 70; display: grid; gap: .4rem; width: min(390px, calc(100vw - 2rem)); padding: .45rem; border: 1px solid var(--line); border-radius: 11px; background: var(--panel); box-shadow: 0 20px 60px color-mix(in srgb, var(--bg-deep) 72%, transparent); }
+.agent-chat-picker-search { display: flex; align-items: center; gap: .45rem; min-height: 40px; padding: 0 .55rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted); }
+.agent-chat-picker-search:focus-within { border-color: var(--accent); }
+.agent-chat-picker-search input { min-width: 0; width: 100%; padding: 0; border: 0; background: transparent; color: var(--text); outline: 0; }
+.agent-chat-picker-options { display: grid; gap: .2rem; max-height: min(360px, 48vh); overflow-y: auto; overscroll-behavior: contain; }
+.agent-chat-picker-options > button { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .55rem; width: 100%; padding: .55rem; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+.agent-chat-picker-options > button:hover, .agent-chat-picker-options > button:focus-visible { outline: none; background: var(--surface); }
+.agent-chat-picker-options > button.active { border-color: color-mix(in srgb, var(--accent) 58%, var(--line)); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.agent-chat-picker-options span, .agent-chat-picker-options strong, .agent-chat-picker-options small { display: block; min-width: 0; }
+.agent-chat-picker-options strong { overflow: hidden; font-size: .76rem; text-overflow: ellipsis; white-space: nowrap; }
+.agent-chat-picker-options small { margin-top: .14rem; color: var(--muted); font-size: .64rem; }
+.agent-chat-picker-options > p { margin: 0; padding: 1rem; text-align: center; }
 .agent-mobile-run-controls { display: none; }
 .agent-log { display: grid; align-content: start; gap: .55rem; max-height: calc(100vh - 350px); overflow: auto; padding: .2rem; }
 .agent-log-entry { padding: .65rem; border: 1px solid var(--line); border-radius: 8px; background: #071423; }
