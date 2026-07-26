@@ -150,6 +150,14 @@ test.describe("responsive application shell", () => {
     await page.goto("/agents?tab=run");
 
     await expect(page.getByRole("heading", { name: "Conversation" })).toBeVisible();
+    const chatPicker = page.getByRole("button", { name: /Other chats:/ });
+    await expect(chatPicker).toBeVisible();
+    await chatPicker.click();
+    await expect(page.getByRole("textbox", { name: "Search chats" })).toBeVisible();
+    await expect(page.getByRole("listbox", { name: "Other chats" })).toBeVisible();
+    await expect(page.getByText("No chats found.")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("textbox", { name: "Search chats" })).toBeHidden();
     await expect(page.getByLabel("Console section")).toHaveValue("run");
     await expect(page.locator(".agent-console-tabs")).toBeHidden();
     await expect(page.locator('.agent-console[data-tab="run"]')).toHaveCSS("position", "fixed");
