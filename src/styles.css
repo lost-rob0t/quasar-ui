@@ -22,9 +22,9 @@
 
 * { box-sizing: border-box; }
 html, body, #root { min-height: 100%; }
-body { margin: 0; background: radial-gradient(circle at 35% -10%, #173251 0, var(--bg) 42rem); }
-a { color: #7dd3fc; text-decoration: none; }
-a:hover { color: #bae6fd; }
+body { margin: 0; color: var(--text); background: radial-gradient(circle at 35% -10%, color-mix(in srgb, var(--panel-2) 82%, var(--accent)) 0, var(--bg) 42rem); }
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-2); }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .45; }
@@ -358,6 +358,7 @@ td small { max-width: 65ch; color: var(--muted); }
 .graph-list-panel { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-width: 0; padding: .7rem; border-right: 1px solid var(--line); background: #081522; }
 .graph-list-panel > header { display: flex; align-items: center; justify-content: space-between; padding: .15rem .15rem .65rem; color: #dbeafe; font-size: .76rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .graph-list-panel > header .icon-button { width: 29px; height: 29px; }
+.graph-list-mobile { display: none; }
 .graph-list { min-height: 0; overflow-y: auto; }
 .graph-list-item { margin-bottom: .35rem; overflow: hidden; border: 1px solid transparent; border-radius: 8px; }
 .graph-list-item.active { border-color: #2563eb88; background: #10284a; }
@@ -479,6 +480,43 @@ td small { max-width: 65ch; color: var(--muted); }
 .ranking-list > div > span { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #10233a; color: var(--muted); font-size: .7rem; }
 .ranking-list strong, .ranking-list code { display: block; }
 .ranking-list code { margin-top: .15rem; font-size: .65rem; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.theme-settings { display: flex; align-items: end; gap: 1rem; }
+.theme-settings .field { flex: 1; margin: 0; }
+.theme-swatches { display: grid; grid-template-columns: repeat(6, 26px); overflow: hidden; border: 1px solid var(--line); border-radius: 8px; }
+.theme-swatches span { width: 26px; height: 42px; }
+.settings-file-button { cursor: pointer; }
+.settings-file-button input { display: none; }
+
+/* Theme-token bridge for the operator shell. */
+.sidebar, .topbar, .mobile-nav { background: color-mix(in srgb, var(--bg) 92%, transparent); }
+.global-search,
+.filter-bar input,
+.filter-bar select,
+.graph-toolbar input,
+.graph-toolbar select,
+.graph-inspector select,
+.field input,
+.field select,
+.field textarea,
+.key-value { background: var(--surface); color: var(--text); }
+.panel, .editor-form { background: linear-gradient(145deg, var(--panel-2), var(--panel)); }
+.button, .icon-button { background: var(--panel-2); color: var(--text); }
+.button:hover, .icon-button:hover { border-color: var(--accent); background: color-mix(in srgb, var(--panel-2) 80%, var(--accent)); }
+.button.primary { border-color: var(--accent); background: color-mix(in srgb, var(--panel-2) 55%, var(--accent)); color: var(--white); }
+.button.primary:hover { background: color-mix(in srgb, var(--panel-2) 35%, var(--accent)); }
+.graph-workbench, .graph-empty-state { background: var(--bg-deep); }
+.graph-list-panel, .table-panel { background: var(--surface); }
+.graph-list-item.active { border-color: var(--accent); background: color-mix(in srgb, var(--panel-2) 78%, var(--accent)); }
+.graph-list-open:hover, .graph-list-open:focus-visible { background: var(--panel-2); }
+.graph-stage { background-color: var(--bg-deep); background-image: radial-gradient(color-mix(in srgb, var(--line) 65%, transparent) 1px, transparent 1px); }
+.graph-inspector,
+.graph-context-menu,
+.graph-relation-editor,
+.modal { background: var(--panel); }
+.graph-list-actions button, .graph-context-search { background: var(--surface); }
+.modal-backdrop { background: color-mix(in srgb, var(--bg-deep) 80%, transparent); }
 
 .empty-state { display: grid; justify-items: center; gap: .8rem; padding: 5rem 1rem; text-align: center; color: var(--muted); }
 .empty-state.compact { padding: 2rem; }

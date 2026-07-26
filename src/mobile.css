@@ -287,24 +287,83 @@ textarea {
   }
 
   .graph-workbench {
-    height: calc(100dvh - 245px);
-    min-height: 430px;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
     border-right: 0;
     border-left: 0;
     border-radius: 0;
   }
 
+  .graph-list-panel {
+    display: block;
+    max-height: none;
+    padding: .65rem .75rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  .graph-list-panel > header,
+  .graph-list,
+  .graph-create-button {
+    display: none;
+  }
+
+  .graph-list-mobile {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) repeat(2, 44px);
+    gap: .45rem;
+    align-items: center;
+  }
+
+  .graph-list-mobile.deletable {
+    grid-template-columns: minmax(0, 1fr) repeat(3, 44px);
+  }
+
+  .graph-list-mobile label {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    color: var(--muted);
+  }
+
+  .graph-list-mobile label > svg {
+    position: absolute;
+    left: .7rem;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .graph-list-mobile select {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: .55rem 2rem .55rem 2.1rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    color: var(--text);
+  }
+
+  .graph-list-mobile small {
+    grid-column: 1 / -1;
+    color: var(--muted);
+    font-size: .68rem;
+  }
+
   .graph-stage {
-    height: 58dvh;
+    height: 56dvh;
     min-height: 390px;
     touch-action: none;
   }
 
   .graph-inspector {
-    max-height: 36dvh;
-    overscroll-behavior: contain;
+    max-height: none;
+    overflow: visible;
     border-top: 1px solid var(--line);
-    background: #0a1728;
+    background: var(--panel);
   }
 
   .graph-inspector section {
@@ -343,7 +402,7 @@ textarea {
     position: sticky;
     top: 0;
     z-index: 2;
-    background: #0b192af5;
+    background: color-mix(in srgb, var(--panel) 96%, transparent);
     backdrop-filter: blur(14px);
   }
 
@@ -378,6 +437,19 @@ textarea {
     top: calc(68px + env(safe-area-inset-top));
     left: .75rem;
     max-width: none;
+  }
+
+  .theme-settings {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .theme-swatches {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .theme-swatches span {
+    width: auto;
   }
 }
 

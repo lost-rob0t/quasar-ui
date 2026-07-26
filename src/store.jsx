@@ -22,6 +22,7 @@ import { actorWithTransformEnvelope, buildActorTransform } from "./lib/actor-tra
 import { startDocumentSource } from "./lib/document-source";
 import { startRabbitMqIngest } from "./lib/rabbitmq-ingest";
 import { probeStarIntelServer, submitTargetToServer } from "./lib/starintel-server";
+import { applyTheme } from "./lib/themes";
 import {
   addDocumentsToActiveGraph as addDocumentsToGraphWorkspace,
   createGraph as createGraphWorkspace,
@@ -71,6 +72,7 @@ export function QuasarProvider({ children }) {
     Promise.all([source.initial, getSettings(), getWorkspace(), ensureStarIntelViews()])
       .then(([, nextSettings, nextWorkspace]) => {
         if (!active) return;
+        applyTheme(nextSettings.theme);
         setSettings(nextSettings);
         workspaceRef.current = nextWorkspace;
         setWorkspace(nextWorkspace);
@@ -169,6 +171,7 @@ export function QuasarProvider({ children }) {
 
   const persistSettings = useCallback(async (next) => {
     const normalized = { ...(settings || {}), ...next };
+    applyTheme(normalized.theme);
     setSettings(normalized);
     await saveSettings(normalized);
     return normalized;

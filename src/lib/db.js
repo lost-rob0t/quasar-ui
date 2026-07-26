@@ -98,6 +98,7 @@ export async function getSettings() {
     rabbitPrefetch: 25,
     actorsEnabled: false,
     actors: [],
+    theme: "midnight",
     ...stored,
     _id: undefined,
     _rev: undefined

@@ -185,6 +185,8 @@ describe("graph local corpus status", () => {
     );
 
     expect(html).toContain('aria-label="Graphs"');
+    expect(html).toContain('aria-label="Open graph"');
+    expect(html).toContain('value="cross-dataset-case" selected=""');
     expect(html).toContain("All documents");
     expect(html).toContain("Entire corpus");
     expect(html).toContain("Cross-dataset case");

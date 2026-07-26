@@ -69,3 +69,26 @@ export const GRAPH_STYLE = [
   },
   { selector: ".labels-hidden", style: { label: "" } }
 ];
+
+const THEME_COLOR = {
+  "#e5eef9": "--text",
+  "#07111f": "--bg-deep",
+  "#f8fafc": "--white",
+  "#38bdf8": "--accent",
+  "#f59e0b": "--warning",
+  "#46617f": "--line",
+  "#8fa5bc": "--muted",
+  "#e0f2fe": "--white",
+  "#22c55e": "--success"
+};
+
+export function themedGraphStyle(root = document.documentElement) {
+  const tokens = getComputedStyle(root);
+  return GRAPH_STYLE.map((rule) => ({
+    ...rule,
+    style: Object.fromEntries(Object.entries(rule.style).map(([property, value]) => {
+      const token = THEME_COLOR[value];
+      return [property, token ? tokens.getPropertyValue(token).trim() || value : value];
+    }))
+  }));
+}

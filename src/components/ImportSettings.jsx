@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Database,
+  Download,
   File,
   Files,
   Network,
+  Palette,
   Play,
   RadioTower,
   RefreshCw,
@@ -11,11 +13,14 @@ import {
   Server,
   Square,
   Trash2,
+  Upload,
   UploadCloud
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { normalizeActorManifest } from "../lib/actors";
 import { openImportedGraph } from "../lib/graph-navigation";
+import { createSettingsExport, parseSettingsImport } from "../lib/settings-transfer";
+import { applyTheme, THEMES } from "../lib/themes";
 import { useQuasar } from "../store";
 
 export function Report({ report }) {
@@ -157,6 +162,10 @@ export function SettingsPage() {
   useEffect(() => setForm(settings || {}), [settings]);
   useEffect(() => { databaseInfo().then(setInfo).catch(() => {}); }, [databaseInfo]);
   const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.type === "checkbox" ? event.target.checked : event.target.value }));
+  const changeTheme = (event) => {
+    const theme = applyTheme(event.target.value);
+    setForm((current) => ({ ...current, theme }));
+  };
 
   async function save() {
     try {
@@ -226,6 +235,33 @@ export function SettingsPage() {
     }
   }
 
+  function exportSettingsFile() {
+    const contents = JSON.stringify(createSettingsExport(form), null, 2);
+    const url = URL.createObjectURL(new Blob([contents], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "quasar-settings.json";
+    link.click();
+    URL.revokeObjectURL(url);
+    setNotice({ kind: "success", message: "Settings exported without passwords or tokens" });
+  }
+
+  async function importSettingsFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const imported = parseSettingsImport(await file.text());
+      const next = { ...form, ...imported };
+      next.theme = applyTheme(next.theme);
+      setForm(next);
+      await persistSettings(next);
+      setNotice({ kind: "success", message: "Settings imported" });
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
+  }
+
   function addActor() {
     try {
       const actor = normalizeActorManifest(JSON.parse(actorText));
@@ -244,6 +280,40 @@ export function SettingsPage() {
   return (
     <section>
       <div className="page-heading"><div><span className="eyebrow">Configuration</span><h1>Settings</h1><p>Local storage, StarIntel services, optional queue ingest, synchronization, and browser actors.</p></div><button className="button primary" onClick={save}><Save size={16} /> Save settings</button></div>
+
+      <section className="panel">
+        <div className="section-heading"><h2>Appearance</h2><Palette size={20} /></div>
+        <div className="theme-settings">
+          <label className="field">
+            <span>Theme</span>
+            <select value={form.theme || "midnight"} onChange={changeTheme}>
+              {THEMES.map((theme) => <option key={theme.id} value={theme.id}>{theme.label}</option>)}
+            </select>
+          </label>
+          <div className="theme-swatches" aria-hidden="true">
+            {THEMES.find((theme) => theme.id === (form.theme || "midnight"))?.tokens
+              ? ["bg", "panel", "accent", "accent2", "warm", "success"].map((token) => (
+                <span
+                  key={token}
+                  style={{ background: THEMES.find((theme) => theme.id === (form.theme || "midnight")).tokens[token] }}
+                />
+              ))
+              : null}
+          </div>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading"><h2>Import / export settings</h2></div>
+        <p className="muted">Passwords and tokens are never exported.</p>
+        <div className="button-row">
+          <button className="button" type="button" onClick={exportSettingsFile}><Download size={15} /> Export settings</button>
+          <label className="button settings-file-button">
+            <Upload size={15} /> Import settings
+            <input type="file" accept=".json,application/json" onChange={importSettingsFile} />
+          </label>
+        </div>
+      </section>
 
       <section className="panel">
         <div className="section-heading"><h2>StarIntel server</h2><span className={`sync-badge sync-${serverStatus.state}`}>{serverStatus.state}</span></div>

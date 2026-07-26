@@ -20,7 +20,7 @@ import { SchemaField } from "./DocumentEditor";
 import { actorApplicability, isBuiltinActor } from "../lib/actors";
 import { buildGraph, filterGraph, findPaths, importedGraphNodeIds, partitionDocumentsByReview } from "../lib/graph";
 import { activeGraphMembershipKey } from "../lib/graph-workspaces";
-import { GRAPH_STYLE } from "../lib/graph-style";
+import { themedGraphStyle } from "../lib/graph-style";
 import { clampRenderedPosition } from "../lib/graph-viewport";
 import { operation } from "../lib/operations";
 import {
@@ -85,7 +85,7 @@ function GraphCanvas({
     const cy = createGraphAdapter({
       container,
       elements: [],
-      style: GRAPH_STYLE,
+      style: themedGraphStyle(),
       minZoom: 0.05,
       maxZoom: 6,
       selectionType: "additive",
@@ -190,6 +190,12 @@ function GraphCanvas({
   }, [apiRef, edgeHandlesRef, navigate]);
 
   useEffect(() => {
+    const applyGraphTheme = () => apiRef.current?.style().fromJson(themedGraphStyle()).update();
+    window.addEventListener("starintel:themechange", applyGraphTheme);
+    return () => window.removeEventListener("starintel:themechange", applyGraphTheme);
+  }, [apiRef]);
+
+  useEffect(() => {
     const cy = apiRef.current;
     if (!cy) return;
     const previous = new Map(cy.nodes().map((node) => [node.id(), node.position()]));
@@ -243,6 +249,8 @@ function Modal({ title, children, onClose, className = "" }) {
 }
 
 function GraphList({ graphs, activeGraph, onSwitch, onCreate, onRename, onDelete }) {
+  const activeDocumentCount = activeGraph?.documentIds?.length || 0;
+
   return (
     <aside className="graph-list-panel" aria-label="Graphs">
       <header>
@@ -251,6 +259,41 @@ function GraphList({ graphs, activeGraph, onSwitch, onCreate, onRename, onDelete
           <Plus size={16} />
         </button>
       </header>
+      <div className={`graph-list-mobile${Array.isArray(activeGraph?.documentIds) ? " deletable" : ""}`}>
+        <label>
+          <span className="sr-only">Open graph</span>
+          <Network size={16} aria-hidden="true" />
+          <select
+            aria-label="Open graph"
+            value={activeGraph?.id || ""}
+            onChange={(event) => onSwitch(event.target.value)}
+          >
+            {(graphs || []).map((graphView) => {
+              const documentCount = graphView.documentIds?.length || 0;
+              const count = graphView.documentIds === null
+                ? "entire corpus"
+                : `${documentCount.toLocaleString()} doc${documentCount === 1 ? "" : "s"}`;
+              return <option key={graphView.id} value={graphView.id}>{graphView.name} — {count}</option>;
+            })}
+          </select>
+        </label>
+        <button type="button" className="icon-button" title="Rename graph" aria-label="Rename graph" onClick={onRename}>
+          <Pencil size={15} />
+        </button>
+        {Array.isArray(activeGraph?.documentIds) && (
+          <button type="button" className="icon-button danger" title="Delete graph" aria-label="Delete graph" onClick={onDelete}>
+            <Trash2 size={15} />
+          </button>
+        )}
+        <button type="button" className="icon-button" title="New graph" aria-label="New graph" onClick={onCreate}>
+          <Plus size={16} />
+        </button>
+        <small>
+          {activeGraph?.documentIds === null
+            ? "Entire corpus"
+            : `${activeDocumentCount.toLocaleString()} document${activeDocumentCount === 1 ? "" : "s"}`}
+        </small>
+      </div>
       <div className="graph-list">
         {(graphs || []).map((graphView) => {
           const active = graphView.id === activeGraph?.id;

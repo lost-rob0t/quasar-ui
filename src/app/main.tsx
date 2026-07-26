@@ -4,11 +4,14 @@ import { BrowserRouter } from "react-router-dom";
 import App from "../App.jsx";
 import { QuasarProvider } from "../store.jsx";
 import { registerServiceWorker } from "../lib/service-worker-registration.js";
+import { initializeTheme } from "../lib/themes.js";
 import { routerBasename } from "./base-path";
 import "../styles.css";
 import "../dashboard.css";
 import "../mobile.css";
 import "../mobile-editor.css";
+
+initializeTheme();
 
 const rootElement = document.getElementById("root");
 
