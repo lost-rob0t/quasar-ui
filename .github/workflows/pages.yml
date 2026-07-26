@@ -29,13 +29,18 @@ jobs:
       - run: npm test
       - run: npm run build
         env:
-          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          # The configured Pages custom domain serves this project at its origin root.
+          VITE_BASE_PATH: /
       - name: Validate Pages base path
         shell: bash
         run: |
           set -euo pipefail
-          grep -q "src=\"/${{ github.event.repository.name }}/assets/" dist/index.html
-          grep -q "href=\"/${{ github.event.repository.name }}/manifest.webmanifest\"" dist/index.html
+          grep -q 'src="/assets/' dist/index.html
+          grep -q 'href="/manifest.webmanifest"' dist/index.html
+          if grep -q '/${{ github.event.repository.name }}/' dist/index.html; then
+            echo "Pages artifact still contains the repository project path" >&2
+            exit 1
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
