@@ -31,7 +31,7 @@ Dependencies point downward toward `core`. A lower zone cannot import a UI or co
 
 ### Graph adapter
 
-Only `src/graph/GraphAdapter.js` may import Cytoscape or Cytoscape plugins. It owns renderer construction and plugin registration. Components receive the adapter surface and never initialize the renderer directly. Renderer objects never persist canonical documents.
+Only `src/graph/GraphAdapter.js` may import Cytoscape or Cytoscape plugins. It owns renderer construction and plugin registration. Components request the renderer through the adapter factory and never initialize it directly. The factory preserves Cytoscape object identity because renderer event targets rely on identity equality. Renderer objects never persist canonical documents.
 
 ### Mutation boundary
 
