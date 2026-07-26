@@ -2,10 +2,10 @@ import { expect, test, type Page } from "@playwright/test";
 
 async function createPerson(page: Page, name: string) {
   await page.goto("/documents/new?dtype=person&returnTo=graph");
-  await page.getByLabel("fname").fill(name);
-  await page.getByLabel("lname").fill("Test");
-  await page.getByLabel("full_name").fill(`${name} Test`);
-  await page.getByRole("button", { name: "Save document" }).click();
+  await page.getByLabel(/^First Name/).fill(name);
+  await page.getByLabel(/^Last Name/).fill("Test");
+  await page.getByLabel(/^Display Name/).fill(`${name} Test`);
+  await page.locator(".editor-save-bar .primary").click();
   await expect(page).toHaveURL(/\/graph\?node=/);
 }
 

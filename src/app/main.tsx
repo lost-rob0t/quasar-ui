@@ -2,6 +2,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "../App.jsx";
+import GraphContextRadialBridge from "../components/GraphContextRadialBridge.jsx";
+import GraphObjectTypePickerBridge from "../components/GraphObjectTypePickerBridge.jsx";
 import MobileGraphToolTray from "../components/MobileGraphToolTray.jsx";
 import OperatorUiEnhancer from "../components/OperatorUiEnhancer.jsx";
 import { QuasarProvider } from "../store.jsx";
@@ -18,6 +20,8 @@ import "../operator-ui.css";
 import "../graph-fullscreen.css";
 import "../mobile-graph-tools.css";
 import "../mobile-graph-empty-state.css";
+import "../graph-editors.css";
+import "../graph-editors-extra.css";
 
 initializeTheme();
 
@@ -34,6 +38,8 @@ createRoot(rootElement).render(
         <App />
         <OperatorUiEnhancer />
         <MobileGraphToolTray />
+        <GraphContextRadialBridge />
+        <GraphObjectTypePickerBridge />
       </QuasarProvider>
     </BrowserRouter>
   </StrictMode>

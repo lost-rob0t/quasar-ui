@@ -14,13 +14,12 @@ function renderEditor(url) {
     execute: vi.fn(),
     setNotice: vi.fn(),
     workspace: {},
-    addDocumentsToActiveGraph: vi.fn()
+    addDocumentsToActiveGraph: vi.fn(),
+    runTargetActors: vi.fn()
   });
   return renderToStaticMarkup(
     <MemoryRouter initialEntries={[url]}>
-      <Routes>
-        <Route path="/documents/new" element={<DocumentEditor mode="create" />} />
-      </Routes>
+      <Routes><Route path="/documents/new" element={<DocumentEditor mode="create" />} /></Routes>
     </MemoryRouter>
   );
 }
@@ -35,7 +34,6 @@ describe("schema field controls", () => {
         onChange={vi.fn()}
       />
     );
-
     expect(html).toContain("Reporter");
     expect(html).toContain("Editor");
     expect(html).toContain("Add value");
@@ -52,18 +50,19 @@ describe("schema field controls", () => {
           type: "object",
           properties: {
             scheme: { type: "string" },
-            canonical: { type: "boolean" }
+            active: { type: "boolean" }
           },
           required: ["scheme"]
         }}
-        value='{"scheme":"registry","canonical":true}'
+        value='{"scheme":"registry","active":true}'
         onChange={vi.fn()}
       />
     );
-
-    expect(html).toContain("<code>scheme</code> *");
+    expect(html).toContain("Scheme *");
+    expect(html).toContain("<small>string</small>");
     expect(html).toContain("registry");
-    expect(html).toContain("<code>canonical</code>");
+    expect(html).toContain("Active");
+    expect(html).toContain('type="checkbox"');
     expect(html).not.toContain("<textarea");
   });
 
@@ -76,46 +75,49 @@ describe("schema field controls", () => {
         onChange={vi.fn()}
       />
     );
-
     expect(html).toContain('value="region"');
     expect(html).toContain('value="north"');
     expect(html).toContain("Add property");
     expect(html).not.toContain("<textarea");
   });
 
-  it("shows only common person fields by default", () => {
-    const html = renderEditor("/documents/new?dtype=person");
+  it("uses date, datetime, number, URL, enum, and long-text controls", () => {
+    expect(renderToStaticMarkup(<SchemaField name="started" fieldSchema={{ type: "string", format: "date" }} value="" onChange={vi.fn()} />)).toContain('type="date"');
+    expect(renderToStaticMarkup(<SchemaField name="observed_at" fieldSchema={{ type: "string", format: "date-time" }} value="" onChange={vi.fn()} />)).toContain('type="datetime-local"');
+    expect(renderToStaticMarkup(<SchemaField name="count" fieldSchema={{ type: "integer" }} value="" onChange={vi.fn()} />)).toContain('step="1"');
+    expect(renderToStaticMarkup(<SchemaField name="url" fieldSchema={{ type: "string", format: "uri" }} value="" onChange={vi.fn()} />)).toContain('type="url"');
+    expect(renderToStaticMarkup(<SchemaField name="status" fieldSchema={{ type: "string", enum: ["open", "closed"] }} value="" onChange={vi.fn()} />)).toContain("<select");
+    expect(renderToStaticMarkup(<SchemaField name="description" fieldSchema={{ type: "string" }} value="" onChange={vi.fn()} />)).toContain("<textarea");
+  });
 
+  it("shows only essential person fields by default", () => {
+    const html = renderEditor("/documents/new?dtype=person");
     expect(html).toContain("New Person");
-    expect(html).toContain("Fields for Person");
-    expect(html).toContain("<code>fname</code>");
-    expect(html).toContain("<code>mname</code>");
-    expect(html).toContain("<code>lname</code>");
-    expect(html).toContain("Add another field");
-    expect(html).toContain('role="combobox"');
-    expect(html).toContain("Advanced metadata and raw JSON");
-    expect(html).not.toContain("<code>nationalities</code>");
-    expect(html).not.toContain("schema fields");
+    expect(html).toContain("Fields for person");
+    expect(html).toContain("First Name");
+    expect(html).toContain("Middle Name");
+    expect(html).toContain("Last Name");
+    expect(html).toContain("Add field");
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain("Advanced");
+    expect(html).not.toContain("Nationalities");
   });
 
   it("switches the field heading and fields for organizations", () => {
     const html = renderEditor("/documents/new?dtype=org");
-
     expect(html).toContain("New Organization");
-    expect(html).toContain("Fields for Organization");
-    expect(html).toContain("<code>legal_name</code>");
-    expect(html).toContain("<code>org_type</code>");
-    expect(html).not.toContain("<code>fname</code>");
+    expect(html).toContain("Fields for org");
+    expect(html).toContain("Legal Name");
+    expect(html).toContain("Organization Type");
+    expect(html).not.toContain("First Name");
   });
 
-  it("keeps metadata and raw JSON behind one advanced level", () => {
+  it("keeps the complete editor full-screen with raw JSON access", () => {
     const html = renderEditor("/documents/new?dtype=person&advanced=1");
-
-    expect(html).toContain("Fields for Person");
-    expect(html).toContain(">Advanced</h2>");
-    expect(html).not.toContain("<code>nationalities</code>");
+    expect(html).toContain("full-document-editor");
+    expect(html).toContain("Full document editor.");
+    expect(html).toContain("Inspect JSON");
     expect(html).toContain("Document metadata");
     expect(html).toContain("Sources and evidence");
-    expect(html).toContain("Edit raw JSON");
   });
 });

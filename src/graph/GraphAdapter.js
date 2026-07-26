@@ -5,6 +5,7 @@ import { installMaltegoLayouts } from "./maltego-layouts";
 
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 const AUTO_NODE_SPACING = 96;
+const DEFAULT_WHEEL_SENSITIVITY = 0.18;
 
 let pluginsRegistered = false;
 
@@ -51,12 +52,71 @@ function installAutomaticNodePlacement(cy) {
   return cy;
 }
 
+function installViewportInput(cy, options) {
+  const container = options.container;
+  if (!container?.addEventListener) return cy;
+
+  const rootWindow = container.ownerDocument?.defaultView;
+  const allowPan = options.panningEnabled !== false && options.userPanningEnabled !== false;
+  const allowZoom = options.zoomingEnabled !== false && options.userZoomingEnabled !== false;
+  const allowBoxSelection = options.boxSelectionEnabled === true;
+
+  const syncViewportState = () => {
+    const pan = cy.pan();
+    container.dataset.graphPanX = String(pan.x);
+    container.dataset.graphPanY = String(pan.y);
+    container.dataset.graphZoom = String(cy.zoom());
+  };
+
+  const restoreViewportInput = () => {
+    cy.boxSelectionEnabled(false);
+    cy.userPanningEnabled(allowPan);
+    cy.userZoomingEnabled(allowZoom);
+  };
+
+  const prepareViewportInput = (event) => {
+    const boxSelection = allowBoxSelection
+      && event.shiftKey
+      && event.pointerType !== "touch";
+    cy.boxSelectionEnabled(boxSelection);
+    cy.userPanningEnabled(allowPan && !boxSelection);
+    cy.userZoomingEnabled(allowZoom);
+  };
+
+  const cleanup = () => {
+    container.removeEventListener("pointerdown", prepareViewportInput, true);
+    rootWindow?.removeEventListener("pointerup", restoreViewportInput, true);
+    rootWindow?.removeEventListener("pointercancel", restoreViewportInput, true);
+    cy.off("pan zoom", syncViewportState);
+  };
+
+  container.addEventListener("pointerdown", prepareViewportInput, true);
+  rootWindow?.addEventListener("pointerup", restoreViewportInput, true);
+  rootWindow?.addEventListener("pointercancel", restoreViewportInput, true);
+  cy.on("pan zoom", syncViewportState);
+  cy.one("destroy", cleanup);
+
+  cy.panningEnabled(options.panningEnabled !== false);
+  cy.zoomingEnabled(options.zoomingEnabled !== false);
+  restoreViewportInput();
+  syncViewportState();
+  return cy;
+}
+
 export class GraphAdapter {
   static create(options) {
     registerPlugins();
-    const cy = installMaltegoLayouts(cytoscape(options));
+    const cy = installMaltegoLayouts(cytoscape({
+      panningEnabled: true,
+      userPanningEnabled: true,
+      zoomingEnabled: true,
+      userZoomingEnabled: true,
+      wheelSensitivity: DEFAULT_WHEEL_SENSITIVITY,
+      ...options
+    }));
     installAutomaticNodePlacement(cy);
-    return installGraphGestures(cy);
+    installGraphGestures(cy);
+    return installViewportInput(cy, options);
   }
 }
 

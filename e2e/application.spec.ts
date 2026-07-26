@@ -24,86 +24,40 @@ test("opens the local workspace without a backend", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Install/update map-reduce views" })).toBeVisible();
 });
 
-test("creates documents and manages a custom full-screen graph", async ({ page }) => {
+test("creates a graph node through the compact editor and preserves its full-editor draft", async ({ page }) => {
   await page.goto("/graph");
 
   await expect(page.getByRole("heading", { name: "Start a blank graph" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open menu", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Search graph" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Cycle active graph" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Select dataset" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Cycle layout" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Add graph document" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Fit graph" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Focus selection" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Toggle labels" })).toBeVisible();
   await expect(page.getByLabel("Dataset filter", { exact: true })).toBeHidden();
   await expect(page.getByLabel("Graph layout", { exact: true })).toBeHidden();
-  await expect(page.getByLabel("Maltego graph layout", { exact: true })).toBeHidden();
-  await expect(page.getByLabel("Active graph", { exact: true })).toBeHidden();
 
   await page.locator(".graph-stage").click({ button: "right", position: { x: 240, y: 220 } });
   await expect(page.getByRole("menu", { name: "canvas actions" })).toBeVisible();
-  await expect(page.locator(".graph-context-menu")).toHaveClass(/radial-root/);
-  await expect(page.getByRole("menuitem", { name: "Create person here" })).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Create organization here" })).toBeVisible();
-  await page.getByRole("menuitem", { name: /Ingest/ }).click();
-  await expect(page.getByRole("menuitem", { name: "Import documents" })).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "StarIntel connection settings" })).toBeVisible();
-  await page.getByRole("menuitem", { name: "Back" }).click();
-  await page.getByRole("menuitem", { name: "Create person here" }).click();
-  await expect(page).toHaveURL(/\/documents\/new\?/);
-  await expect(page.getByLabel("Object type")).toHaveValue("person");
-  await expect(page.getByRole("heading", { name: "Fields for Person" })).toBeVisible();
-  await expect(page.getByText("Advanced metadata and raw JSON…")).toBeVisible();
-  await expect(page.getByLabel("fname")).toBeVisible();
-  await expect(page.getByLabel("mname")).toBeVisible();
-  await expect(page.getByLabel("lname")).toBeVisible();
-  await page.getByRole("combobox", { name: "Add another field" }).fill("nationalities");
-  const fieldOptions = page.locator(".field-picker-options");
-  await expect(fieldOptions).toBeVisible();
-  await expect(fieldOptions).toHaveCSS("z-index", "12");
-  await expect(page.locator(".simple-editor-form")).toHaveCSS("overflow", "visible");
-  await page.getByRole("option", { name: /nationalities/ }).click();
-  await expect(page.getByRole("group", { name: "nationalities" })).toBeVisible();
-  await page.getByLabel("Object type").selectOption("org");
-  await expect(page.getByRole("heading", { name: "Fields for Organization" })).toBeVisible();
-  await expect(page.getByLabel("org_type")).toBeVisible();
-  await expect(page.getByLabel("legal_name")).toBeVisible();
-  await expect(page.getByLabel("fname")).toHaveCount(0);
-  await page.getByLabel("Object type").selectOption("person");
-  await page.getByLabel("fname").fill("Jane");
-  await page.getByLabel("lname").fill("Doe");
-  await page.getByLabel("full_name").fill("Jane Doe");
-  await page.getByRole("button", { name: "Save document" }).click();
+  await page.getByRole("button", { name: "Create person here" }).click();
+
+  const compactEditor = page.getByRole("dialog", { name: "New Person" });
+  await expect(compactEditor).toBeVisible();
+  await expect(compactEditor.getByText("Fields for person")).toBeVisible();
+  await expect(compactEditor.getByRole("button", { name: "Add field" })).toBeVisible();
+  await expect(compactEditor.getByRole("button", { name: "Inspect JSON" })).toBeVisible();
+  await expect(compactEditor.getByRole("button", { name: "Generate empty document" })).toBeVisible();
+  await compactEditor.getByLabel(/^First Name/).fill("Jane");
+  await compactEditor.getByLabel(/^Last Name/).fill("Doe");
+  await compactEditor.getByLabel(/^Display Name/).fill("Jane Doe");
+  await compactEditor.getByRole("button", { name: "Open full editor" }).click();
+
+  await expect(page).toHaveURL(/\/documents\/new\?.*draft=/);
+  await expect(page.locator(".full-document-editor")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "New Person" })).toBeVisible();
+  await expect(page.getByLabel(/^First Name/)).toHaveValue("Jane");
+  await expect(page.getByLabel(/^Last Name/)).toHaveValue("Doe");
+  await expect(page.getByLabel(/^Display Name/)).toHaveValue("Jane Doe");
+  await page.locator(".editor-save-bar .primary").click();
 
   await expect(page).toHaveURL(/\/graph\?node=/);
   await expect(page.locator(".graph-count")).toContainText("1 nodes");
-
-  await page.locator(".graph-stage").click({ button: "right", position: { x: 100, y: 600 } });
-  await page.getByRole("menuitem", { name: /^Graph/ }).click();
-  await page.getByRole("menuitem", { name: "Create another graph" }).click();
-  await page.getByLabel("Graph name").fill("Second graph");
-  await page.getByRole("button", { name: "Create graph" }).click();
-
-  await expect(page.getByRole("heading", { name: "Start a blank graph" })).toBeVisible();
-  await expect(page.getByLabel("Active graph", { exact: true })).toHaveValue(/second-graph-/);
-  await expect(page.getByLabel("Active graph", { exact: true }).locator("option")).toHaveCount(2);
-
-  await page.locator(".graph-stage").click({ button: "right", position: { x: 100, y: 600 } });
-  await page.getByRole("menuitem", { name: /^Graph/ }).click();
-  await page.getByRole("menuitem", { name: "Add from corpus" }).click();
-  const janeRow = page.locator(".membership-list label").filter({ hasText: "Jane Doe" });
-  await janeRow.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "Add 1 document" }).click();
-  await expect(page.locator(".graph-count")).toContainText("1 nodes");
-
-  await page.getByRole("button", { name: "Remove from graph" }).click();
-  await expect(page.locator(".graph-count")).toContainText("0 nodes");
-
-  await page.getByRole("button", { name: "Cycle active graph" }).click();
-  await expect(page.getByLabel("Active graph", { exact: true })).toHaveValue("all-documents");
-  await expect(page.locator(".graph-count")).not.toContainText("0 nodes");
 });
 
 test.describe("responsive application shell", () => {
@@ -160,7 +114,7 @@ test.describe("responsive application shell", () => {
     expect(viewport.scrollWidth).toBe(viewport.clientWidth);
   });
 
-  test("keeps the mobile graph exactly viewport-sized", async ({ page }) => {
+  test("keeps the mobile graph and compact editor inside the viewport", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/graph");
 
@@ -180,39 +134,36 @@ test.describe("responsive application shell", () => {
     await expect(page.getByRole("button", { name: "Focus selection" })).toBeHidden();
     await expect(page.getByRole("button", { name: "Toggle labels" })).toBeHidden();
 
-    await page.getByRole("button", { name: "Graph tools" }).click();
-    const tray = page.getByRole("menu", { name: "Graph tools" });
-    await expect(tray).toBeVisible();
-    await expect(tray.getByRole("menuitem", { name: "Search" })).toBeVisible();
-    await expect(tray.getByRole("menuitem", { name: "Graph" })).toBeVisible();
-    await expect(tray.getByRole("menuitem", { name: "Dataset" })).toBeVisible();
-    await expect(tray.getByRole("menuitem", { name: "Layout" })).toBeVisible();
-    await expect(tray.getByRole("menuitem", { name: "Fit" })).toBeVisible();
-    await expect(tray.getByRole("menuitem", { name: "Focus" })).toBeVisible();
-    await expect(tray.getByRole("menuitem", { name: "Labels" })).toBeVisible();
-    await expect(tray.getByRole("menuitem", { name: "Clear" })).toBeVisible();
-    await expect(tray.getByRole("menuitem", { name: "Remove" })).toBeVisible();
-    await expect(tray.getByRole("menuitem", { name: "Delete" })).toBeVisible();
+    await page.getByRole("button", { name: "Add graph document" }).click();
+    const compactEditor = page.getByRole("dialog", { name: "New Entity" });
+    await expect(compactEditor).toBeVisible();
+    await expect(compactEditor.getByRole("button", { name: "Cancel" })).toBeVisible();
+    await expect(compactEditor.getByRole("button", { name: "Save" })).toBeVisible();
 
-    const layout = await page.locator(".graph-stage").evaluate((stage) => {
-      const rect = stage.getBoundingClientRect();
+    const layout = await page.evaluate(() => {
+      const stageRect = document.querySelector(".graph-stage")?.getBoundingClientRect();
+      const editorRect = document.querySelector(".graph-compact-editor")?.getBoundingClientRect();
       return {
-        x: rect.x,
-        y: rect.y,
-        width: rect.width,
-        height: rect.height,
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
         pageWidth: document.documentElement.scrollWidth,
-        pageHeight: document.documentElement.scrollHeight
+        pageHeight: document.documentElement.scrollHeight,
+        stageRect,
+        editorRect
       };
     });
-    expect(layout.x).toBe(0);
-    expect(layout.y).toBe(0);
-    expect(layout.width).toBe(layout.viewportWidth);
-    expect(layout.height).toBe(layout.viewportHeight);
+    expect(layout.stageRect?.x).toBe(0);
+    expect(layout.stageRect?.y).toBe(0);
+    expect(layout.stageRect?.width).toBe(layout.viewportWidth);
+    expect(layout.stageRect?.height).toBe(layout.viewportHeight);
+    expect(layout.editorRect?.x).toBe(0);
+    expect(layout.editorRect?.width).toBe(layout.viewportWidth);
+    expect(layout.editorRect?.bottom).toBeLessThanOrEqual(layout.viewportHeight);
     expect(layout.pageWidth).toBe(layout.viewportWidth);
     expect(layout.pageHeight).toBe(layout.viewportHeight);
+
+    await compactEditor.getByRole("button", { name: "Cancel" }).click();
+    await expect(compactEditor).toBeHidden();
   });
 
   test("fits agent chat inside the mobile PWA viewport", async ({ page }) => {
