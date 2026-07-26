@@ -50,6 +50,12 @@ export function findRelationDropTarget(cy, sourceNode, padding = DESKTOP_DROP_PA
   return best;
 }
 
+function pointerTypeFromEvent(event) {
+  const originalEvent = event?.originalEvent;
+  if (!originalEvent || !("pointerType" in originalEvent)) return "";
+  return typeof originalEvent.pointerType === "string" ? originalEvent.pointerType : "";
+}
+
 function emitContextTap(event) {
   const target = event.target;
   if (!target?.emit) return;
@@ -113,7 +119,7 @@ export function installGraphGestures(cy) {
   cy.on("grab", "node", (event) => {
     const node = event.target;
     if (node.data("unresolved")) return;
-    const pointerType = event.originalEvent?.pointerType || "";
+    const pointerType = pointerTypeFromEvent(event);
     state.panningEnabled = cy.panningEnabled();
     cy.panningEnabled(false);
     state.drag = {
