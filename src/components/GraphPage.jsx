@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import cytoscape from "cytoscape";
-import { ArrowLeft, Database, ExternalLink, Focus, Link2, Network, Play, Plus, Search, TriangleAlert, X } from "lucide-react";
+import { ArrowLeft, Database, ExternalLink, Focus, FolderPlus, Link2, Network, Pencil, Play, Plus, Search, Trash2, TriangleAlert, X } from "lucide-react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { assertDocument, createDocument, createRelation, dtypes, documentLabel } from "starintel_doc";
+import { actorApplicability, isBuiltinActor } from "../lib/actors";
 import { buildGraph, filterGraph, findPaths, importedGraphNodeIds, partitionDocumentsByReview } from "../lib/graph";
+import { documentsForActiveGraph } from "../lib/graph-workspaces";
 import { GRAPH_STYLE } from "../lib/graph-style";
 import { operation } from "../lib/operations";
 import { useQuasar } from "../store";
@@ -90,8 +92,72 @@ function Modal({ title, children, onClose }) {
   );
 }
 
-function QuickAdd({ selectedDataset, onClose }) {
-  const { execute, setNotice, persistWorkspace, workspace } = useQuasar();
+function GraphCreate({ onClose, onCreate }) {
+  const [name, setName] = useState("");
+
+  function submit(event) {
+    event.preventDefault();
+    if (onCreate(name) !== false) onClose();
+  }
+
+  return (
+    <Modal title="Create graph" onClose={onClose}>
+      <form className="modal-form" onSubmit={submit}>
+        <label className="field"><span>Graph name</span><input value={name} onChange={(event) => setName(event.target.value)} autoFocus required /></label>
+        <p className="muted graph-form-note">A new graph starts blank and keeps its own document membership, positions, layout, viewport, and selection.</p>
+        <div className="form-actions"><button type="button" className="button" onClick={onClose}>Cancel</button><button className="button primary">Create graph</button></div>
+      </form>
+    </Modal>
+  );
+}
+
+function GraphMembershipAdd({ documents, existingIds, onAdd, onClose }) {
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState([]);
+  const existing = useMemo(() => new Set(existingIds || []), [existingIds]);
+  const visible = useMemo(() => documents
+    .filter((document) => document.dtype !== "relation" && !existing.has(document._id))
+    .filter((document) => {
+      const needle = query.trim().toLowerCase();
+      if (!needle) return true;
+      return `${document._id} ${document.title || ""} ${JSON.stringify(document.data || {})}`.toLowerCase().includes(needle);
+    })
+    .slice(0, 100), [documents, existing, query]);
+
+  function toggle(id) {
+    setSelected((current) => current.includes(id)
+      ? current.filter((value) => value !== id)
+      : [...current, id]);
+  }
+
+  function submit(event) {
+    event.preventDefault();
+    onAdd(selected);
+    onClose();
+  }
+
+  return (
+    <Modal title="Add corpus documents" onClose={onClose}>
+      <form className="modal-form" onSubmit={submit}>
+        <label className="field"><span>Search corpus</span><input value={query} onChange={(event) => setQuery(event.target.value)} autoFocus placeholder="Name, ID, or field value" /></label>
+        <div className="membership-list">
+          {visible.map((document) => (
+            <label key={document._id}>
+              <input type="checkbox" checked={selected.includes(document._id)} onChange={() => toggle(document._id)} />
+              <span><strong>{documentLabel(document)}</strong><code>{document._id}</code></span>
+            </label>
+          ))}
+          {!visible.length && <p className="muted">No available corpus documents match.</p>}
+        </div>
+        <p className="muted graph-form-note">Relations whose endpoints are both in this graph are added automatically.</p>
+        <div className="form-actions"><button type="button" className="button" onClick={onClose}>Cancel</button><button className="button primary" disabled={!selected.length}>Add {selected.length || ""} document{selected.length === 1 ? "" : "s"}</button></div>
+      </form>
+    </Modal>
+  );
+}
+
+function QuickAdd({ selectedDataset, onClose, onCreated }) {
+  const { execute, setNotice, addDocumentsToActiveGraph, workspace } = useQuasar();
   const [form, setForm] = useState({ dtype: "entity", dataset: selectedDataset || "default", id: "", title: "", data: "{}" });
   const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
 
@@ -105,7 +171,11 @@ function QuickAdd({ selectedDataset, onClose }) {
         data: JSON.parse(form.data || "{}")
       }));
       await execute(operation.save(document), `Graph add ${document._id}`);
-      persistWorkspace({ positions: { ...(workspace?.positions || {}), [document._id]: { x: 0, y: 0 } }, selectedIds: [document._id] });
+      addDocumentsToActiveGraph([document._id], {
+        positions: { ...(workspace?.positions || {}), [document._id]: { x: 0, y: 0 } },
+        selectedIds: [document._id]
+      });
+      onCreated(document);
       onClose();
     } catch (error) {
       setNotice({ kind: "error", message: error.message });
@@ -128,7 +198,7 @@ function QuickAdd({ selectedDataset, onClose }) {
 }
 
 function RelationAdd({ ids, documents, onClose }) {
-  const { execute, setNotice } = useQuasar();
+  const { execute, setNotice, addDocumentsToActiveGraph } = useQuasar();
   const source = documents.find((document) => document._id === ids[0]);
   const target = documents.find((document) => document._id === ids[1]);
   const [predicate, setPredicate] = useState("related-to");
@@ -147,6 +217,7 @@ function RelationAdd({ ids, documents, onClose }) {
         title: `${documentLabel(source) || ids[0]} ${predicate} ${documentLabel(target) || ids[1]}`
       }));
       await execute(operation.save(relation), `Connect ${ids[0]} to ${ids[1]}`);
+      addDocumentsToActiveGraph([relation._id]);
       onClose();
     } catch (error) {
       setNotice({ kind: "error", message: error.message });
@@ -172,10 +243,13 @@ export default function GraphPage() {
   const location = useLocation();
   const {
     documents, workspace, selectedIds, selectedDocuments, select, persistWorkspace,
-    actors, runActor, settings, setNotice
+    actors, runActor, settings, setNotice, graphs, activeGraph,
+    addDocumentsToActiveGraph, removeDocumentsFromActiveGraph,
+    createGraph, switchGraph, renameGraph, deleteGraph
   } = useQuasar();
   const apiRef = useRef(null);
-  const importHandled = useRef(false);
+  const importMembershipHandled = useRef(false);
+  const importFocusHandled = useRef(false);
   const importedIds = useMemo(
     () => location.state?.source === "local-import" ? [...new Set(location.state.importedIds || [])] : [],
     [location.state]
@@ -184,17 +258,25 @@ export default function GraphPage() {
   const [dtype, setDtype] = useState("");
   const [dataset, setDataset] = useState("");
   const [predicate, setPredicate] = useState("");
-  const [reviewStatus, setReviewStatus] = useState(location.state?.revealUnreviewed ? "all" : "reviewed");
+  const [reviewStatus, setReviewStatus] = useState(location.state?.revealUnreviewed || !documents.length ? "all" : "reviewed");
   const [labels, setLabels] = useState(true);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showRelation, setShowRelation] = useState(false);
+  const [showGraphCreate, setShowGraphCreate] = useState(false);
+  const [showMembershipAdd, setShowMembershipAdd] = useState(false);
   const [pathStart, setPathStart] = useState("");
   const [pathEnd, setPathEnd] = useState("");
   const [paths, setPaths] = useState([]);
   const [activePath, setActivePath] = useState(-1);
+  const [runningActorId, setRunningActorId] = useState("");
+  const [lastActorRun, setLastActorRun] = useState(null);
 
-  const reviewGroups = useMemo(() => partitionDocumentsByReview(documents), [documents]);
-  const graphDocuments = reviewStatus === "all" ? documents : reviewGroups.reviewed;
+  const scopedDocuments = useMemo(
+    () => documentsForActiveGraph(workspace || {}, documents),
+    [documents, workspace]
+  );
+  const reviewGroups = useMemo(() => partitionDocumentsByReview(scopedDocuments), [scopedDocuments]);
+  const graphDocuments = reviewStatus === "all" ? scopedDocuments : reviewGroups.reviewed;
   const graph = useMemo(() => buildGraph(graphDocuments, workspace?.positions || {}), [graphDocuments, workspace?.positions]);
   const visibleGraph = useMemo(
     () => filterGraph(graph, { query, dtype, dataset, predicate }),
@@ -215,6 +297,11 @@ export default function GraphPage() {
     .slice()
     .sort((left, right) => left.data.label.localeCompare(right.data.label));
   const selected = selectedDocuments.find((document) => graphDocumentIds.has(document._id));
+  const actorEntries = useMemo(() => actors.map((actor) => ({
+    actor,
+    builtin: isBuiltinActor(actor),
+    availability: actorApplicability(actor, selectedDocuments)
+  })), [actors, selectedDocuments]);
 
   const onMove = useMemo(() => (id, position) => {
     persistWorkspace({ positions: { ...(workspace?.positions || {}), [id]: position } });
@@ -228,8 +315,15 @@ export default function GraphPage() {
   }, [graphDocumentIds, select, selectedIds]);
 
   useEffect(() => {
-    if (importHandled.current || !importedIds.length || !importedFocusIds.length) return undefined;
-    importHandled.current = true;
+    if (importMembershipHandled.current || !importedIds.length) return;
+    importMembershipHandled.current = true;
+    addDocumentsToActiveGraph(importedIds);
+    setReviewStatus("all");
+  }, [addDocumentsToActiveGraph, importedIds]);
+
+  useEffect(() => {
+    if (importFocusHandled.current || !importedFocusIds.length) return undefined;
+    importFocusHandled.current = true;
     select(importedFocusIds);
     const timer = setTimeout(() => {
       const cy = apiRef.current;
@@ -239,7 +333,7 @@ export default function GraphPage() {
       if (elements.length) cy.animate({ fit: { eles: elements, padding: 140 }, duration: 350 });
     }, 100);
     return () => clearTimeout(timer);
-  }, [importedFocusIds, importedIds.length, select]);
+  }, [importedFocusIds, select]);
 
   useEffect(() => {
     const node = params.get("node");
@@ -308,6 +402,108 @@ export default function GraphPage() {
     setPredicate("");
   }
 
+  function revealCreated(document) {
+    setReviewStatus("all");
+    clearFilters();
+    select([document._id]);
+  }
+
+  function createNamedGraph(name) {
+    try {
+      createGraph(name);
+      setReviewStatus("all");
+      clearFilters();
+      setPaths([]);
+      setActivePath(-1);
+      return true;
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+      return false;
+    }
+  }
+
+  function changeGraph(id) {
+    try {
+      switchGraph(id);
+      setReviewStatus("all");
+      clearFilters();
+      setPaths([]);
+      setActivePath(-1);
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
+  }
+
+  function renameCurrentGraph() {
+    const name = window.prompt("Graph name", activeGraph?.name || "");
+    if (name === null) return;
+    try {
+      renameGraph(name);
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
+  }
+
+  function deleteCurrentGraph() {
+    if (!window.confirm(`Delete graph "${activeGraph?.name || ""}"? Corpus documents will not be deleted.`)) return;
+    try {
+      deleteGraph();
+      setReviewStatus("all");
+      clearFilters();
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
+  }
+
+  function addExistingDocuments(ids) {
+    const members = new Set([...(activeGraph?.documentIds || []), ...ids]);
+    const relationIds = documents
+      .filter((document) => document.dtype === "relation")
+      .filter((document) => members.has(document.data?.subject) && members.has(document.data?.object))
+      .map((document) => document._id);
+    addDocumentsToActiveGraph([...ids, ...relationIds], { selectedIds: ids });
+    setReviewStatus("all");
+    clearFilters();
+  }
+
+  function removeSelectionFromGraph() {
+    if (!selectedIds.length || activeGraph?.documentIds === null) return;
+    const selectedSet = new Set(selectedIds);
+    const relationIds = scopedDocuments
+      .filter((document) => document.dtype === "relation")
+      .filter((document) => selectedSet.has(document.data?.subject) || selectedSet.has(document.data?.object))
+      .map((document) => document._id);
+    removeDocumentsFromActiveGraph([...selectedIds, ...relationIds]);
+  }
+
+  async function executeActor(actor) {
+    setRunningActorId(actor.id);
+    setLastActorRun(null);
+    try {
+      const result = await runActor(actor);
+      const produced = Array.isArray(result?.documents) ? result.documents : [];
+      const nodeIds = produced
+        .filter((document) => document?.dtype !== "relation")
+        .map((document) => document._id)
+        .filter(Boolean)
+        .slice(0, 100);
+      if (produced.length) {
+        setReviewStatus("all");
+        clearFilters();
+        if (nodeIds.length) select(nodeIds);
+      }
+      setLastActorRun({
+        actorId: actor.id,
+        produced: produced.length,
+        message: result?.message || `Actor produced ${produced.length} document(s).`
+      });
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    } finally {
+      setRunningActorId("");
+    }
+  }
+
   return (
     <section className="graph-page">
       <Link className="back-link" to="/"><ArrowLeft size={14} /> Statistics dashboard</Link>
@@ -315,7 +511,21 @@ export default function GraphPage() {
         <div><span className="eyebrow">Investigation graph</span><h1>Graph explorer</h1><p>Search, filter, and inspect the relationship network. Reviewed records are shown by default.</p></div>
         <div className="graph-heading-actions">
           <div className="graph-source-status"><Database size={17} /><span><strong>Local PouchDB corpus</strong><small>startup + live changes</small></span></div>
+          <div className="graph-switcher">
+            <select aria-label="Active graph" value={activeGraph?.id || ""} onChange={(event) => changeGraph(event.target.value)}>
+              {(graphs || []).map((graphView) => (
+                <option key={graphView.id} value={graphView.id}>
+                  {graphView.name}{graphView.documentIds === null ? " · all documents" : ` · ${graphView.documentIds.length}`}
+                </option>
+              ))}
+            </select>
+            <button className="icon-button" title="Create graph" aria-label="Create graph" onClick={() => setShowGraphCreate(true)}><FolderPlus size={16} /></button>
+            <button className="icon-button" title="Rename graph" aria-label="Rename graph" onClick={renameCurrentGraph}><Pencil size={15} /></button>
+            <button className="icon-button danger" title="Delete graph" aria-label="Delete graph" onClick={deleteCurrentGraph} disabled={(graphs || []).length <= 1}><Trash2 size={15} /></button>
+          </div>
           <div className="button-row">
+            {activeGraph?.documentIds !== null && <button className="button" onClick={() => setShowMembershipAdd(true)}><Plus size={16} /> Add from corpus</button>}
+            {activeGraph?.documentIds !== null && <button className="button danger" onClick={removeSelectionFromGraph} disabled={!selectedIds.length}>Remove from graph</button>}
             <button className="button" onClick={() => setShowRelation(true)} disabled={selectedIds.length !== 2}><Link2 size={16} /> Connect selected</button>
             <button className="button primary" onClick={() => setShowQuickAdd(true)}><Plus size={16} /> Add graph document</button>
           </div>
@@ -376,9 +586,21 @@ export default function GraphPage() {
           {!visibleGraph.nodes.length && (
             <div className="graph-empty-state">
               <Network size={38} />
-              <h2>No graph nodes match</h2>
-              <p>{graph.nodes.length ? "Change or clear the active filters." : "No reviewed graph records are available."}</p>
-              {graph.nodes.length ? <button className="button small" onClick={clearFilters}>Clear filters</button> : <Link className="button small" to="/import">Import documents</Link>}
+              <h2>{scopedDocuments.length ? "No graph nodes match" : "Start a blank graph"}</h2>
+              <p>
+                {graph.nodes.length
+                  ? "Change or clear the active filters."
+                  : reviewGroups.unreviewed.length
+                    ? `${reviewGroups.unreviewed.length.toLocaleString()} unreviewed document(s) are hidden by the current review filter.`
+                    : "Create the first document here or import an existing StarIntel dataset."}
+              </p>
+              <div className="button-row">
+                {graph.nodes.length && <button className="button small" onClick={clearFilters}>Clear filters</button>}
+                {!graph.nodes.length && reviewGroups.unreviewed.length > 0 && <button className="button small" onClick={() => setReviewStatus("all")}>Show unreviewed</button>}
+                {!graph.nodes.length && activeGraph?.documentIds !== null && <button className="button small" onClick={() => setShowMembershipAdd(true)}>Add from corpus</button>}
+                {!graph.nodes.length && <button className="button primary small" onClick={() => setShowQuickAdd(true)}><Plus size={15} /> Create first node</button>}
+                {!graph.nodes.length && <Link className="button small" to="/import">Import documents</Link>}
+              </div>
             </div>
           )}
         </div>
@@ -424,18 +646,48 @@ export default function GraphPage() {
 
           <section>
             <h2>Browser actors</h2>
-            {!settings?.actorsEnabled && <p className="muted">Enable browser actors in Settings.</p>}
-            {settings?.actorsEnabled && actors.map((actor) => (
-              <button key={actor.id} className="actor-button" disabled={!selectedDocuments.length} onClick={() => runActor(actor).catch((error) => setNotice({ kind: "error", message: error.message }))}>
-                <Play size={14} /><span><strong>{actor.label}</strong><small>{actor.id}</small></span>
-              </button>
-            ))}
+            {!settings?.actorsEnabled && <p className="muted">Built-in actors are ready. Enable custom actor code in Settings when needed.</p>}
+            {actorEntries.map(({ actor, builtin, availability }) => {
+              const customDisabled = !builtin && !settings?.actorsEnabled;
+              const reason = customDisabled ? "Custom actor execution is disabled." : availability.reason;
+              const running = runningActorId === actor.id;
+              return (
+                <button
+                  key={actor.id}
+                  className="actor-button"
+                  disabled={Boolean(runningActorId) || customDisabled || !availability.applicable}
+                  title={reason || actor.description || actor.id}
+                  onClick={() => executeActor(actor)}
+                >
+                  <Play size={14} />
+                  <span>
+                    <strong>{running ? "Running…" : actor.label}</strong>
+                    <small>{reason || actor.description || actor.id}</small>
+                  </span>
+                </button>
+              );
+            })}
+            {lastActorRun && (
+              <div className="actor-result" role="status">
+                <strong>{lastActorRun.produced} document(s) returned</strong>
+                <span>{lastActorRun.message}</span>
+              </div>
+            )}
           </section>
         </aside>
       </div>
 
-      {showQuickAdd && <QuickAdd selectedDataset={selected?.dataset} onClose={() => setShowQuickAdd(false)} />}
-      {showRelation && <RelationAdd ids={selectedIds} documents={documents} onClose={() => setShowRelation(false)} />}
+      {showGraphCreate && <GraphCreate onCreate={createNamedGraph} onClose={() => setShowGraphCreate(false)} />}
+      {showMembershipAdd && (
+        <GraphMembershipAdd
+          documents={documents}
+          existingIds={activeGraph?.documentIds || []}
+          onAdd={addExistingDocuments}
+          onClose={() => setShowMembershipAdd(false)}
+        />
+      )}
+      {showQuickAdd && <QuickAdd selectedDataset={selected?.dataset} onCreated={revealCreated} onClose={() => setShowQuickAdd(false)} />}
+      {showRelation && <RelationAdd ids={selectedIds} documents={scopedDocuments} onClose={() => setShowRelation(false)} />}
     </section>
   );
 }

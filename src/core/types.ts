@@ -26,7 +26,19 @@ export interface GraphViewport {
   pan: GraphPosition;
 }
 
+export interface SavedGraph {
+  id: string;
+  name: string;
+  documentIds: DocumentId[] | null;
+  positions: Record<DocumentId, GraphPosition>;
+  viewport: GraphViewport | null;
+  layout: string;
+  selectedIds: DocumentId[];
+}
+
 export interface WorkspaceState {
+  graphs: SavedGraph[];
+  activeGraphId: string;
   positions: Record<DocumentId, GraphPosition>;
   viewport: GraphViewport | null;
   layout: string;

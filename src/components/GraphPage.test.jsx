@@ -29,6 +29,59 @@ const document = (id, dtype, data, verified) => ({
 });
 
 describe("graph local corpus status", () => {
+  it("offers manual creation from an empty graph", () => {
+    context.current = {
+      documents: [],
+      workspace: { positions: {}, layout: "cose" },
+      selectedIds: [],
+      selectedDocuments: [],
+      select: vi.fn(),
+      persistWorkspace: vi.fn(),
+      actors: [],
+      runActor: vi.fn(),
+      settings: { actorsEnabled: false },
+      setNotice: vi.fn()
+    };
+
+    const html = renderToStaticMarkup(
+      <MemoryRouter initialEntries={["/graph"]}>
+        <Routes><Route path="/graph" element={<GraphPage />} /></Routes>
+      </MemoryRouter>
+    );
+
+    expect(html).toContain("Start a blank graph");
+    expect(html).toContain("Create first node");
+    expect(html).toContain("Import documents");
+  });
+
+  it("reveals why newly-created unreviewed nodes are hidden", () => {
+    const documents = [
+      document("starintel:entity:manual", "entity", { name: "Manual" }, false)
+    ];
+    context.current = {
+      documents,
+      workspace: { positions: {}, layout: "cose" },
+      selectedIds: [],
+      selectedDocuments: [],
+      select: vi.fn(),
+      persistWorkspace: vi.fn(),
+      actors: [],
+      runActor: vi.fn(),
+      settings: { actorsEnabled: false },
+      setNotice: vi.fn()
+    };
+
+    const html = renderToStaticMarkup(
+      <MemoryRouter initialEntries={["/graph"]}>
+        <Routes><Route path="/graph" element={<GraphPage />} /></Routes>
+      </MemoryRouter>
+    );
+
+    expect(html).toContain("1 unreviewed document(s) are hidden");
+    expect(html).toContain("Show unreviewed");
+    expect(html).toContain("Create first node");
+  });
+
   it("reveals imported unreviewed records and reports corpus review counts", () => {
     const documents = [
       document("starintel:org:reviewed", "org", { name: "Reviewed" }, true),

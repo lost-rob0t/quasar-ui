@@ -43,13 +43,15 @@ PouchDB: quasar-ui-state-v1
 
 Contains:
 
-- graph positions;
-- viewport and layout;
-- selection;
+- saved graph definitions and active graph;
+- per-graph document membership;
+- per-graph positions, viewport, layout, and selection;
 - CouchDB connection settings;
 - browser actor manifests.
 
 This database is not part of the StarIntel corpus and is not replicated by the application.
+
+The default `All documents` graph has dynamic corpus membership. User-created graphs start with an empty membership list and reference canonical documents by stable ID. Graph creation, rename, switching, and deletion mutate only application state.
 
 ## Mutation pipeline
 
@@ -83,7 +85,8 @@ Node drag frames remain in Cytoscape. `dragfree` commits only the final position
 - missing endpoints become unresolved placeholder nodes;
 - `related_ids` become undirected related edges;
 - relation confidence contributes to connection-path cost;
-- positions are loaded from Quasar workspace state rather than written into StarIntel documents.
+- positions are loaded from the active saved graph rather than written into StarIntel documents;
+- one canonical document may appear in many saved graphs without being duplicated.
 
 ## Routes
 

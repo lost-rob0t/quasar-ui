@@ -14,8 +14,18 @@ import {
 } from "./lib/db";
 import { importFiles } from "./lib/importer";
 import { applyOperation, operation, saveDocumentBatch } from "./lib/operations";
-import { BUILTIN_ACTORS, actorApplicable, runBrowserActor } from "./lib/actors";
+import { BUILTIN_ACTORS, actorApplicability, isBuiltinActor, runBrowserActor } from "./lib/actors";
 import { startDocumentSource } from "./lib/document-source";
+import {
+  addDocumentsToActiveGraph as addDocumentsToGraphWorkspace,
+  createGraph as createGraphWorkspace,
+  deleteActiveGraph as deleteGraphWorkspace,
+  getActiveGraph,
+  removeDocumentsFromActiveGraph as removeDocumentsFromGraphWorkspace,
+  renameActiveGraph as renameGraphWorkspace,
+  switchActiveGraph as switchGraphWorkspace,
+  updateActiveGraph
+} from "./lib/graph-workspaces";
 
 const QuasarContext = createContext(null);
 
@@ -29,6 +39,7 @@ export function QuasarProvider({ children }) {
   const [syncStatus, setSyncStatus] = useState({ state: "offline", message: "Local only" });
   const [history, setHistory] = useState({ undo: [], redo: [] });
   const syncRef = useRef(null);
+  const workspaceRef = useRef(null);
   const workspaceTimer = useRef(null);
 
   const refresh = useCallback(async () => setDocuments(await listDocuments()), []);
@@ -45,6 +56,7 @@ export function QuasarProvider({ children }) {
       .then(([, nextSettings, nextWorkspace]) => {
         if (!active) return;
         setSettings(nextSettings);
+        workspaceRef.current = nextWorkspace;
         setWorkspace(nextWorkspace);
         setSelectedIds(nextWorkspace.selectedIds || []);
       })
@@ -145,22 +157,51 @@ export function QuasarProvider({ children }) {
     return normalized;
   }, [settings]);
 
-  const persistWorkspace = useCallback((next) => {
-    const normalized = { ...(workspace || {}), ...next };
+  const commitWorkspace = useCallback((normalized) => {
+    workspaceRef.current = normalized;
     setWorkspace(normalized);
-    if (next.selectedIds) setSelectedIds(next.selectedIds);
+    setSelectedIds(normalized.selectedIds || []);
     clearTimeout(workspaceTimer.current);
     workspaceTimer.current = setTimeout(() => saveWorkspace(normalized).catch((error) => {
       setNotice({ kind: "error", message: error.message });
     }), 120);
     return normalized;
-  }, [workspace]);
+  }, []);
+
+  const persistWorkspace = useCallback((next) => {
+    return commitWorkspace(updateActiveGraph(workspaceRef.current || {}, next));
+  }, [commitWorkspace]);
+
+  const addDocumentsToActiveGraph = useCallback((ids, changes = {}) => {
+    return commitWorkspace(addDocumentsToGraphWorkspace(workspaceRef.current || {}, ids, changes));
+  }, [commitWorkspace]);
+
+  const removeDocumentsFromActiveGraph = useCallback((ids) => {
+    return commitWorkspace(removeDocumentsFromGraphWorkspace(workspaceRef.current || {}, ids));
+  }, [commitWorkspace]);
+
+  const createGraph = useCallback((name) => {
+    return commitWorkspace(createGraphWorkspace(workspaceRef.current || {}, name));
+  }, [commitWorkspace]);
+
+  const switchGraph = useCallback((id) => {
+    return commitWorkspace(switchGraphWorkspace(workspaceRef.current || {}, id));
+  }, [commitWorkspace]);
+
+  const renameGraph = useCallback((name) => {
+    return commitWorkspace(renameGraphWorkspace(workspaceRef.current || {}, name));
+  }, [commitWorkspace]);
+
+  const deleteGraph = useCallback(() => {
+    return commitWorkspace(deleteGraphWorkspace(workspaceRef.current || {}));
+  }, [commitWorkspace]);
 
   const select = useCallback((ids) => {
     const normalized = [...new Set(ids)];
-    if (normalized.length === selectedIds.length && normalized.every((id, index) => id === selectedIds[index])) return workspace;
+    const currentIds = workspaceRef.current?.selectedIds || selectedIds;
+    if (normalized.length === currentIds.length && normalized.every((id, index) => id === currentIds[index])) return workspaceRef.current;
     return persistWorkspace({ selectedIds: normalized });
-  }, [persistWorkspace, selectedIds, workspace]);
+  }, [persistWorkspace, selectedIds]);
 
   const startSync = useCallback((configuration = settings) => {
     syncRef.current?.cancel?.();
@@ -199,24 +240,32 @@ export function QuasarProvider({ children }) {
   ], [settings?.actors]);
 
   const runActor = useCallback(async (actor) => {
-    if (!settings?.actorsEnabled) throw new Error("Browser actors are disabled in settings");
+    if (!isBuiltinActor(actor) && !settings?.actorsEnabled) throw new Error("Custom browser actors are disabled in settings");
     const selection = documents.filter((document) => selectedIds.includes(document._id));
-    if (!actorApplicable(actor, selection)) throw new Error("Actor does not accept the current selection");
+    const availability = actorApplicability(actor, selection);
+    if (!availability.applicable) throw new Error(availability.reason);
     const result = await runBrowserActor(actor, {
       selection,
       documents: documents.map((document) => ({ ...document })),
       workspace: { layout: workspace?.layout || "cose" }
     });
     const produced = Array.isArray(result?.documents) ? result.documents : [];
-    if (produced.length) await executeBatch(produced, `Actor: ${actor.label}`);
+    if (produced.length) {
+      await executeBatch(produced, `Actor: ${actor.label}`);
+      addDocumentsToActiveGraph(produced.map((document) => document._id));
+    }
     setNotice({ kind: "success", message: result?.message || `Actor produced ${produced.length} document(s)` });
     return result;
-  }, [documents, executeBatch, selectedIds, settings?.actorsEnabled, workspace?.layout]);
+  }, [addDocumentsToActiveGraph, documents, executeBatch, selectedIds, settings?.actorsEnabled, workspace?.layout]);
+
+  const activeGraph = useMemo(() => getActiveGraph(workspace || {}), [workspace]);
 
   const value = useMemo(() => ({
     documents,
     settings,
     workspace,
+    graphs: workspace?.graphs || [],
+    activeGraph,
     selectedIds,
     selectedDocuments: documents.filter((document) => selectedIds.includes(document._id)),
     loading,
@@ -233,6 +282,12 @@ export function QuasarProvider({ children }) {
     importFileSet,
     persistSettings,
     persistWorkspace,
+    addDocumentsToActiveGraph,
+    removeDocumentsFromActiveGraph,
+    createGraph,
+    switchGraph,
+    renameGraph,
+    deleteGraph,
     select,
     startSync,
     stopSync,
@@ -245,7 +300,9 @@ export function QuasarProvider({ children }) {
   }), [
     documents, settings, workspace, selectedIds, loading, notice, syncStatus, history,
     execute, executeBatch, undo, redo, importFileSet, persistSettings, persistWorkspace,
-    select, startSync, stopSync, synchronize, actors, runActor
+    addDocumentsToActiveGraph, removeDocumentsFromActiveGraph,
+    createGraph, switchGraph, renameGraph, deleteGraph,
+    activeGraph, select, startSync, stopSync, synchronize, actors, runActor
   ]);
 
   return <QuasarContext.Provider value={value}>{children}</QuasarContext.Provider>;

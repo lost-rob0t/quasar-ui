@@ -1,6 +1,7 @@
 import PouchDB from "pouchdb-browser";
 import { assertDocument, isStarIntelDocument } from "starintel_doc";
 import { commitDocumentBatch } from "./document-batch";
+import { normalizeGraphWorkspace } from "./graph-workspaces";
 
 export const documentsDb = new PouchDB("quasar-starintel-v09", { auto_compaction: true });
 export const stateDb = new PouchDB("quasar-ui-state-v1", { auto_compaction: true });
@@ -92,7 +93,7 @@ export function saveSettings(settings) {
 
 export async function getWorkspace() {
   const stored = await getState("workspace:default", {});
-  return {
+  return normalizeGraphWorkspace({
     positions: {},
     viewport: null,
     layout: "cose",
@@ -100,11 +101,11 @@ export async function getWorkspace() {
     ...stored,
     _id: undefined,
     _rev: undefined
-  };
+  });
 }
 
 export function saveWorkspace(workspace) {
-  return putState("workspace:default", workspace);
+  return putState("workspace:default", normalizeGraphWorkspace(workspace));
 }
 
 function remoteUrl(config) {

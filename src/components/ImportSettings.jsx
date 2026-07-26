@@ -121,8 +121,11 @@ export function ImportPage() {
 const ACTOR_TEMPLATE = JSON.stringify({
   id: "quasar.actor.example",
   label: "Example actor",
+  description: "Describe what this actor returns.",
   version: 1,
   accepts: ["*"],
+  minSelection: 1,
+  maxSelection: 8,
   source: `(context) => ({ documents: [], message: "Selected " + context.selection.length + " document(s)" })`
 }, null, 2);
 
@@ -206,7 +209,7 @@ export function SettingsPage() {
 
       <section className="panel">
         <div className="section-heading"><h2>Browser actors</h2><label className="checkbox"><input type="checkbox" checked={Boolean(form.actorsEnabled)} onChange={update("actorsEnabled")} /> Enable actor execution</label></div>
-        <p className="muted">Actors run as Web Workers and return StarIntel document batches. Returned documents pass through canonical validation and transaction-level undo.</p>
+        <p className="muted">Bundled actors run without enabling custom code. Custom actors run as Web Workers and return StarIntel document batches. Returned documents pass through canonical validation and transaction-level undo.</p>
         <div className="actor-list">
           {actors.map((actor) => (
             <div key={actor.id} className="actor-row"><div><strong>{actor.label}</strong><code>{actor.id} · v{actor.version}</code></div><button className="icon-button danger" onClick={() => removeActor(actor.id)}><Trash2 size={16} /></button></div>

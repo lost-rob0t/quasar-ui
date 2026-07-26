@@ -12,6 +12,7 @@ Quasar is a browser-first, offline-first StarIntel investigation workspace. It f
 - optional push, pull, one-shot, or live CouchDB replication
 - canonical StarIntel v0.9 validation through `starintel_doc.js`
 - graph-created documents and relations
+- multiple saved graph workspaces with independent membership, layout, viewport, and selection
 - standalone manual document adder/editor
 - stable single-document routes at `/documents/:id`
 - searchable/filterable table view
@@ -39,10 +40,13 @@ Quasar-only state is stored separately in `quasar-ui-state-v1`:
 - viewport
 - selected nodes
 - layout choice
+- saved graph definitions and active graph
 - CouchDB settings
 - browser actor manifests
 
 Only the StarIntel corpus database is replicated to CouchDB. UI state does not contaminate the StarIntel schema.
+
+The initial **All documents** graph dynamically projects the complete local corpus. Additional graphs start blank and store only document IDs plus graph-local view state; creating or deleting a graph never duplicates or deletes canonical corpus documents.
 
 ## Routes
 
@@ -134,16 +138,21 @@ Import reports also show the active `starintel_doc` schema revision and profile.
 
 ## Browser actors
 
-Actors are disabled by default. An actor manifest contains:
+Bundled actors are available by default; user-supplied actor code is disabled until explicitly enabled. An actor manifest contains:
 
 ```json
 {
   "id": "quasar.actor.example",
   "label": "Example actor",
+  "description": "Describe what this actor returns.",
   "version": 1,
   "accepts": ["org", "person"],
+  "minSelection": 1,
+  "maxSelection": 8,
   "source": "(context) => ({ documents: [], message: 'done' })"
 }
 ```
 
-Actors receive cloned selection/corpus data and return StarIntel documents. They cannot mutate the Cytoscape instance or PouchDB directly. Returned batches use the same validation and undo path as manual edits and imports.
+Bundled actors are available without enabling custom actor code. The first built-ins generate username candidates from person/entity names and prepare `whatsmyname.app` enumeration links for existing or generated usernames. The live WhatsMyName check opens in its browser application because cross-origin profile sites cannot be reliably verified from a Quasar Web Worker.
+
+Actors receive cloned selection/corpus data and return StarIntel documents. They cannot mutate the Cytoscape instance or PouchDB directly. Returned batches use the same validation and undo path as manual edits and imports. Selection bounds and accepted dtypes are checked before execution; actor output is capped before it reaches validation.

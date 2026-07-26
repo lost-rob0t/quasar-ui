@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Download, Edit3, Network, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, Edit3, ExternalLink, Network, Plus, Save, Trash2 } from "lucide-react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { assertDocument, createDocument, dtypes, documentLabel, touchDocument } from "starintel_doc";
 import { documentsToJsonl, downloadText } from "../lib/importer";
@@ -10,6 +10,15 @@ function includesDocument(document, query) {
   if (!query) return true;
   const text = `${document._id} ${document.dataset} ${document.dtype} ${document.title || ""} ${document.summary || ""} ${JSON.stringify(document.data)} ${JSON.stringify(document.sources || [])}`.toLowerCase();
   return text.includes(query.toLowerCase());
+}
+
+function safeExternalUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+  } catch {
+    return "";
+  }
 }
 
 export function DocumentsPage() {
@@ -92,6 +101,7 @@ export function DocumentPage() {
   const navigate = useNavigate();
   const { documents, execute, setNotice } = useQuasar();
   const document = documents.find((item) => item._id === id);
+  const website = safeExternalUrl(document?.data?.website);
 
   if (!document) return <section className="empty-state"><h1>Document not found</h1><code>{id}</code><Link className="button" to="/documents">Back to documents</Link></section>;
 
@@ -117,6 +127,7 @@ export function DocumentPage() {
         </div>
         <div className="button-row">
           <Link className="button" to={`/graph?node=${encodeURIComponent(document._id)}`}><Network size={16} /> Graph</Link>
+          {website && <a className="button" href={website} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Open website</a>}
           <Link className="button primary" to={`/documents/${encodeURIComponent(document._id)}/edit`}><Edit3 size={16} /> Edit</Link>
           <button className="button danger" onClick={remove}><Trash2 size={16} /> Delete</button>
         </div>
