@@ -14,6 +14,7 @@ The [JavaScript-only deployment roadmap](docs/ROADMAP.md) defines the target arc
 - optional push, pull, one-shot, or live CouchDB replication
 - canonical StarIntel v0.9 validation through `starintel_doc.js`
 - graph-created documents and relations
+- multiple saved graph workspaces with independent membership, layout, viewport, and selection
 - standalone manual document adder/editor
 - stable single-document routes at `/documents/:id`
 - searchable/filterable table view
@@ -41,10 +42,13 @@ Quasar-only state is stored separately in `quasar-ui-state-v1`:
 - viewport
 - selected nodes
 - layout choice
+- saved graph definitions and active graph
 - CouchDB settings
 - browser actor manifests
 
 Only the StarIntel corpus database is replicated to CouchDB. UI state does not contaminate the StarIntel schema.
+
+The initial **All documents** graph dynamically projects the complete local corpus. Additional graphs start blank and store only document IDs plus graph-local view state; creating or deleting a graph never duplicates or deletes canonical corpus documents.
 
 ## Routes
 
@@ -63,19 +67,40 @@ The Pages build includes `404.html` as an SPA fallback so direct document routes
 
 ## Development
 
+From a clean checkout, install the pinned dependencies and start the local
+application at `http://localhost:5173` with one command:
+
+```bash
+npm ci && npm run dev
+```
+
+The individual validation and production commands are:
+
 ```bash
 npm ci
 npm run dev
 npm run check
 npm run typecheck
 npm test
+npx playwright install chromium
 npm run test:e2e
 npm run build
 ```
 
-Node.js 22 or newer and the committed npm lockfile define the reproducible
+Node.js 22.12 or newer and the committed npm lockfile define the reproducible
 toolchain. `npm run check` includes strict TypeScript validation plus syntax
 checks for the static service-worker runtime.
+
+Development and production builds use root hosting by default. Set
+`VITE_BASE_PATH` to an absolute URL path when deploying below a site root:
+
+```bash
+VITE_BASE_PATH=/quasar-ui/ npm run build
+```
+
+The Pages workflow sets this value from the repository name. The same normalized
+base path configures Vite assets, React Router, the web manifest, and service
+worker registration, so no backend or runtime URL rewriting is required.
 
 The TypeScript package entrypoints establish the intended dependency areas:
 
@@ -115,16 +140,21 @@ Import reports also show the active `starintel_doc` schema revision and profile.
 
 ## Browser actors
 
-Actors are disabled by default. An actor manifest contains:
+Bundled actors are available by default; user-supplied actor code is disabled until explicitly enabled. An actor manifest contains:
 
 ```json
 {
   "id": "quasar.actor.example",
   "label": "Example actor",
+  "description": "Describe what this actor returns.",
   "version": 1,
   "accepts": ["org", "person"],
+  "minSelection": 1,
+  "maxSelection": 8,
   "source": "(context) => ({ documents: [], message: 'done' })"
 }
 ```
 
-Actors receive cloned selection/corpus data and return StarIntel documents. They cannot mutate the Cytoscape instance or PouchDB directly. Returned batches use the same validation and undo path as manual edits and imports.
+Bundled actors are available without enabling custom actor code. The first built-ins generate username candidates from person/entity names and prepare `whatsmyname.app` enumeration links for existing or generated usernames. The live WhatsMyName check opens in its browser application because cross-origin profile sites cannot be reliably verified from a Quasar Web Worker.
+
+Actors receive cloned selection/corpus data and return StarIntel documents. They cannot mutate the Cytoscape instance or PouchDB directly. Returned batches use the same validation and undo path as manual edits and imports. Selection bounds and accepted dtypes are checked before execution; actor output is capped before it reaches validation.
