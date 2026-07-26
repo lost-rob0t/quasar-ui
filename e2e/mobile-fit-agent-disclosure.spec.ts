@@ -9,10 +9,12 @@ test("uses a full-screen graph canvas with only compact buttons", async ({ page 
   await expect(page.locator(".graph-toolbar")).toBeHidden();
   await expect(page.locator(".graph-list-panel")).toBeHidden();
   await expect(page.locator(".graph-inspector")).toBeHidden();
-  await expect(page.getByLabel("Dataset filter")).toBeHidden();
-  await expect(page.getByLabel("Graph layout")).toBeHidden();
-  await expect(page.getByLabel("Active graph")).toBeHidden();
+  await expect(page.getByLabel("Dataset filter", { exact: true })).toBeHidden();
+  await expect(page.getByLabel("Graph layout", { exact: true })).toBeHidden();
+  await expect(page.getByLabel("Maltego graph layout", { exact: true })).toBeHidden();
+  await expect(page.getByLabel("Active graph", { exact: true })).toBeHidden();
 
+  await expect(page.getByRole("button", { name: "Open menu", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Search graph" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Cycle active graph" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Cycle dataset" })).toBeVisible();
@@ -35,9 +37,9 @@ test("uses a full-screen graph canvas with only compact buttons", async ({ page 
   await expect(page.locator(".graph-search input")).toHaveValue("Jane");
   await page.getByRole("button", { name: "Close graph search" }).click();
 
-  await expect(page.getByLabel("Graph layout")).toHaveValue("cose");
+  await expect(page.getByLabel("Maltego graph layout", { exact: true })).toHaveValue("organic");
   await page.getByRole("button", { name: "Cycle layout" }).click();
-  await expect(page.getByLabel("Graph layout")).toHaveValue("breadthfirst");
+  await expect(page.getByLabel("Maltego graph layout", { exact: true })).toHaveValue("interactive-organic");
 
   await page.locator(".graph-stage").click({ button: "right", position: { x: 180, y: 360 } });
   const radial = page.locator(".graph-context-menu.canvas-actions.radial-root");
