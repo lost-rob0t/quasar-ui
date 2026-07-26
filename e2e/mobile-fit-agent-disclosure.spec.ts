@@ -1,11 +1,15 @@
 import { expect, test } from "@playwright/test";
 
-test("fits the graph canvas into the mobile viewport", async ({ page }) => {
+test("fits the graph canvas with direct controls and a radial blank-canvas menu", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/graph");
 
   await expect(page.locator(".topbar")).toBeHidden();
-  await expect(page.getByRole("button", { name: "More graph controls" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "More graph controls" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add graph document" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Fit graph" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Focus selection" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Toggle labels" })).toBeVisible();
   await expect(page.getByLabel("Dataset filter")).toBeVisible();
   await expect(page.getByLabel("Document type filter")).toBeHidden();
 
@@ -14,9 +18,13 @@ test("fits the graph canvas into the mobile viewport", async ({ page }) => {
   expect(stage?.height).toBeGreaterThan(560);
   expect((stage?.y || 0) + (stage?.height || 0)).toBeLessThanOrEqual(844);
 
-  await page.getByRole("button", { name: "More graph controls" }).click();
-  await expect(page.getByLabel("Document type filter")).toBeVisible();
-  await expect(page.getByLabel("Predicate filter")).toBeVisible();
+  await page.locator(".graph-stage").click({ button: "right", position: { x: 180, y: 260 } });
+  const radial = page.locator(".graph-context-menu.canvas-actions.radial-root");
+  await expect(radial).toBeVisible();
+  await expect(radial.getByRole("menuitem", { name: /Create node/ })).toBeVisible();
+  await expect(radial.getByRole("menuitem", { name: /Graph/ })).toBeVisible();
+  await expect(radial.getByRole("menuitem", { name: /Layout/ })).toBeVisible();
+  await expect(radial.getByRole("menuitem", { name: /Ingest/ })).toBeVisible();
 });
 
 test("collapses thinking and tool output until expanded", async ({ page }) => {
