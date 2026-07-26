@@ -2,7 +2,7 @@
 
 Quasar is a browser-first, offline-first StarIntel investigation workspace. It follows the graph-document and reversible-operation boundaries from the Quasar designs in `starintel-auto-research`, while replacing the earlier CLOG/backend-first prototype assumption with a full JavaScript client.
 
-The [JavaScript-only deployment roadmap](docs/ROADMAP.md) defines the target architecture, dependency order, phase gates, and production-readiness decision. The implementation list below describes the current prototype and does not supersede the roadmap's IndexedDB-based target.
+The [JavaScript-only deployment roadmap](docs/ROADMAP.md) defines the target architecture, dependency order, phase gates, and production-readiness decision. [ADR 0001](docs/adr/0001-js-package-boundaries.md) defines and enforces the package dependency direction. The implementation list below describes the current prototype and does not supersede the roadmap's IndexedDB-based target.
 
 ## Current implementation
 
@@ -91,6 +91,7 @@ npm ci
 npm run dev
 npm run check
 npm run typecheck
+npm run check:boundaries
 npm test
 npx playwright install chromium
 npm run test:e2e
@@ -123,6 +124,7 @@ src/storage
 src/graph
 src/actions
 src/projections
+src/integrations
 src/components
 src/testing
 ```
