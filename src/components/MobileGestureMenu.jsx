@@ -10,7 +10,7 @@ import {
   TableProperties,
   X
 } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
 const navigation = [
   { to: "/", label: "Home", Icon: Activity, end: true },
@@ -28,9 +28,7 @@ const CLOSE_DISTANCE = 44;
 export default function MobileGestureMenu() {
   const [open, setOpen] = useState(false);
   const pointer = useRef(null);
-  const location = useLocation();
 
-  useEffect(() => setOpen(false), [location.pathname]);
   useEffect(() => {
     if (!open) return undefined;
     const close = (event) => event.key === "Escape" && setOpen(false);
@@ -106,6 +104,7 @@ export default function MobileGestureMenu() {
                   to={to}
                   end={end}
                   className={({ isActive }) => isActive ? "mobile-gesture-link active" : "mobile-gesture-link"}
+                  onClick={() => setOpen(false)}
                 >
                   <Icon size={22} aria-hidden="true" />
                   <span>{label}</span>
