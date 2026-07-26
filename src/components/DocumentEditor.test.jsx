@@ -1,10 +1,29 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../store", () => ({ useQuasar: vi.fn() }));
 vi.mock("../lib/operations", () => ({ operation: {} }));
 
-import { SchemaField } from "./DocumentEditor";
+import { useQuasar } from "../store";
+import DocumentEditor, { SchemaField } from "./DocumentEditor";
+
+function renderEditor(url) {
+  useQuasar.mockReturnValue({
+    documents: [],
+    execute: vi.fn(),
+    setNotice: vi.fn(),
+    workspace: {},
+    addDocumentsToActiveGraph: vi.fn()
+  });
+  return renderToStaticMarkup(
+    <MemoryRouter initialEntries={[url]}>
+      <Routes>
+        <Route path="/documents/new" element={<DocumentEditor mode="create" />} />
+      </Routes>
+    </MemoryRouter>
+  );
+}
 
 describe("schema field controls", () => {
   it("renders arrays as repeatable values instead of JSON text", () => {
@@ -60,5 +79,40 @@ describe("schema field controls", () => {
     expect(html).toContain('value="north"');
     expect(html).toContain("Add property");
     expect(html).not.toContain("<textarea");
+  });
+
+  it("shows only common person fields by default", () => {
+    const html = renderEditor("/documents/new?dtype=person");
+
+    expect(html).toContain("New Person");
+    expect(html).toContain("Fields for Person");
+    expect(html).toContain("<code>fname</code>");
+    expect(html).toContain("<code>mname</code>");
+    expect(html).toContain("<code>lname</code>");
+    expect(html).toContain("Advanced fields and metadata");
+    expect(html).not.toContain("Advanced fields for Person");
+    expect(html).not.toContain("<code>nationalities</code>");
+    expect(html).not.toContain("schema fields");
+  });
+
+  it("switches the field heading and fields for organizations", () => {
+    const html = renderEditor("/documents/new?dtype=org");
+
+    expect(html).toContain("New Organization");
+    expect(html).toContain("Fields for Organization");
+    expect(html).toContain("<code>legal_name</code>");
+    expect(html).toContain("<code>org_type</code>");
+    expect(html).not.toContain("<code>fname</code>");
+  });
+
+  it("puts every secondary field behind one advanced level", () => {
+    const html = renderEditor("/documents/new?dtype=person&advanced=1");
+
+    expect(html).toContain("Fields for Person");
+    expect(html).toContain("Advanced fields for Person");
+    expect(html).toContain("<code>nationalities</code>");
+    expect(html).toContain("Document metadata");
+    expect(html).toContain("Sources and evidence");
+    expect(html).toContain("Edit raw JSON");
   });
 });

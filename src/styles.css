@@ -134,6 +134,17 @@ td small { max-width: 65ch; color: var(--muted); }
 .editor-field-search input { width: 100%; padding: 0; border: 0; outline: 0; background: transparent; color: var(--text); }
 .editor-no-fields { margin: .5rem 0 0; }
 .editor-save-bar { position: sticky; bottom: .7rem; z-index: 5; margin: .5rem -.2rem -.2rem; padding: .65rem; border: 1px solid var(--line); border-radius: 10px; background: #091727ee; backdrop-filter: blur(12px); }
+.simple-document-editor { max-width: 900px; margin-inline: auto; }
+.simple-editor-heading { margin-bottom: 1rem; }
+.simple-editor-form { display: grid; gap: 0; padding: 0; overflow: hidden; }
+.simple-editor-section { padding: 1rem; border-bottom: 1px solid var(--line); }
+.simple-editor-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .85rem; }
+.simple-editor-section-heading h2 { margin: 0; font-size: 1rem; }
+.object-fields-section { background: #0d1d30; }
+.advanced-editor-toggle { justify-self: start; margin: .8rem 1rem; }
+.advanced-editor-section { border-top: 1px solid var(--line); background: #081522; }
+.advanced-editor-section h3 { margin: 1.2rem 0 .7rem; padding-top: 1rem; border-top: 1px solid var(--line); font-size: .86rem; }
+.simple-editor-form > .editor-save-bar { position: static; margin: 0; padding: .8rem 1rem; border: 0; border-radius: 0; border-top: 1px solid var(--line); background: #091727; backdrop-filter: none; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .85rem; }
 .field { display: grid; gap: .38rem; min-width: 0; }
 .field.full { grid-column: 1 / -1; }

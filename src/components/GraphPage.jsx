@@ -339,7 +339,6 @@ function NodeQuickEditor({ document, onClose }) {
   const fieldSchema = useMemo(() => dataSchemaForDtype(document.dtype), [document.dtype]);
   const fields = useMemo(() => essentialDataFieldsForDtype(document.dtype), [document.dtype]);
   const required = useMemo(() => new Set(fieldSchema.required || []), [fieldSchema]);
-  const [title, setTitle] = useState(document.title || "");
   const [values, setValues] = useState(() => Object.fromEntries(fields.map((name) => [
     name,
     formatSchemaValue(document.data?.[name], fieldSchema.properties?.[name] || {})
@@ -361,7 +360,7 @@ function NodeQuickEditor({ document, onClose }) {
         if (parsed === undefined) delete data[name];
         else data[name] = parsed;
       }
-      const updated = assertDocument(touchDocument(document, { title, data }));
+      const updated = assertDocument(touchDocument(document, { data }));
       await execute(operation.save(updated), `Update ${document._id}`);
       onClose();
     } catch (error) {
@@ -373,13 +372,12 @@ function NodeQuickEditor({ document, onClose }) {
 
   function openAdvanced() {
     onClose();
-    navigate(`/documents/${encodeURIComponent(document._id)}/edit`);
+    navigate(`/documents/${encodeURIComponent(document._id)}/edit?advanced=1`);
   }
 
   return (
     <Modal title={`Edit ${documentLabel(document)}`} onClose={onClose} className="quick-edit-modal">
       <form className="modal-form quick-edit-form" onSubmit={submit}>
-        <label className="field"><span>Title</span><input value={title} onChange={(event) => setTitle(event.target.value)} autoFocus /></label>
         <div className="quick-edit-fields">
           {fields.map((name) => (
             <SchemaField

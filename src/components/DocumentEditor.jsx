@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Save, Search, X } from "lucide-react";
+import { Plus, Save, X } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   assertDocument,
   createDocument,
   dtypes,
   documentLabel,
-  expansion,
   schema,
   touchDocument
 } from "starintel_doc";
@@ -14,6 +13,8 @@ import { operation } from "../lib/operations";
 import {
   dataFieldsForDtype,
   dataSchemaForDtype,
+  dtypeLabel,
+  essentialDataFieldsForDtype,
   effectiveFieldSchema,
   formatSchemaValue,
   parseSchemaField
@@ -257,8 +258,8 @@ export default function DocumentEditor({ mode }) {
   const existing = mode === "edit" ? documents.find((document) => document._id === id) : null;
   const initialDtype = params.get("dtype") || "entity";
   const [rawMode, setRawMode] = useState(false);
+  const [advanced, setAdvanced] = useState(params.get("advanced") === "1");
   const [saving, setSaving] = useState(false);
-  const [fieldQuery, setFieldQuery] = useState("");
   const [dataValues, setDataValues] = useState({});
   const [form, setForm] = useState({
     id: "",
@@ -276,38 +277,14 @@ export default function DocumentEditor({ mode }) {
 
   const currentDataSchema = useMemo(() => dataSchemaForDtype(form.dtype), [form.dtype]);
   const allFields = useMemo(() => dataFieldsForDtype(form.dtype), [form.dtype]);
-  const commonFields = useMemo(() => new Set(expansion.common_data_fields || []), []);
-  const dtypeFields = useMemo(
-    () => allFields.filter((name) => !commonFields.has(name)),
-    [allFields, commonFields]
-  );
-  const sharedFields = useMemo(
-    () => allFields.filter((name) => commonFields.has(name)),
-    [allFields, commonFields]
+  const essentialFields = useMemo(() => essentialDataFieldsForDtype(form.dtype), [form.dtype]);
+  const essentialFieldSet = useMemo(() => new Set(essentialFields), [essentialFields]);
+  const advancedFields = useMemo(
+    () => allFields.filter((name) => !essentialFieldSet.has(name)),
+    [allFields, essentialFieldSet]
   );
   const requiredFields = useMemo(() => new Set(currentDataSchema.required || []), [currentDataSchema]);
-  const structuredFields = useMemo(() => new Set(allFields.filter((name) => {
-    const resolved = effectiveFieldSchema(currentDataSchema.properties?.[name] || {});
-    return resolved.type === "array" || resolved.type === "object" || !resolved.type;
-  })), [allFields, currentDataSchema]);
-  const detailFields = useMemo(
-    () => dtypeFields.filter((name) => !structuredFields.has(name)),
-    [dtypeFields, structuredFields]
-  );
-  const collectionFields = useMemo(
-    () => dtypeFields.filter((name) => structuredFields.has(name)),
-    [dtypeFields, structuredFields]
-  );
-  const matchingFields = useMemo(() => {
-    const query = fieldQuery.trim().toLowerCase();
-    if (!query) return [];
-    return allFields.filter((name) => {
-      const fieldSchema = currentDataSchema.properties?.[name] || {};
-      return `${name} ${fieldSchema.title || ""} ${fieldSchema.description || ""}`
-        .toLowerCase()
-        .includes(query);
-    });
-  }, [allFields, currentDataSchema, fieldQuery]);
+  const objectType = dtypeLabel(form.dtype);
 
   useEffect(() => {
     if (!existing) return;
@@ -412,98 +389,87 @@ export default function DocumentEditor({ mode }) {
   ));
 
   return (
-    <section>
-      <div className="page-heading">
+    <section className="simple-document-editor">
+      <div className="page-heading simple-editor-heading">
         <div>
-          <span className="eyebrow">{mode === "edit" ? "Edit document" : "New document"}</span>
-          <h1>{mode === "edit" ? `Edit ${documentLabel(existing)}` : "Create StarIntel document"}</h1>
-          <p>{form.dtype} fields come directly from the canonical schema.</p>
+          <span className="eyebrow">{mode === "edit" ? "Edit" : "Create"}</span>
+          <h1>{mode === "edit" ? `Edit ${documentLabel(existing)}` : `New ${objectType}`}</h1>
+          <p>Only the fields used most often are shown.</p>
         </div>
-        <button className="button small" type="button" onClick={() => setRawMode((value) => !value)}>{rawMode ? "Back to fields" : "Raw JSON"}</button>
+        {advanced && (
+          <button className="button small" type="button" onClick={() => setRawMode((value) => !value)}>
+            {rawMode ? "Back to fields" : "Edit raw JSON"}
+          </button>
+        )}
       </div>
 
-      <form className="editor-form" onSubmit={submit}>
+      <form className="editor-form simple-editor-form" onSubmit={submit}>
         {rawMode ? (
           <label className="field full"><span>Complete document JSON</span><textarea className="code-editor tall" value={form.raw} onChange={update("raw")} /></label>
         ) : (
           <>
-            <section className="panel editor-section">
-              <div className="section-heading-inline">
-                <div><span className="eyebrow">Basics</span><h2>Document</h2></div>
+            <section className="simple-editor-section">
+              <div className="form-grid editor-basics-grid">
+                {!existing && (
+                  <label className="field">
+                    <span>Object type</span>
+                    <select value={form.dtype} onChange={update("dtype")}>
+                      {dtypes.map((name) => <option key={name} value={name}>{dtypeLabel(name)}</option>)}
+                    </select>
+                  </label>
+                )}
+                <label className="field"><span>Dataset</span><input required value={form.dataset} onChange={update("dataset")} /></label>
+              </div>
+            </section>
+
+            <section className="simple-editor-section object-fields-section">
+              <div className="simple-editor-section-heading">
+                <h2>Fields for {objectType}</h2>
                 <span className={`dtype dtype-${form.dtype}`}>{form.dtype}</span>
               </div>
-              <div className="form-grid editor-basics-grid">
-                <label className="field"><span>Dtype</span><select value={form.dtype} onChange={update("dtype")} disabled={Boolean(existing)}>{dtypes.map((name) => <option key={name}>{name}</option>)}</select></label>
-                <label className="field"><span>Dataset</span><input required value={form.dataset} onChange={update("dataset")} /></label>
-                <label className="field full"><span>Title</span><input value={form.title} onChange={update("title")} autoFocus /></label>
-              </div>
-              <details className="editor-inline-disclosure">
-                <summary>More document metadata</summary>
+              <div className="form-grid dtype-field-grid">{renderFields(essentialFields)}</div>
+              {!essentialFields.length && <p className="muted">No common fields are defined for this object type.</p>}
+            </section>
+
+            <button
+              className="button small advanced-editor-toggle"
+              type="button"
+              aria-expanded={advanced}
+              onClick={() => {
+                setAdvanced((value) => !value);
+                setRawMode(false);
+              }}
+            >
+              {advanced ? "Hide advanced" : "Advanced fields and metadata…"}
+            </button>
+
+            {advanced && (
+              <section className="simple-editor-section advanced-editor-section">
+                <div className="simple-editor-section-heading">
+                  <h2>Advanced fields for {objectType}</h2>
+                </div>
+                <div className="form-grid dtype-field-grid details-field-grid">
+                  {renderFields(advancedFields)}
+                </div>
+                {!advancedFields.length && <p className="muted">No additional schema fields.</p>}
+
+                <h3>Document metadata</h3>
                 <div className="form-grid details-field-grid">
+                  <label className="field full"><span>Title</span><input value={form.title} onChange={update("title")} /></label>
                   <label className="field"><span>Document ID</span><input value={form.id} onChange={update("id")} placeholder="Generated when blank" disabled={Boolean(existing)} /></label>
                   <label className="field"><span>Status</span><input value={form.status} onChange={update("status")} /></label>
                   <label className="field full"><span>Summary</span><textarea value={form.summary} onChange={update("summary")} /></label>
                   <label className="field full"><span>Description</span><textarea value={form.description} onChange={update("description")} /></label>
                   <label className="field full"><span>Tags</span><input value={form.tags} onChange={update("tags")} placeholder="comma, separated" /></label>
                 </div>
-              </details>
-            </section>
 
-            <section className="panel editor-section">
-              <div className="section-heading-inline">
-                <div>
-                  <span className="eyebrow">{form.dtype}</span>
-                  <h2>Properties</h2>
-                </div>
-                <span className="result-count">{allFields.length} schema fields</span>
-              </div>
-              <label className="editor-field-search">
-                <Search size={15} />
-                <input
-                  value={fieldQuery}
-                  onChange={(event) => setFieldQuery(event.target.value)}
-                  placeholder="Find a schema field"
-                  aria-label="Find a schema field"
-                />
-              </label>
-              {fieldQuery ? (
-                <>
-                  <div className="form-grid dtype-field-grid">{renderFields(matchingFields)}</div>
-                  {!matchingFields.length && <p className="muted editor-no-fields">No schema fields match “{fieldQuery}”.</p>}
-                </>
-              ) : (
-                <>
-                  <div className="form-grid dtype-field-grid">{renderFields(detailFields)}</div>
-                  {!detailFields.length && <p className="muted editor-no-fields">This dtype has no scalar properties.</p>}
-                </>
-              )}
-            </section>
-
-            {!fieldQuery && collectionFields.length > 0 && (
-              <details className="panel editor-section editor-disclosure">
-                <summary>Collections and linked records <span>{collectionFields.length}</span></summary>
+                <h3>Sources and evidence</h3>
                 <div className="form-grid dtype-field-grid details-field-grid">
-                  {renderFields(collectionFields)}
+                  <SchemaField name="sources" fieldSchema={schema.properties?.sources || { type: "array" }} value={form.sources} onChange={(value) => setForm((current) => ({ ...current, sources: value }))} />
+                  <SchemaField name="evidence" fieldSchema={schema.properties?.evidence || { type: "array" }} value={form.evidence} onChange={(value) => setForm((current) => ({ ...current, evidence: value }))} />
                 </div>
-              </details>
+              </section>
             )}
-
-            {!fieldQuery && sharedFields.length > 0 && (
-              <details className="panel editor-section editor-disclosure">
-                <summary>Shared StarIntel fields <span>{sharedFields.length}</span></summary>
-                <div className="form-grid dtype-field-grid details-field-grid">
-                  {renderFields(sharedFields)}
-                </div>
-              </details>
-            )}
-
-            <details className="panel editor-section editor-disclosure">
-              <summary>Sources and evidence</summary>
-              <div className="form-grid dtype-field-grid details-field-grid">
-                <SchemaField name="sources" fieldSchema={schema.properties?.sources || { type: "array" }} value={form.sources} onChange={(value) => setForm((current) => ({ ...current, sources: value }))} />
-                <SchemaField name="evidence" fieldSchema={schema.properties?.evidence || { type: "array" }} value={form.evidence} onChange={(value) => setForm((current) => ({ ...current, evidence: value }))} />
-              </div>
-            </details>
           </>
         )}
         <div className="form-actions editor-save-bar">

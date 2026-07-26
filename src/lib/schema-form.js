@@ -3,13 +3,29 @@ import { schema } from "starintel_doc";
 const ESSENTIAL_FIELD_PREFERENCES = {
   person: ["fname", "mname", "lname", "full_name", "dob", "birthplace"],
   org: ["name", "legal_name", "org_type", "industry", "headquarters", "website"],
-  event: ["name", "event_type", "start_date", "end_date", "location", "website"],
-  location: ["name", "location_type", "address", "city", "country", "coordinates"],
-  entity: ["name", "entity_type", "aliases", "website"],
-  document: ["name", "document_type", "published_at", "author", "url"],
-  source: ["name", "source_type", "publisher", "url"],
-  concept: ["name", "concept_type", "definition", "aliases"]
+  event: ["name", "event_kind", "start_at", "end_at", "status", "description"],
+  location: ["name", "location_type", "address", "city", "state", "country"],
+  entity: ["name", "etype", "description", "country", "website", "status"],
+  document: ["display_label", "document_kind", "published_at", "publisher_id", "format", "description"],
+  source: ["name", "url", "source_type_id", "publisher", "published_at", "retrieved_at"],
+  concept: ["term", "preferred_label", "definition", "domain", "vocabulary", "namespace"]
 };
+
+const DTYPE_LABELS = {
+  person: "Person",
+  org: "Organization",
+  event: "Event",
+  location: "Location",
+  entity: "Entity",
+  document: "Document",
+  source: "Source",
+  concept: "Concept",
+  relation: "Relation"
+};
+
+export function dtypeLabel(dtype) {
+  return DTYPE_LABELS[dtype] || humanizeSchemaField(dtype);
+}
 
 export function humanizeSchemaField(name) {
   return String(name)

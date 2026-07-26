@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   dataFieldsForDtype,
   dataSchemaForDtype,
+  dtypeLabel,
   essentialDataFieldsForDtype
 } from "./schema-form";
 
@@ -55,11 +56,24 @@ describe("schema-driven document fields", () => {
       "headquarters",
       "website"
     ]);
+    expect(essentialDataFieldsForDtype("event")).toEqual([
+      "name",
+      "event_kind",
+      "start_at",
+      "end_at",
+      "status",
+      "description"
+    ]);
     for (const dtype of ["person", "org", "event", "location"]) {
       const schemaFields = new Set(dataFieldsForDtype(dtype));
       const essentialFields = essentialDataFieldsForDtype(dtype);
       expect(essentialFields.length).toBeLessThanOrEqual(6);
       expect(essentialFields.every((field) => schemaFields.has(field))).toBe(true);
     }
+  });
+
+  it("uses object names instead of raw dtype jargon", () => {
+    expect(dtypeLabel("person")).toBe("Person");
+    expect(dtypeLabel("org")).toBe("Organization");
   });
 });
