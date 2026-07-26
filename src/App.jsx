@@ -17,6 +17,7 @@ import {
 import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { useQuasar } from "./store";
 import GraphPage from "./components/GraphPage";
+import GraphLayoutControl from "./components/GraphLayoutControl";
 import { DocumentPage, DocumentsPage } from "./components/Documents";
 import DocumentEditor from "./components/DocumentEditor";
 import { ImportPage, SettingsPage } from "./components/ImportSettings";
@@ -193,6 +194,7 @@ export default function App() {
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <GraphLayoutControl />
         <AgentBubble />
       </WorkbenchShell>
     </AgentSystemProvider>
