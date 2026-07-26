@@ -8,7 +8,8 @@ const ESSENTIAL_FIELD_PREFERENCES = {
   entity: ["name", "etype", "description", "country", "website", "status"],
   document: ["display_label", "document_kind", "published_at", "publisher_id", "format", "description"],
   source: ["name", "url", "source_type_id", "publisher", "published_at", "retrieved_at"],
-  concept: ["term", "preferred_label", "definition", "domain", "vocabulary", "namespace"]
+  concept: ["term", "preferred_label", "definition", "domain", "vocabulary", "namespace"],
+  target: ["target"]
 };
 
 const DTYPE_LABELS = {
@@ -20,7 +21,8 @@ const DTYPE_LABELS = {
   document: "Document",
   source: "Source",
   concept: "Concept",
-  relation: "Relation"
+  relation: "Relation",
+  target: "Target"
 };
 
 export function dtypeLabel(dtype) {
