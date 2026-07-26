@@ -1,0 +1,35 @@
+name: Format issue 9
+
+on:
+  push:
+    branches:
+      - agent/issue-9-graph-history
+    paths:
+      - .github/workflows/format-issue-9.yml
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/issue-9-graph-history
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Format and remove helper
+        run: |
+          npx prettier --write tests/unit/core/graph-history.test.ts
+          rm .github/workflows/format-issue-9.yml
+      - name: Commit formatting
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "format graph history tests"
+          git push origin HEAD:agent/issue-9-graph-history
