@@ -164,7 +164,12 @@ export function installGraphGestures(cy) {
     emitRelationDraft(cy, sourceNode, targetNode);
   });
   cy.on("free", "node", () => {
-    if (!state.drag) cy.panningEnabled(state.panningEnabled);
+    const drag = state.drag;
+    cy.panningEnabled(state.panningEnabled);
+    if (!drag) return;
+    queueMicrotask(() => {
+      if (state.drag === drag) state.drag = null;
+    });
   });
   cy.on("taphold", (event) => {
     if (state.drag?.moved) return;
