@@ -9,11 +9,21 @@ function cleanPositions(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
+function cleanGroups(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value).map(([id, group]) => [id, {
+    id,
+    name: String(group?.name || id),
+    documentIds: uniqueStrings(group?.documentIds),
+    collapsed: Boolean(group?.collapsed)
+  }]));
+}
+
 function normalizeGraph(graph, fallback = {}) {
   const documentIds = graph?.documentIds === null
     ? null
     : uniqueStrings(graph?.documentIds || fallback.documentIds || []);
-  return {
+  const normalized = {
     id: String(graph?.id || fallback.id || "").trim(),
     name: String(graph?.name || fallback.name || "Untitled graph").trim(),
     documentIds,
@@ -22,6 +32,8 @@ function normalizeGraph(graph, fallback = {}) {
     layout: String(graph?.layout || fallback.layout || "cose"),
     selectedIds: uniqueStrings(graph?.selectedIds || fallback.selectedIds || [])
   };
+  if (graph?.groups || fallback.groups) normalized.groups = cleanGroups(graph?.groups || fallback.groups);
+  return normalized;
 }
 
 function generatedGraphId(name) {
@@ -71,7 +83,8 @@ export function normalizeGraphWorkspace(input = {}) {
     positions: active.positions,
     viewport: active.viewport,
     layout: active.layout,
-    selectedIds: active.selectedIds
+    selectedIds: active.selectedIds,
+    ...(active.groups ? { groups: active.groups } : {})
   };
 }
 

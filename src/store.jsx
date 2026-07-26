@@ -348,9 +348,9 @@ export function QuasarProvider({ children }) {
     ...(settings?.actors || [])
   ], [settings?.actors]);
 
-  const runActor = useCallback(async (actor) => {
+  const runActor = useCallback(async (actor, requestedSelectionIds = selectedIds) => {
     if (!isBuiltinActor(actor) && !settings?.actorsEnabled) throw new Error("Custom browser actors are disabled in settings");
-    const selection = documents.filter((document) => selectedIds.includes(document._id));
+    const selection = documents.filter((document) => requestedSelectionIds.includes(document._id));
     const availability = actorApplicability(actor, selection);
     if (!availability.applicable) throw new Error(availability.reason);
     const result = await runBrowserActor(actorWithTransformEnvelope(actor), {

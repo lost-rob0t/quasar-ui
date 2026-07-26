@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Activity,
+  Bot,
   Database,
   Download,
   FilePlus2,
@@ -19,12 +20,14 @@ import { DocumentPage, DocumentsPage } from "./components/Documents";
 import DocumentEditor from "./components/DocumentEditor";
 import { ImportPage, SettingsPage } from "./components/ImportSettings";
 import StatsPage from "./components/StatsPage";
+import { AgentBubble, AgentConsole, AgentSystemProvider } from "./components/AgentSystem";
 
 const navigation = [
   { to: "/", label: "Dashboard", mobileLabel: "Home", Icon: Activity, end: true },
   { to: "/graph", label: "Graph", mobileLabel: "Graph", Icon: Network },
   { to: "/documents", label: "Documents", mobileLabel: "Docs", Icon: TableProperties },
   { to: "/documents/new", label: "Add document", mobileLabel: "Add", Icon: FilePlus2 },
+  { to: "/agents", label: "Agents", Icon: Bot },
   { to: "/import", label: "Import", Icon: FolderInput },
   { to: "/settings", label: "Settings", mobileLabel: "Settings", Icon: Settings }
 ];
@@ -162,19 +165,23 @@ function NotFound() {
 
 export default function App() {
   return (
-    <WorkbenchShell>
-      <Routes>
-        <Route path="/" element={<StatsPage />} />
-        <Route path="/graph" element={<GraphPage />} />
-        <Route path="/documents" element={<DocumentsPage />} />
-        <Route path="/documents/new" element={<DocumentEditor mode="create" />} />
-        <Route path="/documents/:id" element={<DocumentPage />} />
-        <Route path="/documents/:id/edit" element={<DocumentEditor mode="edit" />} />
-        <Route path="/import" element={<ImportPage />} />
-        <Route path="/stats" element={<Navigate to="/" replace />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </WorkbenchShell>
+    <AgentSystemProvider>
+      <WorkbenchShell>
+        <Routes>
+          <Route path="/" element={<StatsPage />} />
+          <Route path="/graph" element={<GraphPage />} />
+          <Route path="/documents" element={<DocumentsPage />} />
+          <Route path="/documents/new" element={<DocumentEditor mode="create" />} />
+          <Route path="/documents/:id" element={<DocumentPage />} />
+          <Route path="/documents/:id/edit" element={<DocumentEditor mode="edit" />} />
+          <Route path="/import" element={<ImportPage />} />
+          <Route path="/agents" element={<AgentConsole />} />
+          <Route path="/stats" element={<Navigate to="/" replace />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <AgentBubble />
+      </WorkbenchShell>
+    </AgentSystemProvider>
   );
 }

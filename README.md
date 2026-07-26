@@ -32,6 +32,11 @@ The [JavaScript-only deployment roadmap](docs/ROADMAP.md) defines the target arc
 - transaction-level undo and redo
 - connection path finder
 - opt-in custom browser actors executed in Web Workers
+- persistent operator agents with editable roles and scoped memory
+- OpenRouter, OpenAI, Anthropic, OpenAI-compatible, and local provider adapters
+- permissioned database, graph, actor, and graph-mutation tools
+- persisted autonomous runs with checkpoints, recovery, loop detection, budgets, and cost logs
+- draggable desktop/mobile agent bubble and full run console
 - runtime service worker for offline reopening
 - GitHub Actions CI and Pages deployment
 
@@ -71,6 +76,7 @@ The initial **All documents** graph dynamically projects the complete local corp
 /import
 /stats
 /settings
+/agents
 ```
 
 The Pages build includes `404.html` as an SPA fallback so direct document routes remain loadable.
@@ -174,6 +180,23 @@ Actors receive cloned selection and corpus data. They return declarative transfo
 Quasar validates the entire plan, checks create/update/remove preconditions against a projected corpus, and applies it as one undoable batch through the same mutation path as manual edits. Legacy actors that return `documents` remain compatible; each returned document is treated as an `upsert_document` transform.
 
 The first built-ins generate username candidates from person/entity names and prepare `whatsmyname.app` enumeration links for existing or generated usernames. The live WhatsMyName check opens in its browser application because cross-origin profile sites cannot be reliably verified from a Quasar Web Worker.
+
+## Agents
+
+The floating agent bubble opens a bounded command panel from any route. The
+full `/agents` console manages agents, reusable roles, provider connections,
+structured memory, runs, tool logs, checkpoints, loop warnings, usage, and
+cost.
+
+Agents query the StarIntel database and graph through declared permissioned
+tools. They can run existing actors, test generated actors in Web Workers, and
+apply validated graph plans through the normal history and undo path. Provider
+keys remain session-scoped and are excluded from stored records and normal JSON
+exports.
+
+See [Agent system](docs/AGENT_SYSTEM.md) for provider, tool, permission, state
+machine, recovery, loop detection, budget, context, and actor-generation
+contracts.
 
 ## StarIntel server and queue ingest
 

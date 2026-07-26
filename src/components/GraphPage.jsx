@@ -725,6 +725,20 @@ export default function GraphPage() {
     fitElements(cy, neighborhood, 100, 300);
   }
 
+  useEffect(() => {
+    const handleAgentCommand = (event) => {
+      const command = event.detail || {};
+      if (command.op === "fit_graph") fit();
+      if (command.op === "focus_selection") {
+        if (command.ids?.length) select(command.ids);
+        requestAnimationFrame(focusSelection);
+      }
+      if (command.op === "apply_layout") runLayout(command.layout || "cose");
+    };
+    window.addEventListener("quasar:agent-graph-command", handleAgentCommand);
+    return () => window.removeEventListener("quasar:agent-graph-command", handleAgentCommand);
+  });
+
   function clearFilters() {
     setQuery("");
     setDtype("");
