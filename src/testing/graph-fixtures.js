@@ -60,7 +60,7 @@ export function smallTypedGraphFixture() {
     "starintel:person:ada",
     "person",
     "people",
-    { full_name: "Ada Lovelace", fixture_extension: { stable: true, ordinal: 1 } }
+    { full_name: "Ada Lovelace" }
   );
   const organization = baseDocument(
     "starintel:org:analytical-society",
@@ -144,25 +144,25 @@ export function highDegreeGraphFixture(leafCount = 32) {
 export function invalidDocumentFixtures() {
   return [
     {
-      name: "missing-id",
+      name: "unknown-dtype",
       document: {
-        dataset: "invalid",
-        dtype: "org",
-        schema_version: "0.9.0",
-        version: 1,
-        date_added: FIXTURE_TIMESTAMP,
-        date_updated: FIXTURE_TIMESTAMP,
-        sources: [],
-        evidence: [],
-        data: { name: "Missing ID" }
+        _id: "invalid",
+        dtype: "not-a-real-dtype"
       }
     },
     {
-      name: "invalid-sources",
-      document: {
-        ...baseDocument("starintel:org:invalid-sources", "org", "invalid", { name: "Invalid sources" }),
-        sources: "not-an-array"
-      }
+      name: "missing-relation-object",
+      document: baseDocument(
+        "starintel:relation:missing-object",
+        "relation",
+        "invalid",
+        {
+          subject: "starintel:org:a",
+          predicate: "connected-to",
+          source: "starintel:org:a",
+          directed: true
+        }
+      )
     }
   ];
 }
