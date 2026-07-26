@@ -9,9 +9,13 @@ The [JavaScript-only deployment roadmap](docs/ROADMAP.md) defines the target arc
 - strict TypeScript application entrypoint and package contracts
 - React and Vite application shell
 - Cytoscape investigation graph with Maltego-style selection and relationship navigation
+- hierarchical canvas, node, edge, and multi-selection context menus with action search
 - PouchDB canonical local corpus
 - separate PouchDB workspace/settings store
+- versioned CouchDB-compatible map-reduce views
 - optional push, pull, one-shot, or live CouchDB replication
+- optional starintel-server capability probing and target submission
+- optional RabbitMQ Web STOMP ingestion into local PouchDB and the active graph
 - canonical StarIntel v0.9 validation through `starintel_doc.js`
 - graph-created documents and relations
 - multiple saved graph workspaces with independent membership, layout, viewport, and selection
@@ -44,9 +48,15 @@ Quasar-only state is stored separately in `quasar-ui-state-v1`:
 - layout choice
 - saved graph definitions and active graph
 - CouchDB settings
+- StarIntel server and RabbitMQ Web STOMP settings
 - browser actor manifests
 
 Only the StarIntel corpus database is replicated to CouchDB. UI state does not contaminate the StarIntel schema.
+
+Quasar installs versioned `_design/starintel-*-v1` documents into the canonical
+corpus. Those views replicate to CouchDB, so local PouchDB and remote CouchDB
+queries share keys and reduce behavior. The statistics dashboard reads its
+review, dtype, and dataset distributions through these views.
 
 The initial **All documents** graph dynamically projects the complete local corpus. Additional graphs start blank and store only document IDs plus graph-local view state; creating or deleting a graph never duplicates or deletes canonical corpus documents.
 
@@ -160,3 +170,17 @@ Actors receive cloned selection and corpus data. They return declarative transfo
 Quasar validates the entire plan, checks create/update/remove preconditions against a projected corpus, and applies it as one undoable batch through the same mutation path as manual edits. Legacy actors that return `documents` remain compatible; each returned document is treated as an `upsert_document` transform.
 
 The first built-ins generate username candidates from person/entity names and prepare `whatsmyname.app` enumeration links for existing or generated usernames. The live WhatsMyName check opens in its browser application because cross-origin profile sites cannot be reliably verified from a Quasar Web Worker.
+
+## StarIntel server and queue ingest
+
+The optional server adapter probes `/api/v1/capabilities` first. Until the
+expanded API is available, it falls back to current gserver metadata and
+`/new/target/:actor`. Submitted targets are canonical v0.9 target documents and
+are saved locally only after the server accepts them.
+
+The optional RabbitMQ listener uses Web STOMP. Deliveries may be a document, an
+array, `{ "document": ... }`, or `{ "documents": [...] }`. Every batch passes
+canonical validation and idempotent PouchDB persistence before its IDs are
+added to the active graph. Accepted and already-current documents are
+acknowledged; invalid deliveries are negatively acknowledged without requeue
+to avoid poison-message loops.

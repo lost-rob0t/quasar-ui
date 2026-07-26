@@ -52,6 +52,7 @@ Contains:
 - per-graph document membership;
 - per-graph positions, viewport, layout, and selection;
 - CouchDB connection settings;
+- StarIntel server and RabbitMQ Web STOMP connection settings;
 - browser actor manifests.
 
 This database is not part of the StarIntel corpus and is not replicated by the application.
@@ -61,7 +62,7 @@ The default `All documents` graph has dynamic corpus membership. User-created gr
 ## Mutation pipeline
 
 ```text
-manual form / graph gesture / import / actor output
+manual form / graph gesture / import / actor output / queue delivery
                     |
                     v
         StarIntel v0.9 normalization
@@ -83,6 +84,11 @@ Document operations support save, remove, and atomic batches. Undo applies store
 
 Node drag frames remain in Cytoscape. `dragfree` commits only the final position to the Quasar workspace database.
 
+Queue deliveries use the same batch validator and reversible operation path.
+The queue is acknowledged only after validation and local persistence finish.
+Accepted document IDs, including idempotently skipped existing records, are
+added to the active graph workspace.
+
 ## Graph projection
 
 - every non-relation StarIntel document becomes a node;
@@ -92,6 +98,8 @@ Node drag frames remain in Cytoscape. `dragfree` commits only the final position
 - relation confidence contributes to connection-path cost;
 - positions are loaded from the active saved graph rather than written into StarIntel documents;
 - one canonical document may appear in many saved graphs without being duplicated.
+- canvas, node, edge, and multi-selection context menus expose graph operations
+  through short hierarchical action groups with action search.
 
 ## Routes
 
@@ -128,6 +136,33 @@ PouchDB provides:
 - retrying live sync.
 
 Replication applies only to the canonical corpus database.
+
+## Map-reduce projections
+
+Quasar installs versioned CouchDB-compatible design documents for core counts,
+relation adjacency and degree, targets, messages, and events. The definitions
+live in `src/lib/views.js`, install idempotently into the canonical PouchDB
+database, and replicate to CouchDB with the corpus. Query helpers provide one
+contract for dashboards and future table and graph projections.
+
+## StarIntel server
+
+The optional adapter probes the planned `/api/v1/capabilities` contract before
+falling back to current gserver metadata and the legacy target route. This
+compatibility layer supports today's server without freezing the future API
+around its initial endpoints.
+
+## RabbitMQ ingestion
+
+Direct optional broker ingestion uses RabbitMQ Web STOMP because browsers
+cannot speak AMQP 0-9-1 over TCP. Subscriptions use `client-individual`
+acknowledgement and bounded prefetch. Invalid deliveries are negatively
+acknowledged without requeue; successful and idempotently duplicate deliveries
+are acknowledged after persistence.
+
+The target architecture is a starintel-server-owned authenticated WebSocket
+gateway with broker credentials, authorization, settlement, replay, and
+backpressure handled server-side.
 
 ## Browser actors
 

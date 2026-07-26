@@ -23,6 +23,7 @@
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run check:static"
   },
   "dependencies": {
+    "@stomp/stompjs": "^7.3.0",
     "cytoscape": "^3.34.0",
     "cytoscape-edgehandles": "^4.0.1",
     "events": "^3.3.0",

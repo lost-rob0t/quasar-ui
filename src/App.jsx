@@ -29,8 +29,14 @@ const navigation = [
 ];
 
 function SyncBadge() {
-  const { syncStatus } = useQuasar();
-  return <span className={`sync-badge sync-${syncStatus.state}`} title={syncStatus.message}>{syncStatus.state}</span>;
+  const { syncStatus, serverStatus, queueStatus } = useQuasar();
+  return (
+    <div className="connection-badges">
+      <span className={`sync-badge sync-${syncStatus.state}`} title={`CouchDB: ${syncStatus.message}`}>db {syncStatus.state}</span>
+      {serverStatus.state !== "offline" && <span className={`sync-badge sync-${serverStatus.state}`} title={serverStatus.message}>api {serverStatus.state}</span>}
+      {queueStatus.state !== "offline" && <span className={`sync-badge sync-${queueStatus.state}`} title={queueStatus.message}>queue {queueStatus.state}</span>}
+    </div>
+  );
 }
 
 function WorkbenchShell({ children }) {

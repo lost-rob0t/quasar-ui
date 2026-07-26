@@ -2,14 +2,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import cytoscape from "cytoscape";
 import edgehandles from "cytoscape-edgehandles";
 import {
-  ArrowLeft, BookOpen, Building2, CalendarDays, CircleDot, Database,
-  ExternalLink, FileText, Focus, FolderPlus, Lightbulb, Link2, MapPin,
-  Minimize2, MoreHorizontal, Network, Pencil, Play, Plus, Search,
-  Trash2, TriangleAlert, UserRound, X
+  ArrowLeft, BookOpen, Building2, CalendarDays, ChevronRight, CircleDot,
+  Clipboard, Copy, Database, ExternalLink, FileText, Focus, FolderPlus,
+  GitBranch, Grid2X2, Lightbulb, Link2, MapPin, MoreHorizontal, Network,
+  Pencil, Play, Plus, RadioTower, Search, Send, Server, Trash2,
+  TriangleAlert, UserRound, X
 } from "lucide-react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   assertDocument,
+  createDocument,
   createRelation,
   dtypes,
   documentLabel,
@@ -59,6 +61,7 @@ function GraphCanvas({
   onViewport,
   onCanvasContext,
   onNodeContext,
+  onEdgeContext,
   onRelationDraft,
   apiRef,
   edgeHandlesRef,
@@ -75,6 +78,7 @@ function GraphCanvas({
     onViewport,
     onCanvasContext,
     onNodeContext,
+    onEdgeContext,
     onRelationDraft
   };
 
@@ -167,6 +171,7 @@ function GraphCanvas({
       const context = contextPosition(event);
       if (event.target === cy) callbacks.current.onCanvasContext(context);
       else if (event.target.isNode()) callbacks.current.onNodeContext(event.target.id(), context);
+      else if (event.target.isEdge()) callbacks.current.onEdgeContext(event.target.id(), context);
     });
     cy.on("ehcomplete", (event, sourceNode, targetNode, addedEdge) => {
       const context = contextPosition(event);
@@ -429,6 +434,61 @@ function NodeQuickEditor({ document, onClose }) {
   );
 }
 
+function TargetSubmit({ document, onClose }) {
+  const { settings, submitTarget, setNotice } = useQuasar();
+  const [actor, setActor] = useState("");
+  const [target, setTarget] = useState(document._id);
+  const [dataset, setDataset] = useState(document.dataset || "default");
+  const [recurring, setRecurring] = useState(false);
+  const [delay, setDelay] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit(event) {
+    event.preventDefault();
+    setSubmitting(true);
+    try {
+      const targetDocument = assertDocument(createDocument("target", {
+        dataset,
+        title: `Target ${documentLabel(document)}`,
+        data: {
+          actor,
+          target,
+          target_id: document._id,
+          target_type: document.dtype,
+          recurring,
+          delay: Number(delay) || 0,
+          options: []
+        }
+      }));
+      await submitTarget(targetDocument, settings);
+      setNotice({ kind: "success", message: `Submitted ${documentLabel(document)} to ${actor}` });
+      onClose();
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title="Submit target" onClose={onClose}>
+      <form className="modal-form" onSubmit={submit}>
+        <p className="muted">Send a canonical v0.9 target document to the configured StarIntel server.</p>
+        <label className="field"><span>Actor ID</span><input value={actor} onChange={(event) => setActor(event.target.value)} autoFocus required /></label>
+        <label className="field"><span>Target</span><input value={target} onChange={(event) => setTarget(event.target.value)} required /></label>
+        <label className="field"><span>Dataset</span><input value={dataset} onChange={(event) => setDataset(event.target.value)} required /></label>
+        <label className="field"><span>Delay in seconds</span><input type="number" min="0" value={delay} onChange={(event) => setDelay(event.target.value)} /></label>
+        <label className="checkbox"><input type="checkbox" checked={recurring} onChange={(event) => setRecurring(event.target.checked)} /> Recurring target</label>
+        {!settings?.serverUrl && <p className="validation-error">Configure a StarIntel server URL in Settings first.</p>}
+        <div className="form-actions">
+          <button type="button" className="button" onClick={onClose}>Cancel</button>
+          <button className="button primary" disabled={submitting || !settings?.serverUrl}><Send size={15} /> {submitting ? "Submitting…" : "Submit target"}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 export default function GraphPage() {
   const [params] = useSearchParams();
   const location = useLocation();
@@ -437,7 +497,8 @@ export default function GraphPage() {
     documents, workspace, selectedIds, selectedDocuments, select, persistWorkspace,
     actors, runActor, settings, setNotice, graphs, activeGraph,
     addDocumentsToActiveGraph, removeDocumentsFromActiveGraph,
-    createGraph, switchGraph, renameGraph, deleteGraph
+    createGraph, switchGraph, renameGraph, deleteGraph, execute,
+    queueStatus, startQueue, stopQueue
   } = useQuasar();
   const apiRef = useRef(null);
   const edgeHandlesRef = useRef(null);
@@ -455,10 +516,12 @@ export default function GraphPage() {
   const [labels, setLabels] = useState(true);
   const [relationDraft, setRelationDraft] = useState(null);
   const [quickEditDocument, setQuickEditDocument] = useState(null);
+  const [targetDocument, setTargetDocument] = useState(null);
   const [showGraphCreate, setShowGraphCreate] = useState(false);
   const [showMembershipAdd, setShowMembershipAdd] = useState(false);
   const [canvasMenu, setCanvasMenu] = useState(null);
-  const [canvasMenuCompact, setCanvasMenuCompact] = useState(true);
+  const [menuSection, setMenuSection] = useState("");
+  const [menuQuery, setMenuQuery] = useState("");
   const [emptyStateDismissed, setEmptyStateDismissed] = useState(false);
   const [pathStart, setPathStart] = useState("");
   const [pathEnd, setPathEnd] = useState("");
@@ -511,6 +574,9 @@ export default function GraphPage() {
     setCanvasMenu(null);
     setRelationDraft(null);
     setQuickEditDocument(null);
+    setTargetDocument(null);
+    setMenuSection("");
+    setMenuQuery("");
     setEmptyStateDismissed(false);
   }, [activeGraph?.id]);
 
@@ -635,6 +701,8 @@ export default function GraphPage() {
 
   function openCanvasMenu(context) {
     setEmptyStateDismissed(true);
+    setMenuSection("");
+    setMenuQuery("");
     setCanvasMenu({
       kind: "canvas",
       ...context
@@ -642,8 +710,16 @@ export default function GraphPage() {
   }
 
   function openNodeMenu(id, context) {
-    select([id]);
+    if (!selectedIds.includes(id)) select([id]);
+    setMenuSection("");
+    setMenuQuery("");
     setCanvasMenu({ kind: "node", id, ...context });
+  }
+
+  function openEdgeMenu(id, context) {
+    setMenuSection("");
+    setMenuQuery("");
+    setCanvasMenu({ kind: "edge", id, ...context });
   }
 
   function beginRelationFromNode(id) {
@@ -680,11 +756,11 @@ export default function GraphPage() {
   const canvasMenuStyle = canvasMenu ? {
     left: Math.max(8, Math.min(
       canvasMenu.rendered.x,
-      canvasMenu.bounds.width - (canvasMenu.kind === "node" || !canvasMenuCompact ? 270 : 216)
+      canvasMenu.bounds.width - 292
     )),
     top: Math.max(8, Math.min(
       canvasMenu.rendered.y,
-      canvasMenu.bounds.height - (canvasMenu.kind === "node" ? 210 : canvasMenuCompact ? 52 : 390)
+      canvasMenu.bounds.height - 430
     ))
   } : undefined;
 
@@ -766,6 +842,56 @@ export default function GraphPage() {
     removeDocumentsFromActiveGraph([id, ...relationIds]);
     setCanvasMenu(null);
   }
+
+  function selectNeighbors(id) {
+    const node = apiRef.current?.getElementById(id);
+    if (!node?.length) return;
+    select(node.closedNeighborhood().nodes().map((item) => item.id()));
+    setCanvasMenu(null);
+  }
+
+  async function copyText(value, message) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setNotice({ kind: "success", message });
+      setCanvasMenu(null);
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
+  }
+
+  async function deleteCorpusDocuments(ids) {
+    const selectedSet = new Set(ids);
+    const relationIds = documents
+      .filter((document) => document.dtype === "relation")
+      .filter((document) => selectedSet.has(document.data?.subject) || selectedSet.has(document.data?.object))
+      .map((document) => document._id);
+    const deleteIds = [...new Set([...ids, ...relationIds])];
+    if (!window.confirm(`Delete ${deleteIds.length} corpus document(s)? This includes connected relation documents and can be undone.`)) return;
+    try {
+      await execute(
+        operation.batch(deleteIds.map((id) => operation.remove(id)), "Delete graph documents"),
+        `Delete ${deleteIds.length} graph document(s)`
+      );
+      if (activeGraph?.documentIds !== null) removeDocumentsFromActiveGraph(deleteIds);
+      setCanvasMenu(null);
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
+  }
+
+  async function toggleQueueListener() {
+    try {
+      if (queueStatus.state === "active" || queueStatus.state === "connecting") stopQueue();
+      else startQueue(settings);
+      setCanvasMenu(null);
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
+  }
+
+  const menuMatches = (label) => !menuQuery.trim()
+    || label.toLowerCase().includes(menuQuery.trim().toLowerCase());
 
   async function executeActor(actor) {
     setRunningActorId(actor.id);
@@ -876,6 +1002,7 @@ export default function GraphPage() {
             onViewport={onViewport}
             onCanvasContext={openCanvasMenu}
             onNodeContext={openNodeMenu}
+            onEdgeContext={openEdgeMenu}
             onRelationDraft={setRelationDraft}
             apiRef={apiRef}
             edgeHandlesRef={edgeHandlesRef}
@@ -904,63 +1031,148 @@ export default function GraphPage() {
           )}
           {canvasMenu && (
             <div
-              className={`graph-context-menu ${canvasMenu.kind === "node" ? "node-actions" : canvasMenuCompact ? "compact" : "expanded"}`}
+              className={`graph-context-menu expanded ${canvasMenu.kind}-actions`}
               role="menu"
-              aria-label={canvasMenu.kind === "node" ? "Node actions" : "Graph canvas actions"}
+              aria-label={`${canvasMenu.kind} actions`}
               style={canvasMenuStyle}
               onContextMenu={(event) => event.preventDefault()}
             >
-              {canvasMenu.kind === "node" ? (() => {
+              {(() => {
                 const nodeDocument = documents.find((document) => document._id === canvasMenu.id);
-                return (
-                  <>
-                    <div className="graph-context-header">
-                      <strong>{nodeDocument ? documentLabel(nodeDocument) : canvasMenu.id}</strong>
-                    </div>
-                    {nodeDocument && <Link role="menuitem" to={`/documents/${encodeURIComponent(canvasMenu.id)}`}><ExternalLink size={15} /> Open</Link>}
-                    {nodeDocument && <button role="menuitem" onClick={() => { setCanvasMenu(null); setQuickEditDocument(nodeDocument); }}><Pencil size={15} /> Quick edit</button>}
-                    {nodeDocument && <Link role="menuitem" to={`/documents/${encodeURIComponent(canvasMenu.id)}/edit`}><MoreHorizontal size={15} /> Advanced edit</Link>}
-                    {nodeDocument && <button role="menuitem" onClick={() => beginRelationFromNode(canvasMenu.id)}><Link2 size={15} /> Drag a relation</button>}
-                    {activeGraph?.documentIds !== null && <button role="menuitem" className="danger" onClick={() => removeNodeFromGraph(canvasMenu.id)}><Trash2 size={15} /> Remove from graph</button>}
-                  </>
-                );
-              })() : canvasMenuCompact ? (
-                <div className="graph-context-palette" aria-label="Create node type">
-                  {COMPACT_NODE_TYPES.map(({ dtype: nodeDtype, label, Icon }) => (
-                    <button
-                      key={nodeDtype}
-                      role="menuitem"
-                      aria-label={`Create ${label.toLowerCase()} here`}
-                      title={label}
-                      onClick={() => openQuickAdd(canvasMenu.position, nodeDtype)}
-                    >
-                      <Icon size={16} />
-                    </button>
-                  ))}
-                  <button role="menuitem" aria-label="Expand graph menu" title="More actions" onClick={() => setCanvasMenuCompact(false)}>
-                    <MoreHorizontal size={17} />
-                  </button>
-                </div>
-              ) : (
-                <>
+                const edgeDocument = canvasMenu.kind === "edge"
+                  ? documents.find((document) => document._id === canvasMenu.id)
+                  : null;
+                const section = menuQuery ? "search" : menuSection;
+                return <>
                   <div className="graph-context-header">
-                    <strong>Create node</strong>
-                    <button role="menuitem" aria-label="Use compact graph menu" title="Compact menu" onClick={() => setCanvasMenuCompact(true)}><Minimize2 size={15} /></button>
+                    {menuSection && !menuQuery
+                      ? <button role="menuitem" aria-label="Back" onClick={() => setMenuSection("")}><ArrowLeft size={15} /></button>
+                      : <span className="context-kind">{canvasMenu.kind}</span>}
+                    <strong>
+                      {canvasMenu.kind === "node"
+                        ? nodeDocument ? documentLabel(nodeDocument) : canvasMenu.id
+                        : canvasMenu.kind === "edge"
+                          ? edgeDocument ? documentLabel(edgeDocument) : "Relation"
+                          : activeGraph?.name || "Graph"}
+                    </strong>
                   </div>
-                  <div className="graph-context-types">
-                    {QUICK_NODE_TYPES.map(({ dtype: nodeDtype, label, Icon }) => (
-                      <button key={nodeDtype} role="menuitem" onClick={() => openQuickAdd(canvasMenu.position, nodeDtype)}>
-                        <Icon size={15} /> {label}
-                      </button>
-                    ))}
-                  </div>
-                  <button role="menuitem" onClick={() => openQuickAdd(canvasMenu.position)}><MoreHorizontal size={15} /> Other document type…</button>
-                  <div className="graph-context-divider" />
-                  {activeGraph?.documentIds !== null && <button role="menuitem" onClick={() => { setCanvasMenu(null); setShowMembershipAdd(true); }}><Database size={15} /> Add from corpus</button>}
-                  <button role="menuitem" onClick={() => { setCanvasMenu(null); setShowGraphCreate(true); }}><FolderPlus size={15} /> Create another graph</button>
-                  <Link role="menuitem" to="/import"><ExternalLink size={15} /> Import documents</Link>
-                </>
-              )}
+                  <label className="graph-context-search">
+                    <Search size={14} />
+                    <input aria-label="Search context actions" value={menuQuery} onChange={(event) => setMenuQuery(event.target.value)} placeholder="Find action…" />
+                  </label>
+
+                  {canvasMenu.kind === "node" && nodeDocument && (
+                    <>
+                      {!section && (
+                        <>
+                          <Link role="menuitem" to={`/documents/${encodeURIComponent(canvasMenu.id)}`}><ExternalLink size={15} /> Open document</Link>
+                          <button role="menuitem" onClick={() => setMenuSection("edit")}><Pencil size={15} /> Edit <ChevronRight size={14} /></button>
+                          <button role="menuitem" onClick={() => setMenuSection("connect")}><Link2 size={15} /> Connect <ChevronRight size={14} /></button>
+                          <button role="menuitem" onClick={() => setMenuSection("selection")}><Focus size={15} /> Selection <ChevronRight size={14} /></button>
+                          <button role="menuitem" onClick={() => setMenuSection("actors")}><Play size={15} /> Run actor <ChevronRight size={14} /></button>
+                          <button role="menuitem" onClick={() => { setCanvasMenu(null); setTargetDocument(nodeDocument); }}><Send size={15} /> Submit as target</button>
+                          <button role="menuitem" onClick={() => setMenuSection("copy")}><Copy size={15} /> Copy <ChevronRight size={14} /></button>
+                          <div className="graph-context-divider" />
+                          {activeGraph?.documentIds !== null && <button role="menuitem" onClick={() => removeNodeFromGraph(canvasMenu.id)}><Trash2 size={15} /> Remove from this graph</button>}
+                          <button role="menuitem" className="danger" onClick={() => deleteCorpusDocuments(selectedIds.length > 1 ? selectedIds : [canvasMenu.id])}><Trash2 size={15} /> Delete from corpus</button>
+                        </>
+                      )}
+                      {(section === "edit" || section === "search") && (
+                        <>
+                          {menuMatches("Quick edit") && <button role="menuitem" onClick={() => { setCanvasMenu(null); setQuickEditDocument(nodeDocument); }}><Pencil size={15} /> Quick edit</button>}
+                          {menuMatches("Advanced edit") && <Link role="menuitem" to={`/documents/${encodeURIComponent(canvasMenu.id)}/edit`}><MoreHorizontal size={15} /> Advanced edit</Link>}
+                        </>
+                      )}
+                      {(section === "connect" || section === "search") && (
+                        <>
+                          {menuMatches("Drag a relation") && <button role="menuitem" onClick={() => beginRelationFromNode(canvasMenu.id)}><Link2 size={15} /> Drag a relation</button>}
+                          {menuMatches("Connect selected pair") && <button role="menuitem" disabled={selectedIds.length !== 2} onClick={() => { setCanvasMenu(null); openSelectedRelation(); }}><GitBranch size={15} /> Connect selected pair</button>}
+                        </>
+                      )}
+                      {(section === "selection" || section === "search") && (
+                        <>
+                          {menuMatches("Select neighbors") && <button role="menuitem" onClick={() => selectNeighbors(canvasMenu.id)}><Network size={15} /> Select neighbors</button>}
+                          {menuMatches("Focus selection") && <button role="menuitem" onClick={() => { setCanvasMenu(null); focusSelection(); }}><Focus size={15} /> Focus selection</button>}
+                          {menuMatches("Clear selection") && <button role="menuitem" onClick={() => { select([]); setCanvasMenu(null); }}><X size={15} /> Clear selection</button>}
+                          {activeGraph?.documentIds !== null && menuMatches("Remove selection from graph") && <button role="menuitem" onClick={() => { removeSelectionFromGraph(); setCanvasMenu(null); }}><Trash2 size={15} /> Remove selection from graph</button>}
+                        </>
+                      )}
+                      {(section === "actors" || section === "search") && actorEntries
+                        .filter(({ actor }) => menuMatches(actor.label))
+                        .map(({ actor, availability }) => (
+                          <button role="menuitem" key={actor.id} disabled={!availability.applicable || runningActorId === actor.id} onClick={() => { setCanvasMenu(null); executeActor(actor); }}>
+                            <Play size={15} /> {actor.label}
+                          </button>
+                        ))}
+                      {(section === "copy" || section === "search") && (
+                        <>
+                          {menuMatches("Copy document ID") && <button role="menuitem" onClick={() => copyText(nodeDocument._id, "Copied document ID")}><Clipboard size={15} /> Copy document ID</button>}
+                          {menuMatches("Copy document JSON") && <button role="menuitem" onClick={() => copyText(JSON.stringify(nodeDocument, null, 2), "Copied document JSON")}><Copy size={15} /> Copy document JSON</button>}
+                        </>
+                      )}
+                      {section === "search" && menuMatches("Submit as target") && <button role="menuitem" onClick={() => { setCanvasMenu(null); setTargetDocument(nodeDocument); }}><Send size={15} /> Submit as target</button>}
+                    </>
+                  )}
+
+                  {canvasMenu.kind === "edge" && edgeDocument && (
+                    <>
+                      {menuMatches("Open relation") && <Link role="menuitem" to={`/documents/${encodeURIComponent(edgeDocument._id)}`}><ExternalLink size={15} /> Open relation</Link>}
+                      {menuMatches("Edit relation") && <Link role="menuitem" to={`/documents/${encodeURIComponent(edgeDocument._id)}/edit`}><Pencil size={15} /> Edit relation</Link>}
+                      {menuMatches("Copy relation ID") && <button role="menuitem" onClick={() => copyText(edgeDocument._id, "Copied relation ID")}><Clipboard size={15} /> Copy relation ID</button>}
+                      {menuMatches("Copy relation JSON") && <button role="menuitem" onClick={() => copyText(JSON.stringify(edgeDocument, null, 2), "Copied relation JSON")}><Copy size={15} /> Copy relation JSON</button>}
+                      <div className="graph-context-divider" />
+                      <button role="menuitem" className="danger" onClick={() => deleteCorpusDocuments([edgeDocument._id])}><Trash2 size={15} /> Delete relation</button>
+                    </>
+                  )}
+
+                  {canvasMenu.kind === "canvas" && (
+                    <>
+                      {!section && (
+                        <>
+                          <div className="graph-context-palette" aria-label="Create node type">
+                            {COMPACT_NODE_TYPES.map(({ dtype: nodeDtype, label, Icon }) => (
+                              <button key={nodeDtype} role="menuitem" aria-label={`Create ${label.toLowerCase()} here`} title={label} onClick={() => openQuickAdd(canvasMenu.position, nodeDtype)}><Icon size={16} /></button>
+                            ))}
+                          </div>
+                          <button role="menuitem" onClick={() => setMenuSection("create")}><Plus size={15} /> Create node <ChevronRight size={14} /></button>
+                          <button role="menuitem" onClick={() => setMenuSection("graph")}><Network size={15} /> Graph <ChevronRight size={14} /></button>
+                          <button role="menuitem" onClick={() => setMenuSection("layout")}><Grid2X2 size={15} /> Layout <ChevronRight size={14} /></button>
+                          <button role="menuitem" onClick={() => setMenuSection("ingest")}><Database size={15} /> Ingest <ChevronRight size={14} /></button>
+                        </>
+                      )}
+                      {(section === "create" || section === "search") && (
+                        <>
+                          {QUICK_NODE_TYPES.filter(({ label }) => menuMatches(`Create ${label}`)).map(({ dtype: nodeDtype, label, Icon }) => (
+                            <button key={nodeDtype} role="menuitem" onClick={() => openQuickAdd(canvasMenu.position, nodeDtype)}><Icon size={15} /> Create {label.toLowerCase()}</button>
+                          ))}
+                          {menuMatches("Other document type") && <button role="menuitem" onClick={() => openQuickAdd(canvasMenu.position)}><MoreHorizontal size={15} /> Other document type…</button>}
+                        </>
+                      )}
+                      {(section === "graph" || section === "search") && (
+                        <>
+                          {menuMatches("Fit graph") && <button role="menuitem" onClick={() => { fit(); setCanvasMenu(null); }}><Focus size={15} /> Fit graph</button>}
+                          {menuMatches("Focus selection") && <button role="menuitem" disabled={!selectedIds.length} onClick={() => { focusSelection(); setCanvasMenu(null); }}><Focus size={15} /> Focus selection</button>}
+                          {menuMatches("Clear filters") && <button role="menuitem" onClick={() => { clearFilters(); setCanvasMenu(null); }}><X size={15} /> Clear filters</button>}
+                          {activeGraph?.documentIds !== null && menuMatches("Add from corpus") && <button role="menuitem" onClick={() => { setCanvasMenu(null); setShowMembershipAdd(true); }}><Database size={15} /> Add from corpus</button>}
+                          {menuMatches("Create another graph") && <button role="menuitem" onClick={() => { setCanvasMenu(null); setShowGraphCreate(true); }}><FolderPlus size={15} /> Create another graph</button>}
+                          {menuMatches("Rename graph") && <button role="menuitem" onClick={() => { setCanvasMenu(null); renameCurrentGraph(); }}><Pencil size={15} /> Rename graph</button>}
+                          {menuMatches("Delete graph") && <button role="menuitem" className="danger" disabled={graphs.length < 2} onClick={() => { setCanvasMenu(null); deleteCurrentGraph(); }}><Trash2 size={15} /> Delete graph</button>}
+                        </>
+                      )}
+                      {(section === "layout" || section === "search") && ["cose", "breadthfirst", "circle", "concentric", "grid"]
+                        .filter((name) => menuMatches(`Layout ${name}`))
+                        .map((name) => <button role="menuitem" key={name} onClick={() => { runLayout(name); setCanvasMenu(null); }}><Grid2X2 size={15} /> {name}</button>)}
+                      {(section === "ingest" || section === "search") && (
+                        <>
+                          {menuMatches("Import documents") && <Link role="menuitem" to="/import"><ExternalLink size={15} /> Import documents</Link>}
+                          {menuMatches("RabbitMQ queue listener") && <button role="menuitem" disabled={!settings?.rabbitWebSocketUrl} onClick={toggleQueueListener}><RadioTower size={15} /> {queueStatus.state === "active" ? "Stop" : "Start"} queue listener</button>}
+                          {menuMatches("StarIntel connection settings") && <Link role="menuitem" to="/settings"><Server size={15} /> StarIntel connection settings</Link>}
+                        </>
+                      )}
+                    </>
+                  )}
+                </>;
+              })()}
             </div>
           )}
           {relationDraft && (
@@ -1056,6 +1268,7 @@ export default function GraphPage() {
         />
       )}
       {quickEditDocument && <NodeQuickEditor document={quickEditDocument} onClose={() => setQuickEditDocument(null)} />}
+      {targetDocument && <TargetSubmit document={targetDocument} onClose={() => setTargetDocument(null)} />}
     </section>
   );
 }

@@ -13,10 +13,15 @@ test("opens the local workspace without a backend", async ({ page }) => {
   await expect(page).toHaveTitle("Quasar");
   await expect(page.getByRole("heading", { name: "Statistics dashboard" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "No documents loaded" })).toBeVisible();
-  await expect(page.locator(".sync-badge")).toHaveText("offline");
-  await expect(page.locator(".sync-badge")).toHaveAttribute("title", "Local only");
+  await expect(page.locator(".sync-badge")).toHaveText("db offline");
+  await expect(page.locator(".sync-badge")).toHaveAttribute("title", "CouchDB: Local only");
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", "/manifest.webmanifest");
   expect(failedApplicationRequests).toEqual([]);
+
+  await page.getByRole("link", { name: "Settings" }).click();
+  await expect(page.getByRole("heading", { name: "StarIntel server" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "RabbitMQ graph ingest" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Install/update map-reduce views" })).toBeVisible();
 });
 
 test("creates a blank graph and runs a bundled actor", async ({ page }) => {
@@ -24,10 +29,14 @@ test("creates a blank graph and runs a bundled actor", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "Start a blank graph" })).toBeVisible();
   await page.locator(".graph-stage").click({ button: "right", position: { x: 240, y: 220 } });
-  await expect(page.getByRole("menu", { name: "Graph canvas actions" })).toBeVisible();
-  await expect(page.locator(".graph-context-menu")).toHaveClass(/compact/);
+  await expect(page.getByRole("menu", { name: "canvas actions" })).toBeVisible();
+  await expect(page.locator(".graph-context-menu")).toHaveClass(/expanded/);
   await expect(page.getByRole("menuitem", { name: "Create person here" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Create organization here" })).toBeVisible();
+  await page.getByRole("menuitem", { name: /Ingest/ }).click();
+  await expect(page.getByRole("menuitem", { name: "Import documents" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "StarIntel connection settings" })).toBeVisible();
+  await page.getByRole("menuitem", { name: "Back" }).click();
   await page.getByRole("menuitem", { name: "Create person here" }).click();
   await expect(page).toHaveURL(/\/documents\/new\?/);
   await expect(page.getByLabel("Object type")).toHaveValue("person");

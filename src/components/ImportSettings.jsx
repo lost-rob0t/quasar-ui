@@ -1,5 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { Database, File, Files, Network, Play, Save, Trash2, UploadCloud } from "lucide-react";
+import {
+  Database,
+  File,
+  Files,
+  Network,
+  Play,
+  RadioTower,
+  RefreshCw,
+  Save,
+  Server,
+  Square,
+  Trash2,
+  UploadCloud
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { normalizeActorManifest } from "../lib/actors";
 import { openImportedGraph } from "../lib/graph-navigation";
@@ -132,11 +145,13 @@ const ACTOR_TEMPLATE = JSON.stringify({
 export function SettingsPage() {
   const {
     settings, persistSettings, syncStatus, startSync, stopSync, synchronize,
-    databaseInfo, setNotice
+    serverStatus, queueStatus, testServer, startQueue, stopQueue,
+    databaseInfo, ensureStarIntelViews, setNotice
   } = useQuasar();
   const [form, setForm] = useState(settings || {});
   const [actorText, setActorText] = useState(ACTOR_TEMPLATE);
   const [info, setInfo] = useState(null);
+  const [viewStatus, setViewStatus] = useState("");
   const actors = useMemo(() => form.actors || [], [form.actors]);
 
   useEffect(() => setForm(settings || {}), [settings]);
@@ -170,6 +185,47 @@ export function SettingsPage() {
     }
   }
 
+  async function probeServer() {
+    try {
+      await persistSettings(form);
+      const result = await testServer(form);
+      setNotice({
+        kind: "success",
+        message: result.mode === "v1" ? "Connected to StarIntel API v1" : "Connected using the legacy gserver API"
+      });
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
+  }
+
+  async function beginQueue() {
+    try {
+      const next = { ...form, rabbitEnabled: true };
+      setForm(next);
+      await persistSettings(next);
+      startQueue(next);
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
+  }
+
+  async function endQueue() {
+    const next = { ...form, rabbitEnabled: false };
+    setForm(next);
+    stopQueue();
+    await persistSettings(next);
+  }
+
+  async function installViews() {
+    try {
+      const result = await ensureStarIntelViews();
+      const changed = result.filter((item) => item.status !== "current").length;
+      setViewStatus(`${result.length} design documents ready · ${changed} changed`);
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
+  }
+
   function addActor() {
     try {
       const actor = normalizeActorManifest(JSON.parse(actorText));
@@ -187,7 +243,40 @@ export function SettingsPage() {
 
   return (
     <section>
-      <div className="page-heading"><div><span className="eyebrow">Configuration</span><h1>Settings</h1><p>Local database, optional CouchDB replication, and opt-in browser actors.</p></div><button className="button primary" onClick={save}><Save size={16} /> Save settings</button></div>
+      <div className="page-heading"><div><span className="eyebrow">Configuration</span><h1>Settings</h1><p>Local storage, StarIntel services, optional queue ingest, synchronization, and browser actors.</p></div><button className="button primary" onClick={save}><Save size={16} /> Save settings</button></div>
+
+      <section className="panel">
+        <div className="section-heading"><h2>StarIntel server</h2><span className={`sync-badge sync-${serverStatus.state}`}>{serverStatus.state}</span></div>
+        <p className="muted">Quasar probes the expanded v1 capability endpoint first and falls back to the current gserver routes for target submission.</p>
+        <div className="form-grid">
+          <label className="field full"><span>Server URL</span><input value={form.serverUrl || ""} onChange={update("serverUrl")} placeholder="http://localhost:5000" /></label>
+          <label className="field"><span>Username</span><input value={form.serverUsername || ""} onChange={update("serverUsername")} autoComplete="username" /></label>
+          <label className="field"><span>Password</span><input type="password" value={form.serverPassword || ""} onChange={update("serverPassword")} autoComplete="current-password" /></label>
+          <label className="field full"><span>Bearer token</span><input type="password" value={form.serverToken || ""} onChange={update("serverToken")} placeholder="Optional; takes precedence over basic auth" /></label>
+        </div>
+        <p className="muted sync-message">{serverStatus.message}</p>
+        <button className="button primary" onClick={probeServer} disabled={!form.serverUrl}><Server size={15} /> Test server connection</button>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading"><h2>RabbitMQ graph ingest</h2><span className={`sync-badge sync-${queueStatus.state}`}>{queueStatus.state}</span></div>
+        <p className="muted">Uses RabbitMQ Web STOMP, validates each delivery with the canonical v0.9 schema, saves it to local PouchDB, and adds accepted IDs to the active graph.</p>
+        <div className="form-grid">
+          <label className="field full"><span>Web STOMP URL</span><input value={form.rabbitWebSocketUrl || ""} onChange={update("rabbitWebSocketUrl")} placeholder="ws://localhost:15674/ws" /></label>
+          <label className="field full"><span>Destination</span><input value={form.rabbitDestination || ""} onChange={update("rabbitDestination")} placeholder="/exchange/documents/documents.update.#" /></label>
+          <label className="field"><span>Queue name</span><input value={form.rabbitQueueName || ""} onChange={update("rabbitQueueName")} placeholder="Optional durable queue" /></label>
+          <label className="field"><span>Virtual host</span><input value={form.rabbitVhost || "/"} onChange={update("rabbitVhost")} /></label>
+          <label className="field"><span>Username</span><input value={form.rabbitUsername || ""} onChange={update("rabbitUsername")} autoComplete="username" /></label>
+          <label className="field"><span>Password</span><input type="password" value={form.rabbitPassword || ""} onChange={update("rabbitPassword")} autoComplete="current-password" /></label>
+          <label className="field"><span>Prefetch</span><input type="number" min="1" max="500" value={form.rabbitPrefetch || 25} onChange={update("rabbitPrefetch")} /></label>
+          <label className="checkbox"><input type="checkbox" checked={Boolean(form.rabbitEnabled)} onChange={update("rabbitEnabled")} /> Start listener when Quasar opens</label>
+        </div>
+        <p className="muted sync-message">{queueStatus.message} · {queueStatus.accepted} accepted · {queueStatus.rejected} rejected{queueStatus.lastError ? ` · ${queueStatus.lastError}` : ""}</p>
+        <div className="button-row">
+          <button className="button primary" onClick={beginQueue} disabled={!form.rabbitWebSocketUrl || !form.rabbitDestination}><RadioTower size={15} /> Start listener</button>
+          <button className="button danger" onClick={endQueue}><Square size={14} /> Stop listener</button>
+        </div>
+      </section>
 
       <section className="panel">
         <div className="section-heading"><h2>CouchDB synchronization</h2><span className={`sync-badge sync-${syncStatus.state}`}>{syncStatus.state}</span></div>
@@ -222,7 +311,11 @@ export function SettingsPage() {
 
       <section className="panel">
         <div className="section-heading"><h2>Local databases</h2><Database size={20} /></div>
-        {info && <div className="metadata-grid"><div className="key-value"><span>Corpus documents</span><strong>{info.documents.doc_count}</strong></div><div className="key-value"><span>Corpus updates</span><strong>{info.documents.update_seq}</strong></div><div className="key-value"><span>State documents</span><strong>{info.state.doc_count}</strong></div><div className="key-value"><span>Adapter</span><strong>{info.documents.adapter}</strong></div></div>}
+        {info && <div className="metadata-grid"><div className="key-value"><span>Corpus documents</span><strong>{info.documents.corpus_doc_count}</strong></div><div className="key-value"><span>Corpus updates</span><strong>{info.documents.update_seq}</strong></div><div className="key-value"><span>State documents</span><strong>{info.state.doc_count}</strong></div><div className="key-value"><span>Adapter</span><strong>{info.documents.adapter}</strong></div></div>}
+        <div className="section-subactions">
+          <button className="button" onClick={installViews}><RefreshCw size={15} /> Install/update map-reduce views</button>
+          {viewStatus && <span className="muted">{viewStatus}</span>}
+        </div>
       </section>
     </section>
   );

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import {
   bulkSaveDocuments,
   databaseInfo,
+  ensureStarIntelViews,
   exportDocuments,
   getSettings,
   getWorkspace,
@@ -10,6 +11,8 @@ import {
   saveWorkspace,
   startLiveSync,
   syncOnce,
+  queryView,
+  queryViewCounts,
   watchDocuments
 } from "./lib/db";
 import { importFiles } from "./lib/importer";
@@ -17,6 +20,8 @@ import { applyOperation, operation, saveDocumentBatch } from "./lib/operations";
 import { BUILTIN_ACTORS, actorApplicability, isBuiltinActor, runBrowserActor } from "./lib/actors";
 import { actorWithTransformEnvelope, buildActorTransform } from "./lib/actor-transforms";
 import { startDocumentSource } from "./lib/document-source";
+import { startRabbitMqIngest } from "./lib/rabbitmq-ingest";
+import { probeStarIntelServer, submitTargetToServer } from "./lib/starintel-server";
 import {
   addDocumentsToActiveGraph as addDocumentsToGraphWorkspace,
   createGraph as createGraphWorkspace,
@@ -38,8 +43,18 @@ export function QuasarProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState(null);
   const [syncStatus, setSyncStatus] = useState({ state: "offline", message: "Local only" });
+  const [serverStatus, setServerStatus] = useState({ state: "offline", message: "Not connected" });
+  const [queueStatus, setQueueStatus] = useState({
+    state: "offline",
+    message: "Queue listener stopped",
+    accepted: 0,
+    rejected: 0
+  });
   const [history, setHistory] = useState({ undo: [], redo: [] });
   const syncRef = useRef(null);
+  const queueRef = useRef(null);
+  const queueIngestRef = useRef(null);
+  const queueAutostartRef = useRef(false);
   const workspaceRef = useRef(null);
   const workspaceTimer = useRef(null);
 
@@ -53,7 +68,7 @@ export function QuasarProvider({ children }) {
       onDocuments: (nextDocuments) => setDocuments(nextDocuments),
       onError: (error) => setNotice({ kind: "error", message: error.message })
     });
-    Promise.all([source.initial, getSettings(), getWorkspace()])
+    Promise.all([source.initial, getSettings(), getWorkspace(), ensureStarIntelViews()])
       .then(([, nextSettings, nextWorkspace]) => {
         if (!active) return;
         setSettings(nextSettings);
@@ -67,6 +82,7 @@ export function QuasarProvider({ children }) {
       active = false;
       source.stop();
       syncRef.current?.cancel?.();
+      queueRef.current?.cancel?.();
       clearTimeout(workspaceTimer.current);
     };
   }, []);
@@ -83,8 +99,8 @@ export function QuasarProvider({ children }) {
     return applied.result;
   }, [record, refresh]);
 
-  const executeBatch = useCallback(async (nextDocuments, label = "Save documents") => {
-    const applied = await saveDocumentBatch(nextDocuments, label);
+  const executeBatch = useCallback(async (nextDocuments, label = "Save documents", options = {}) => {
+    const applied = await saveDocumentBatch(nextDocuments, label, options);
     record({
       label,
       inverse: applied.inverse,
@@ -177,6 +193,68 @@ export function QuasarProvider({ children }) {
     return commitWorkspace(addDocumentsToGraphWorkspace(workspaceRef.current || {}, ids, changes));
   }, [commitWorkspace]);
 
+  const ingestQueueDocuments = useCallback(async (nextDocuments) => {
+    const report = await executeBatch(nextDocuments, `Queue ingest: ${nextDocuments.length} document(s)`, {
+      replace: false,
+      atomic: true
+    });
+    const acceptedIds = [...new Set([
+      ...report.saved.map((item) => item.id),
+      ...report.skipped.map((item) => item.id)
+    ].filter(Boolean))];
+    if (acceptedIds.length) addDocumentsToActiveGraph(acceptedIds);
+    return { count: acceptedIds.length, ids: acceptedIds, report };
+  }, [addDocumentsToActiveGraph, executeBatch]);
+
+  useEffect(() => {
+    queueIngestRef.current = ingestQueueDocuments;
+  }, [ingestQueueDocuments]);
+
+  const stopQueue = useCallback(() => {
+    queueRef.current?.cancel?.();
+    queueRef.current = null;
+    setQueueStatus((current) => ({
+      ...current,
+      state: "offline",
+      message: "Queue listener stopped"
+    }));
+  }, []);
+
+  const startQueue = useCallback((configuration = settings) => {
+    queueRef.current?.cancel?.();
+    setQueueStatus((current) => ({
+      ...current,
+      state: "connecting",
+      message: "Connecting to RabbitMQ Web STOMP"
+    }));
+    queueRef.current = startRabbitMqIngest(configuration, {
+      onStatus: (status) => setQueueStatus((current) => ({ ...current, ...status })),
+      onDocuments: (nextDocuments) => queueIngestRef.current(nextDocuments),
+      onDelivery: (delivery) => setQueueStatus((current) => ({
+        ...current,
+        accepted: current.accepted + (delivery.state === "accepted" ? delivery.count : 0),
+        rejected: current.rejected + (delivery.state === "rejected" ? 1 : 0),
+        lastError: delivery.error || current.lastError || null
+      })),
+      onError: (error) => setQueueStatus((current) => ({
+        ...current,
+        state: current.state === "active" ? "active" : "error",
+        lastError: error.message
+      }))
+    });
+    return queueRef.current;
+  }, [settings]);
+
+  useEffect(() => {
+    if (loading || queueAutostartRef.current || !settings?.rabbitEnabled) return;
+    queueAutostartRef.current = true;
+    try {
+      startQueue(settings);
+    } catch (error) {
+      setQueueStatus((current) => ({ ...current, state: "error", message: error.message }));
+    }
+  }, [loading, settings, startQueue]);
+
   const removeDocumentsFromActiveGraph = useCallback((ids) => {
     return commitWorkspace(removeDocumentsFromGraphWorkspace(workspaceRef.current || {}, ids));
   }, [commitWorkspace]);
@@ -235,6 +313,36 @@ export function QuasarProvider({ children }) {
     }
   }, [refresh, settings]);
 
+  const testServer = useCallback(async (configuration = settings) => {
+    setServerStatus({ state: "connecting", message: "Probing StarIntel server" });
+    try {
+      const result = await probeStarIntelServer(configuration);
+      setServerStatus({
+        state: "active",
+        message: result.mode === "v1" ? "Connected with v1 capabilities" : "Connected in legacy compatibility mode",
+        result
+      });
+      return result;
+    } catch (error) {
+      setServerStatus({ state: "error", message: error.message });
+      throw error;
+    }
+  }, [settings]);
+
+  const submitTarget = useCallback(async (target, configuration = settings) => {
+    setServerStatus((current) => ({ ...current, state: "active", message: "Submitting target" }));
+    try {
+      const response = await submitTargetToServer(configuration, target);
+      await execute(operation.save(target), `Submit target ${target._id}`);
+      addDocumentsToActiveGraph([target._id]);
+      setServerStatus((current) => ({ ...current, state: "active", message: "Target accepted" }));
+      return response;
+    } catch (error) {
+      setServerStatus((current) => ({ ...current, state: "error", message: error.message }));
+      throw error;
+    }
+  }, [addDocumentsToActiveGraph, execute, settings]);
+
   const actors = useMemo(() => [
     ...BUILTIN_ACTORS,
     ...(settings?.actors || [])
@@ -274,6 +382,8 @@ export function QuasarProvider({ children }) {
     notice,
     setNotice,
     syncStatus,
+    serverStatus,
+    queueStatus,
     history,
     canUndo: history.undo.length > 0,
     canRedo: history.redo.length > 0,
@@ -294,17 +404,25 @@ export function QuasarProvider({ children }) {
     startSync,
     stopSync,
     synchronize,
+    testServer,
+    submitTarget,
+    startQueue,
+    stopQueue,
     actors,
     runActor,
     exportDocuments,
     databaseInfo,
-    bulkSaveDocuments
+    bulkSaveDocuments,
+    ensureStarIntelViews,
+    queryView,
+    queryViewCounts
   }), [
-    documents, settings, workspace, selectedIds, loading, notice, syncStatus, history,
+    documents, settings, workspace, selectedIds, loading, notice, syncStatus, serverStatus, queueStatus, history,
     execute, executeBatch, undo, redo, importFileSet, persistSettings, persistWorkspace,
     addDocumentsToActiveGraph, removeDocumentsFromActiveGraph,
     createGraph, switchGraph, renameGraph, deleteGraph,
-    activeGraph, select, startSync, stopSync, synchronize, actors, runActor
+    activeGraph, select, startSync, stopSync, synchronize, testServer, submitTarget,
+    startQueue, stopQueue, actors, runActor
   ]);
 
   return <QuasarContext.Provider value={value}>{children}</QuasarContext.Provider>;

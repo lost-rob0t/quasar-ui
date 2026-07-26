@@ -2,6 +2,11 @@ import PouchDB from "pouchdb-browser";
 import { assertDocument, isStarIntelDocument } from "starintel_doc";
 import { commitDocumentBatch } from "./document-batch";
 import { normalizeGraphWorkspace } from "./graph-workspaces";
+import {
+  installStarIntelViews,
+  queryCountView,
+  queryStarIntelView
+} from "./views";
 
 export const documentsDb = new PouchDB("quasar-starintel-v09", { auto_compaction: true });
 export const stateDb = new PouchDB("quasar-ui-state-v1", { auto_compaction: true });
@@ -79,6 +84,18 @@ export async function getSettings() {
     couchDatabase: "starintel",
     couchUsername: "",
     couchPassword: "",
+    serverUrl: "",
+    serverUsername: "",
+    serverPassword: "",
+    serverToken: "",
+    rabbitEnabled: false,
+    rabbitWebSocketUrl: "",
+    rabbitDestination: "/exchange/documents/documents.update.#",
+    rabbitQueueName: "",
+    rabbitUsername: "guest",
+    rabbitPassword: "guest",
+    rabbitVhost: "/",
+    rabbitPrefetch: 25,
     actorsEnabled: false,
     actors: [],
     ...stored,
@@ -151,6 +168,25 @@ export async function exportDocuments() {
 }
 
 export async function databaseInfo() {
-  const [documents, state] = await Promise.all([documentsDb.info(), stateDb.info()]);
-  return { documents, state };
+  const [documents, state, corpus] = await Promise.all([
+    documentsDb.info(),
+    stateDb.info(),
+    listDocuments()
+  ]);
+  return {
+    documents: { ...documents, corpus_doc_count: corpus.length },
+    state
+  };
+}
+
+export function ensureStarIntelViews() {
+  return installStarIntelViews(documentsDb);
+}
+
+export function queryView(design, view, options = {}) {
+  return queryStarIntelView(documentsDb, design, view, options);
+}
+
+export function queryViewCounts(design, view, options = {}) {
+  return queryCountView(documentsDb, design, view, options);
 }
