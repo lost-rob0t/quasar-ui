@@ -278,10 +278,13 @@ td small { max-width: 65ch; color: var(--muted); }
   cursor: pointer;
 }
 .agent-console-tabs button.active { border-color: var(--accent); color: var(--text); }
+.agent-console-tab-select { display: none; }
 .agent-console-status { display: grid; grid-template-columns: auto auto; align-items: center; gap: .2rem .45rem; }
 .agent-console-status span { grid-column: 2; color: var(--muted); font-size: .68rem; }
 .agent-console-grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 1rem; }
 .agent-conversation { display: grid; grid-template-rows: auto minmax(360px, 1fr) auto; min-height: 650px; }
+.agent-conversation-actions { display: flex; align-items: center; gap: .45rem; min-width: 0; }
+.agent-mobile-run-controls { display: none; }
 .agent-log { display: grid; align-content: start; gap: .55rem; max-height: calc(100vh - 350px); overflow: auto; padding: .2rem; }
 .agent-log-entry { padding: .65rem; border: 1px solid var(--line); border-radius: 8px; background: #071423; }
 .agent-log-entry.tool { border-left: 3px solid #a78bfa; }

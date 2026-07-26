@@ -67,7 +67,7 @@ textarea {
 
   .app-shell {
     display: block;
-    min-height: 100dvh;
+    min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   }
 
   .sidebar {
@@ -75,7 +75,7 @@ textarea {
   }
 
   .workbench {
-    min-height: 100dvh;
+    min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
   }
 
@@ -106,6 +106,136 @@ textarea {
   .content {
     width: 100%;
     padding: 1rem .75rem 1.5rem;
+  }
+
+  .agent-console[data-tab="run"] {
+    position: fixed;
+    z-index: 24;
+    top: calc(58px + env(safe-area-inset-top));
+    right: env(safe-area-inset-right);
+    bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
+    left: env(safe-area-inset-left);
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    gap: .45rem;
+    min-height: 0;
+    padding: .5rem .6rem;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  .agent-console[data-tab="run"] > .page-heading {
+    min-height: 36px;
+    margin: 0;
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .agent-console[data-tab="run"] > .page-heading .eyebrow,
+  .agent-console[data-tab="run"] > .page-heading .button-row > .button {
+    display: none;
+  }
+
+  .agent-console[data-tab="run"] > .page-heading h1 {
+    margin: 0;
+    font-size: 1.15rem;
+    letter-spacing: -.02em;
+  }
+
+  .agent-console[data-tab="run"] > .page-heading .button-row {
+    width: auto;
+    margin-left: auto;
+  }
+
+  .agent-console .agent-console-tabs {
+    display: none;
+  }
+
+  .agent-console .agent-console-tab-select {
+    display: block;
+    min-width: 0;
+  }
+
+  .agent-console .agent-console-tab-select select {
+    width: 100%;
+    min-height: 44px;
+    padding: .5rem .65rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    color: var(--text);
+    text-transform: capitalize;
+  }
+
+  .agent-console[data-tab="run"] .agent-console-grid {
+    display: block;
+    min-height: 0;
+    height: 100%;
+  }
+
+  .agent-console[data-tab="run"] .agent-conversation {
+    height: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: .6rem;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .agent-console[data-tab="run"] .agent-conversation-heading {
+    align-items: stretch;
+    gap: .4rem;
+    margin-bottom: .45rem;
+    flex-direction: column;
+  }
+
+  .agent-console[data-tab="run"] .agent-conversation-heading h2 {
+    margin: 0;
+    font-size: .95rem;
+  }
+
+  .agent-console[data-tab="run"] .agent-conversation-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    width: 100%;
+  }
+
+  .agent-console[data-tab="run"] .agent-conversation-actions > select {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  .agent-console[data-tab="run"] .agent-mobile-run-controls {
+    display: block;
+  }
+
+  .agent-console[data-tab="run"] .agent-mobile-run-controls .button-row {
+    display: grid;
+    grid-template-columns: repeat(4, 44px);
+    gap: .25rem;
+  }
+
+  .agent-console[data-tab="run"] .agent-mobile-run-controls .button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: .35rem;
+    font-size: 0;
+  }
+
+  .agent-console[data-tab="run"] .agent-log {
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .agent-console[data-tab="run"] .agent-run-inspector,
+  .agent-console[data-tab="run"] ~ .agent-float {
+    display: none;
+  }
+
+  .agent-console[data-tab="run"] .agent-console-command {
+    padding-top: .45rem;
   }
 
   .mobile-nav {
@@ -483,9 +613,19 @@ textarea {
   }
 }
 
+@media (max-width: 850px) and (max-height: 700px) {
+  .agent-console[data-tab="run"] > .page-heading {
+    display: none;
+  }
+
+  .agent-console[data-tab="run"] {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+}
+
 @media (display-mode: standalone) {
   .workbench {
-    min-height: 100dvh;
+    min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   }
 
   .install-button {

@@ -141,4 +141,31 @@ test.describe("responsive application shell", () => {
     expect(controls.focusRight).toBeLessThanOrEqual(controls.viewportWidth);
     expect(controls.pageWidth).toBe(controls.viewportWidth);
   });
+
+  test("fits agent chat inside the mobile PWA viewport", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/agents?tab=run");
+
+    await expect(page.getByRole("heading", { name: "Conversation" })).toBeVisible();
+    await expect(page.getByLabel("Console section")).toHaveValue("run");
+    await expect(page.locator(".agent-console-tabs")).toBeHidden();
+    await expect(page.locator('.agent-console[data-tab="run"]')).toHaveCSS("position", "fixed");
+    await expect(page.locator(".agent-run-inspector")).toBeHidden();
+
+    const layout = await page.evaluate(() => {
+      const consoleRect = document.querySelector(".agent-console")?.getBoundingClientRect();
+      const navRect = document.querySelector(".mobile-nav")?.getBoundingClientRect();
+      return {
+        viewportHeight: window.innerHeight,
+        pageHeight: document.documentElement.scrollHeight,
+        consoleTop: consoleRect?.top,
+        consoleBottom: consoleRect?.bottom,
+        navTop: navRect?.top
+      };
+    });
+
+    expect(layout.pageHeight).toBe(layout.viewportHeight);
+    expect(layout.consoleTop).toBeGreaterThanOrEqual(0);
+    expect(layout.consoleBottom).toBeLessThanOrEqual(layout.navTop || layout.viewportHeight);
+  });
 });

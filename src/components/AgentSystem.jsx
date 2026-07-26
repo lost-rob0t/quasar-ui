@@ -1055,7 +1055,7 @@ export function AgentConsole() {
   const dailyCost = system.costs.filter((cost) => cost.createdAt?.startsWith(today)).reduce((total, cost) => total + Number(cost.costUsd || 0), 0);
   const monthlyCost = system.costs.filter((cost) => cost.createdAt?.startsWith(month)).reduce((total, cost) => total + Number(cost.costUsd || 0), 0);
   return (
-    <section className="agent-console page-stack">
+    <section className="agent-console page-stack" data-tab={tab}>
       <header className="page-heading">
         <div><p className="eyebrow">Agent system</p><h1>Operator console</h1></div>
         <div className="button-row">
@@ -1089,10 +1089,22 @@ export function AgentConsole() {
           </button>
         ))}
       </nav>
+      <label className="agent-console-tab-select">
+        <span className="sr-only">Console section</span>
+        <select value={tab} onChange={(event) => setSearchParams({ tab: event.target.value }, { replace: true })}>
+          {AGENT_TABS.map((item) => <option key={item} value={item}>{item}</option>)}
+        </select>
+      </label>
       {tab === "run" && (
         <div className="agent-console-grid">
           <section className="panel agent-conversation">
-            <div className="section-heading"><h2>Conversation</h2>{run && <select value={run.id} onChange={(event) => system.setActiveRunId(event.target.value)}>{system.runs.map((item) => <option key={item.id} value={item.id}>{item.goal || item.id}</option>)}</select>}</div>
+            <div className="section-heading agent-conversation-heading">
+              <h2>Conversation</h2>
+              <div className="agent-conversation-actions">
+                {run && <select value={run.id} onChange={(event) => system.setActiveRunId(event.target.value)}>{system.runs.map((item) => <option key={item.id} value={item.id}>{item.goal || item.id}</option>)}</select>}
+                <div className="agent-mobile-run-controls"><RunControls run={run} /></div>
+              </div>
+            </div>
             <div className="agent-log">
               {run?.history?.map((entry) => (
                 <article key={entry.id} className={`agent-log-entry ${entry.kind}`}>
