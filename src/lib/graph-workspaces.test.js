@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  activeGraphMembershipKey,
   addDocumentsToActiveGraph,
   createGraph,
   deleteActiveGraph,
@@ -74,6 +75,21 @@ describe("graph workspaces", () => {
     workspace = deleteActiveGraph(workspace);
     expect(getActiveGraph(workspace).id).toBe("all-documents");
     expect(() => deleteActiveGraph(workspace)).toThrow("last graph");
+  });
+
+  it("keeps the membership key stable across viewport-only updates", () => {
+    let workspace = createGraph({}, "Case Alpha", { id: "case-alpha" });
+    workspace = addDocumentsToActiveGraph(workspace, ["b", "a"]);
+    const membership = activeGraphMembershipKey(workspace);
+
+    workspace = updateActiveGraph(workspace, {
+      viewport: { pan: { x: 120, y: -40 }, zoom: 1.5 },
+      selectedIds: ["a"]
+    });
+
+    expect(activeGraphMembershipKey(workspace)).toBe(membership);
+    expect(membership).toBe('["a","b"]');
+    expect(activeGraphMembershipKey(switchActiveGraph(workspace, "all-documents"))).toBe("*");
   });
 
   it("filters the corpus by active graph membership", () => {
