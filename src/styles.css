@@ -257,6 +257,7 @@ td small { max-width: 65ch; color: var(--muted); }
 .agent-cost-meter span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #22c55e, #f59e0b, #fb7185); transition: width .2s ease; }
 .agent-quick-actions { display: flex; flex-wrap: wrap; gap: .35rem; }
 .agent-quick-actions .button { flex: 1; justify-content: center; min-width: 88px; }
+.agent-quick-actions .agent-open-chat { flex-basis: 100%; }
 .agent-command-input { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .45rem; padding: .65rem; border-top: 1px solid var(--line); }
 .agent-command-input input, .agent-console-command input {
   min-width: 0;

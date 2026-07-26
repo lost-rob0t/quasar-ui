@@ -9,7 +9,6 @@ import {
   Pause,
   Play,
   RotateCcw,
-  Settings2,
   Square,
   X
 } from "lucide-react";
@@ -691,7 +690,15 @@ export function AgentBubble() {
           <header>
             <div><StatusDot status={activeRun?.status} /><strong>{activeAgent?.name || "No agent"}</strong></div>
             <div>
-              <Link className="icon-button" to="/agents" title="Open run"><Expand size={16} /></Link>
+              <Link
+                className="icon-button"
+                to="/agents"
+                title="Open chat"
+                aria-label="Open chat"
+                onClick={() => setOpen(false)}
+              >
+                <Expand size={16} />
+              </Link>
               <button className="icon-button" onClick={() => setOpen(false)} aria-label="Close"><X size={17} /></button>
             </div>
           </header>
@@ -716,7 +723,9 @@ export function AgentBubble() {
                 ? <button className="button" onClick={() => command("/pause")}><Pause size={14} /> Pause</button>
                 : <button className="button" disabled={!activeRun} onClick={() => command("/resume")}><Play size={14} /> Resume</button>}
               <button className="button danger" disabled={!activeRun} onClick={() => command("/stop")}><Square size={13} /> Stop</button>
-              <Link className="button" to="/agents"><Settings2 size={14} /> Inspect</Link>
+              <Link className="button primary agent-open-chat" to="/agents" onClick={() => setOpen(false)}>
+                <MessageSquareCode size={14} /> Open chat
+              </Link>
             </div>
           </div>
           <form className="agent-command-input" onSubmit={submit}>
