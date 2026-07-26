@@ -15,6 +15,7 @@ import {
 import { importFiles } from "./lib/importer";
 import { applyOperation, operation, saveDocumentBatch } from "./lib/operations";
 import { BUILTIN_ACTORS, actorApplicability, isBuiltinActor, runBrowserActor } from "./lib/actors";
+import { actorWithTransformEnvelope, buildActorTransform } from "./lib/actor-transforms";
 import { startDocumentSource } from "./lib/document-source";
 import {
   addDocumentsToActiveGraph as addDocumentsToGraphWorkspace,
@@ -244,19 +245,20 @@ export function QuasarProvider({ children }) {
     const selection = documents.filter((document) => selectedIds.includes(document._id));
     const availability = actorApplicability(actor, selection);
     if (!availability.applicable) throw new Error(availability.reason);
-    const result = await runBrowserActor(actor, {
+    const result = await runBrowserActor(actorWithTransformEnvelope(actor), {
       selection,
       documents: documents.map((document) => ({ ...document })),
       workspace: { layout: workspace?.layout || "cose" }
     });
-    const produced = Array.isArray(result?.documents) ? result.documents : [];
-    if (produced.length) {
-      await executeBatch(produced, `Actor: ${actor.label}`);
-      addDocumentsToActiveGraph(produced.map((document) => document._id));
+    const label = `Actor: ${actor.label}`;
+    const transform = buildActorTransform(result, documents, label);
+    if (transform.command) await execute(transform.command, label);
+    if (transform.documents.length) {
+      addDocumentsToActiveGraph(transform.documents.map((document) => document._id));
     }
-    setNotice({ kind: "success", message: result?.message || `Actor produced ${produced.length} document(s)` });
-    return result;
-  }, [addDocumentsToActiveGraph, documents, executeBatch, selectedIds, settings?.actorsEnabled, workspace?.layout]);
+    setNotice({ kind: "success", message: transform.message });
+    return { ...result, ...transform, documents: transform.documents };
+  }, [addDocumentsToActiveGraph, documents, execute, selectedIds, settings?.actorsEnabled, workspace?.layout]);
 
   const activeGraph = useMemo(() => getActiveGraph(workspace || {}), [workspace]);
 
