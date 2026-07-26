@@ -123,26 +123,25 @@ test.describe("responsive application shell", () => {
     expect(viewport.scrollWidth).toBe(viewport.clientWidth);
   });
 
-  test("keeps the mobile graph and inspector usable", async ({ page }) => {
+  test("keeps the mobile graph canvas usable", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/graph");
 
     await expect(page.locator(".graph-stage")).toBeVisible();
-    await expect(page.locator(".graph-inspector")).toBeVisible();
+    await expect(page.locator(".graph-inspector")).toBeHidden();
     await expect(page.locator(".graph-workbench")).toHaveCSS("grid-template-columns", "390px");
     await expect(page.locator(".graph-toolbar")).toHaveCSS("overflow-x", "visible");
     await expect(page.getByRole("button", { name: "Fit", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Focus", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Focus", exact: true })).toBeHidden();
+    await expect(page.getByRole("button", { name: "More graph controls" })).toBeVisible();
     const controls = await page.locator(".graph-toolbar").evaluate((toolbar) => ({
       toolbarRight: toolbar.getBoundingClientRect().right,
       fitRight: toolbar.querySelector("button:nth-of-type(1)")?.getBoundingClientRect().right,
-      focusRight: toolbar.querySelector("button:nth-of-type(2)")?.getBoundingClientRect().right,
       viewportWidth: window.innerWidth,
       pageWidth: document.documentElement.scrollWidth
     }));
     expect(controls.toolbarRight).toBeLessThanOrEqual(controls.viewportWidth);
     expect(controls.fitRight).toBeLessThanOrEqual(controls.viewportWidth);
-    expect(controls.focusRight).toBeLessThanOrEqual(controls.viewportWidth);
     expect(controls.pageWidth).toBe(controls.viewportWidth);
   });
 
