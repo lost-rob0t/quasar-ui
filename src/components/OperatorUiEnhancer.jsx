@@ -16,6 +16,7 @@ function disclosureLabel(entry) {
 function prepareAgentEntry(entry) {
   if (!isAgentDisclosure(entry)) return;
   if (!entry.dataset.expanded) entry.dataset.expanded = "false";
+  entry.classList.add("agent-log-collapsible");
   entry.dataset.disclosureReady = "true";
   entry.tabIndex = 0;
   entry.setAttribute("role", "button");
