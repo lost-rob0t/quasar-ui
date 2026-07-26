@@ -1,6 +1,0 @@
-
-> quasar-ui@0.1.0 typecheck
-> tsc --noEmit
-
-src/core/graph-history.ts(239,42): error TS2322: Type 'GraphCommand | readonly GraphCommand[]' is not assignable to type 'GraphCommand | null'.
-  Type 'readonly GraphCommand[]' is not assignable to type 'GraphCommand | null'.

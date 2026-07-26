@@ -236,7 +236,7 @@ function commandForTransaction(
   commandOrCommands: GraphCommand | readonly GraphCommand[],
   options: CommitGraphTransactionOptions
 ): GraphCommand | null {
-  if (!Array.isArray(commandOrCommands)) return cloneValue(commandOrCommands);
+  if (!Array.isArray(commandOrCommands)) return cloneValue(commandOrCommands as GraphCommand);
   if (!commandOrCommands.length) return null;
   return {
     type: "batch",
