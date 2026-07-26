@@ -64,7 +64,8 @@ describe("schema-driven document fields", () => {
       "status",
       "description"
     ]);
-    for (const dtype of ["person", "org", "event", "location"]) {
+    expect(essentialDataFieldsForDtype("target")[0]).toBe("target");
+    for (const dtype of ["person", "org", "event", "location", "target"]) {
       const schemaFields = new Set(dataFieldsForDtype(dtype));
       const essentialFields = essentialDataFieldsForDtype(dtype);
       expect(essentialFields.length).toBeLessThanOrEqual(6);
@@ -75,5 +76,6 @@ describe("schema-driven document fields", () => {
   it("uses object names instead of raw dtype jargon", () => {
     expect(dtypeLabel("person")).toBe("Person");
     expect(dtypeLabel("org")).toBe("Organization");
+    expect(dtypeLabel("target")).toBe("Target");
   });
 });
