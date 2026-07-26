@@ -34,15 +34,16 @@ test("selects a dataset from the desktop graph button", async ({ page }) => {
 
   const dialog = page.getByRole("dialog", { name: "Select dataset" });
   const listbox = page.getByRole("listbox", { name: "Datasets" });
+  const allDatasets = listbox.getByRole("option", { name: "All datasets" });
+  const alpha = listbox.getByRole("option", { name: "Alpha research" });
   await expect(dialog).toBeVisible();
   await expect(listbox).toBeVisible();
-  await expect(listbox.getByRole("option", { name: "All datasets" })).toHaveAttribute(
-    "aria-selected",
-    "true"
-  );
+  await expect(allDatasets).toHaveAttribute("aria-selected", "true");
+  await expect(allDatasets).toBeFocused();
 
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("Enter");
+  await allDatasets.press("ArrowDown");
+  await expect(alpha).toBeFocused();
+  await alpha.press("Enter");
   await expect(dialog).toBeHidden();
   await expect(page.getByLabel("Dataset filter", { exact: true })).toHaveValue("alpha");
   await expect(page.getByLabel("Dataset filter", { exact: true })).toHaveAttribute(
