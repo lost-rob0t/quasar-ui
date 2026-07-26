@@ -7,6 +7,7 @@ import { registerServiceWorker } from "../lib/service-worker-registration.js";
 import { routerBasename } from "./base-path";
 import "../styles.css";
 import "../dashboard.css";
+import "../mobile.css";
 
 const rootElement = document.getElementById("root");
 
