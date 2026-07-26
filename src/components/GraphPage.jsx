@@ -242,6 +242,56 @@ function Modal({ title, children, onClose, className = "" }) {
   );
 }
 
+function GraphList({ graphs, activeGraph, onSwitch, onCreate, onRename, onDelete }) {
+  return (
+    <aside className="graph-list-panel" aria-label="Graphs">
+      <header>
+        <span>Graphs</span>
+        <button className="icon-button" type="button" title="Create graph" aria-label="Create graph" onClick={onCreate}>
+          <Plus size={16} />
+        </button>
+      </header>
+      <div className="graph-list">
+        {(graphs || []).map((graphView) => {
+          const active = graphView.id === activeGraph?.id;
+          const documentCount = graphView.documentIds?.length || 0;
+          return (
+            <div className={active ? "graph-list-item active" : "graph-list-item"} key={graphView.id}>
+              <button
+                className="graph-list-open"
+                type="button"
+                aria-current={active ? "page" : undefined}
+                onClick={() => onSwitch(graphView.id)}
+              >
+                <Network size={15} />
+                <span>
+                  <strong>{graphView.name}</strong>
+                  <small>
+                    {graphView.documentIds === null
+                      ? "Entire corpus"
+                      : `${documentCount.toLocaleString()} document${documentCount === 1 ? "" : "s"}`}
+                  </small>
+                </span>
+              </button>
+              {active && (
+                <div className="graph-list-actions">
+                  <button type="button" title="Rename graph" aria-label="Rename graph" onClick={onRename}><Pencil size={13} /></button>
+                  {graphView.documentIds !== null && (
+                    <button type="button" className="danger" title="Delete graph" aria-label="Delete graph" onClick={onDelete}><Trash2 size={13} /></button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <button className="button small full graph-create-button" type="button" onClick={onCreate}>
+        <Plus size={14} /> New graph
+      </button>
+    </aside>
+  );
+}
+
 function GraphCreate({ onClose, onCreate }) {
   const [name, setName] = useState("");
 
@@ -986,6 +1036,14 @@ export default function GraphPage() {
       )}
 
       <div className="graph-workbench">
+        <GraphList
+          graphs={graphs}
+          activeGraph={activeGraph}
+          onSwitch={changeGraph}
+          onCreate={() => setShowGraphCreate(true)}
+          onRename={renameCurrentGraph}
+          onDelete={deleteCurrentGraph}
+        />
         <div
           className="graph-stage"
           onPointerDown={closeCanvasMenu}
