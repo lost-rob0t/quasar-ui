@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 
 type ViewportState = {
   panX: number;
@@ -6,7 +6,7 @@ type ViewportState = {
   zoom: number;
 };
 
-async function viewportState(canvas: ReturnType<Parameters<typeof test>[0]> extends never ? never : any): Promise<ViewportState> {
+async function viewportState(canvas: Locator): Promise<ViewportState> {
   return canvas.evaluate((element: HTMLElement) => ({
     panX: Number(element.dataset.graphPanX),
     panY: Number(element.dataset.graphPanY),
