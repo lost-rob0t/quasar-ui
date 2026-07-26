@@ -27,8 +27,16 @@ test("uses a full-screen graph canvas with three mobile controls", async ({ page
       const buttonRect = button.getBoundingClientRect();
       const iconRect = button.querySelector("svg")?.getBoundingClientRect();
       return {
-        x: Math.abs((buttonRect.left + buttonRect.width / 2) - ((iconRect?.left || 0) + (iconRect?.width || 0) / 2)),
-        y: Math.abs((buttonRect.top + buttonRect.height / 2) - ((iconRect?.top || 0) + (iconRect?.height || 0) / 2))
+        x: Math.abs(
+          buttonRect.left
+          + buttonRect.width / 2
+          - ((iconRect?.left || 0) + (iconRect?.width || 0) / 2)
+        ),
+        y: Math.abs(
+          buttonRect.top
+          + buttonRect.height / 2
+          - ((iconRect?.top || 0) + (iconRect?.height || 0) / 2)
+        )
       };
     })
   );
@@ -36,6 +44,25 @@ test("uses a full-screen graph canvas with three mobile controls", async ({ page
     expect(center.x).toBeLessThanOrEqual(1);
     expect(center.y).toBeLessThanOrEqual(1);
   }
+
+  const emptyActions = page.locator(".graph-empty-state .button-row");
+  await expect(emptyActions).toBeVisible();
+  await expect(emptyActions).toHaveCSS("display", "grid");
+  const emptyStateLayout = await emptyActions.evaluate((row) => {
+    const rowRect = row.getBoundingClientRect();
+    return {
+      rawText: [...row.childNodes]
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent?.trim())
+        .filter(Boolean),
+      buttonCenters: [...row.children].map((button) => {
+        const rect = button.getBoundingClientRect();
+        return Math.abs(rect.left + rect.width / 2 - (rowRect.left + rowRect.width / 2));
+      })
+    };
+  });
+  expect(emptyStateLayout.rawText).toEqual([]);
+  for (const offset of emptyStateLayout.buttonCenters) expect(offset).toBeLessThanOrEqual(1);
 
   const stage = await page.locator(".graph-stage").boundingBox();
   expect(stage).not.toBeNull();
@@ -65,8 +92,13 @@ test("uses a full-screen graph canvas with three mobile controls", async ({ page
 
   await expect(page.getByLabel("Maltego graph layout", { exact: true })).toHaveValue("organic");
   await page.getByRole("button", { name: "Graph tools" }).click();
-  await page.getByRole("menu", { name: "Graph tools" }).getByRole("menuitem", { name: "Layout" }).click();
-  await expect(page.getByLabel("Maltego graph layout", { exact: true })).toHaveValue("interactive-organic");
+  await page
+    .getByRole("menu", { name: "Graph tools" })
+    .getByRole("menuitem", { name: "Layout" })
+    .click();
+  await expect(page.getByLabel("Maltego graph layout", { exact: true })).toHaveValue(
+    "interactive-organic"
+  );
 
   await page.locator(".graph-stage").click({ button: "right", position: { x: 180, y: 360 } });
   const radial = page.locator(".graph-context-menu.canvas-actions.radial-root");
