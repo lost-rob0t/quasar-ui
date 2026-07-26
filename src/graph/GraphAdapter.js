@@ -1,5 +1,6 @@
 import cytoscape from "cytoscape";
 import edgehandles from "cytoscape-edgehandles";
+import { installGraphGestures } from "./graph-gestures";
 
 let pluginsRegistered = false;
 
@@ -12,7 +13,7 @@ function registerPlugins() {
 export class GraphAdapter {
   static create(options) {
     registerPlugins();
-    return cytoscape(options);
+    return installGraphGestures(cytoscape(options));
   }
 }
 
