@@ -129,6 +129,7 @@ test.describe("responsive application shell", () => {
     await expect(page.getByRole("button", { name: "Cycle active graph" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Cycle dataset" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Cycle layout" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Graph tools" })).toHaveCount(0);
 
     const stage = await page.locator(".graph-stage").boundingBox();
     expect(stage).not.toBeNull();
@@ -167,14 +168,29 @@ test.describe("responsive application shell", () => {
     await expect(page.locator(".graph-toolbar")).toBeHidden();
     await expect(page.locator(".graph-list-panel")).toBeHidden();
     await expect(page.locator(".graph-inspector")).toBeHidden();
-    await expect(page.getByRole("button", { name: "Open menu", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Search graph" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Cycle active graph" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Cycle dataset" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Cycle layout" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Fit graph" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Focus selection" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Toggle labels" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Graph tools" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add graph document" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Import documents" })).toBeVisible();
+    await expect(page.locator(".graph-mobile-primary-button")).toHaveCount(3);
+    await expect(page.getByRole("button", { name: "Search graph" })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Cycle active graph" })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Cycle dataset" })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Cycle layout" })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Fit graph" })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Focus selection" })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Toggle labels" })).toBeHidden();
+
+    await page.getByRole("button", { name: "Graph tools" }).click();
+    const tray = page.getByRole("menu", { name: "Graph tools" });
+    await expect(tray).toBeVisible();
+    await expect(tray.getByRole("menuitem", { name: "Search" })).toBeVisible();
+    await expect(tray.getByRole("menuitem", { name: "Graph" })).toBeVisible();
+    await expect(tray.getByRole("menuitem", { name: "Dataset" })).toBeVisible();
+    await expect(tray.getByRole("menuitem", { name: "Layout" })).toBeVisible();
+    await expect(tray.getByRole("menuitem", { name: "Fit" })).toBeVisible();
+    await expect(tray.getByRole("menuitem", { name: "Focus" })).toBeVisible();
+    await expect(tray.getByRole("menuitem", { name: "Labels" })).toBeVisible();
+    await expect(tray.getByRole("menuitem", { name: "Remove" })).toBeVisible();
 
     const layout = await page.locator(".graph-stage").evaluate((stage) => {
       const rect = stage.getBoundingClientRect();
