@@ -37,7 +37,12 @@ export default function GraphSelectMenu({
   onClose
 }) {
   const listRef = useRef(null);
+  const closeRef = useRef(onClose);
   const [options, setOptions] = useState([]);
+
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -56,7 +61,7 @@ export default function GraphSelectMenu({
     }
     document.addEventListener("change", sync);
     const onKeyDown = (event) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") closeRef.current();
     };
     window.addEventListener("keydown", onKeyDown);
 
@@ -65,7 +70,7 @@ export default function GraphSelectMenu({
       document.removeEventListener("change", sync);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [open, onClose, selectLabel]);
+  }, [open, selectLabel]);
 
   useEffect(() => {
     if (!open || !options.length) return;
@@ -100,12 +105,16 @@ export default function GraphSelectMenu({
         type="button"
         className="graph-select-backdrop"
         aria-label={`Close ${title.toLowerCase()} picker`}
-        onClick={onClose}
+        onClick={() => closeRef.current()}
       />
       <section className="graph-select-picker" role="dialog" aria-modal="true" aria-label={`Select ${title.toLowerCase()}`}>
         <header className="graph-select-picker-header">
           <strong>{title}</strong>
-          <button type="button" aria-label={`Close ${title.toLowerCase()} picker`} onClick={onClose}>
+          <button
+            type="button"
+            aria-label={`Close ${title.toLowerCase()} picker`}
+            onClick={() => closeRef.current()}
+          >
             <X size={18} aria-hidden="true" />
           </button>
         </header>
@@ -125,7 +134,7 @@ export default function GraphSelectMenu({
               aria-selected={option.selected}
               disabled={option.disabled}
               onClick={() => {
-                if (setSelectValue(findSelect(selectLabel), option.value)) onClose();
+                if (setSelectValue(findSelect(selectLabel), option.value)) closeRef.current();
               }}
             >
               <span>{option.label}</span>
