@@ -121,7 +121,10 @@ describe("actor transform results", () => {
     })).toThrow("Unsupported actor operation");
 
     expect(() => normalizeActorTransformResult({
-      operations: [{ op: "create_document", document: { _id: "broken" } }]
-    })).toThrow();
+      operations: [{
+        op: "create_document",
+        document: { ...org, dtype: "not-a-real-dtype" }
+      }]
+    })).toThrow("Invalid StarIntel v0.9 document");
   });
 });
