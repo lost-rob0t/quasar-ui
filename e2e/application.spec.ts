@@ -25,7 +25,11 @@ test("creates a blank graph and runs a bundled actor", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Start a blank graph" })).toBeVisible();
   await page.locator(".graph-stage").click({ button: "right", position: { x: 240, y: 220 } });
   await expect(page.getByRole("menu", { name: "Graph canvas actions" })).toBeVisible();
-  await page.getByRole("menuitem", { name: "Create node here" }).click();
+  await expect(page.locator(".graph-context-menu")).toHaveClass(/compact/);
+  await expect(page.getByRole("menuitem", { name: "Create person here" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Create organization here" })).toBeVisible();
+  await page.getByRole("menuitem", { name: "Create entity here" }).click();
+  await expect(page.getByLabel("Dtype")).toHaveValue("entity");
   await page.getByLabel("Title").fill("Jane Doe");
   await page.getByRole("button", { name: "Create and select" }).click();
 

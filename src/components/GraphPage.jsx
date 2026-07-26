@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import cytoscape from "cytoscape";
-import { ArrowLeft, Database, ExternalLink, Focus, FolderPlus, Link2, Network, Pencil, Play, Plus, Search, Trash2, TriangleAlert, X } from "lucide-react";
+import {
+  ArrowLeft, BookOpen, Building2, CalendarDays, CircleDot, Database,
+  ExternalLink, FileText, Focus, FolderPlus, Lightbulb, Link2, MapPin,
+  Minimize2, MoreHorizontal, Network, Pencil, Play, Plus, Search,
+  Trash2, TriangleAlert, UserRound, X
+} from "lucide-react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { assertDocument, createDocument, createRelation, dtypes, documentLabel } from "starintel_doc";
 import { actorApplicability, isBuiltinActor } from "../lib/actors";
@@ -10,6 +15,18 @@ import { GRAPH_STYLE } from "../lib/graph-style";
 import { clampRenderedPosition } from "../lib/graph-viewport";
 import { operation } from "../lib/operations";
 import { useQuasar } from "../store";
+
+const QUICK_NODE_TYPES = [
+  { dtype: "person", label: "Person", Icon: UserRound },
+  { dtype: "org", label: "Organization", Icon: Building2 },
+  { dtype: "event", label: "Event", Icon: CalendarDays },
+  { dtype: "location", label: "Location", Icon: MapPin },
+  { dtype: "entity", label: "Entity", Icon: CircleDot },
+  { dtype: "document", label: "Document", Icon: FileText },
+  { dtype: "source", label: "Source", Icon: BookOpen },
+  { dtype: "concept", label: "Concept", Icon: Lightbulb }
+];
+const COMPACT_NODE_TYPES = QUICK_NODE_TYPES.slice(0, 5);
 
 function GraphCanvas({ graph, layout, selectedIds, onSelection, onMove, onViewport, apiRef, labels }) {
   const containerRef = useRef(null);
@@ -176,9 +193,9 @@ function GraphMembershipAdd({ documents, existingIds, onAdd, onClose }) {
   );
 }
 
-function QuickAdd({ selectedDataset, onClose, onCreated, position }) {
+function QuickAdd({ selectedDataset, initialDtype = "entity", onClose, onCreated, position }) {
   const { execute, setNotice, addDocumentsToActiveGraph, workspace } = useQuasar();
-  const [form, setForm] = useState({ dtype: "entity", dataset: selectedDataset || "default", id: "", title: "", data: "{}" });
+  const [form, setForm] = useState({ dtype: initialDtype, dataset: selectedDataset || "default", id: "", title: "", data: "{}" });
   const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
 
   async function submit(event) {
@@ -285,7 +302,9 @@ export default function GraphPage() {
   const [showGraphCreate, setShowGraphCreate] = useState(false);
   const [showMembershipAdd, setShowMembershipAdd] = useState(false);
   const [quickAddPosition, setQuickAddPosition] = useState(null);
+  const [quickAddDtype, setQuickAddDtype] = useState("entity");
   const [canvasMenu, setCanvasMenu] = useState(null);
+  const [canvasMenuCompact, setCanvasMenuCompact] = useState(true);
   const [emptyStateDismissed, setEmptyStateDismissed] = useState(false);
   const [pathStart, setPathStart] = useState("");
   const [pathEnd, setPathEnd] = useState("");
@@ -445,8 +464,9 @@ export default function GraphPage() {
     select([document._id]);
   }
 
-  function openQuickAdd(position = null) {
+  function openQuickAdd(position = null, dtype = "entity") {
     setQuickAddPosition(position);
+    setQuickAddDtype(dtype);
     setCanvasMenu(null);
     setShowQuickAdd(true);
   }
@@ -463,8 +483,8 @@ export default function GraphPage() {
     const zoom = cy?.zoom() || 1;
     setEmptyStateDismissed(true);
     setCanvasMenu({
-      x: Math.max(8, Math.min(rendered.x, bounds.width - 220)),
-      y: Math.max(8, Math.min(rendered.y, bounds.height - 190)),
+      rendered,
+      bounds: { width: bounds.width, height: bounds.height },
       position: {
         x: (rendered.x - pan.x) / zoom,
         y: (rendered.y - pan.y) / zoom
@@ -475,6 +495,17 @@ export default function GraphPage() {
   function closeCanvasMenu(event) {
     if (canvasMenu && !event.target.closest(".graph-context-menu")) setCanvasMenu(null);
   }
+
+  const canvasMenuStyle = canvasMenu ? {
+    left: Math.max(8, Math.min(
+      canvasMenu.rendered.x,
+      canvasMenu.bounds.width - (canvasMenuCompact ? 216 : 270)
+    )),
+    top: Math.max(8, Math.min(
+      canvasMenu.rendered.y,
+      canvasMenu.bounds.height - (canvasMenuCompact ? 52 : 390)
+    ))
+  } : undefined;
 
   function createNamedGraph(name) {
     try {
@@ -678,16 +709,49 @@ export default function GraphPage() {
           )}
           {canvasMenu && (
             <div
-              className="graph-context-menu"
+              className={`graph-context-menu ${canvasMenuCompact ? "compact" : "expanded"}`}
               role="menu"
               aria-label="Graph canvas actions"
-              style={{ left: canvasMenu.x, top: canvasMenu.y }}
+              style={canvasMenuStyle}
               onContextMenu={(event) => event.preventDefault()}
             >
-              <button role="menuitem" onClick={() => openQuickAdd(canvasMenu.position)}><Plus size={15} /> Create node here</button>
-              {activeGraph?.documentIds !== null && <button role="menuitem" onClick={() => { setCanvasMenu(null); setShowMembershipAdd(true); }}><Database size={15} /> Add from corpus</button>}
-              <button role="menuitem" onClick={() => { setCanvasMenu(null); setShowGraphCreate(true); }}><FolderPlus size={15} /> Create another graph</button>
-              <Link role="menuitem" to="/import"><ExternalLink size={15} /> Import documents</Link>
+              {canvasMenuCompact ? (
+                <div className="graph-context-palette" aria-label="Create node type">
+                  {COMPACT_NODE_TYPES.map(({ dtype: nodeDtype, label, Icon }) => (
+                    <button
+                      key={nodeDtype}
+                      role="menuitem"
+                      aria-label={`Create ${label.toLowerCase()} here`}
+                      title={label}
+                      onClick={() => openQuickAdd(canvasMenu.position, nodeDtype)}
+                    >
+                      <Icon size={16} />
+                    </button>
+                  ))}
+                  <button role="menuitem" aria-label="Expand graph menu" title="More actions" onClick={() => setCanvasMenuCompact(false)}>
+                    <MoreHorizontal size={17} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="graph-context-header">
+                    <strong>Create node</strong>
+                    <button role="menuitem" aria-label="Use compact graph menu" title="Compact menu" onClick={() => setCanvasMenuCompact(true)}><Minimize2 size={15} /></button>
+                  </div>
+                  <div className="graph-context-types">
+                    {QUICK_NODE_TYPES.map(({ dtype: nodeDtype, label, Icon }) => (
+                      <button key={nodeDtype} role="menuitem" onClick={() => openQuickAdd(canvasMenu.position, nodeDtype)}>
+                        <Icon size={15} /> {label}
+                      </button>
+                    ))}
+                  </div>
+                  <button role="menuitem" onClick={() => openQuickAdd(canvasMenu.position)}><MoreHorizontal size={15} /> Other document type…</button>
+                  <div className="graph-context-divider" />
+                  {activeGraph?.documentIds !== null && <button role="menuitem" onClick={() => { setCanvasMenu(null); setShowMembershipAdd(true); }}><Database size={15} /> Add from corpus</button>}
+                  <button role="menuitem" onClick={() => { setCanvasMenu(null); setShowGraphCreate(true); }}><FolderPlus size={15} /> Create another graph</button>
+                  <Link role="menuitem" to="/import"><ExternalLink size={15} /> Import documents</Link>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -776,11 +840,13 @@ export default function GraphPage() {
       {showQuickAdd && (
         <QuickAdd
           selectedDataset={selected?.dataset}
+          initialDtype={quickAddDtype}
           position={quickAddPosition}
           onCreated={revealCreated}
           onClose={() => {
             setShowQuickAdd(false);
             setQuickAddPosition(null);
+            setQuickAddDtype("entity");
           }}
         />
       )}
