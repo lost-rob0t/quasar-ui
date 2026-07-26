@@ -39,9 +39,18 @@ const relation = {
 };
 
 describe("actor transform results", () => {
-  it("keeps legacy returned documents as upsert transforms", () => {
+  it("keeps legacy returned documents as canonical upsert transforms", () => {
     const result = normalizeActorTransformResult({ documents: [org], message: "legacy" });
-    expect(result.operations).toEqual([{ op: "upsert_document", document: org }]);
+    expect(result.operations).toHaveLength(1);
+    expect(result.operations[0]).toMatchObject({
+      op: "upsert_document",
+      document: org
+    });
+    expect(result.operations[0].document).toMatchObject({
+      schema_revision: expect.any(String),
+      profile: expect.any(String),
+      profile_version: expect.any(String)
+    });
     expect(result.legacyDocumentCount).toBe(1);
   });
 
