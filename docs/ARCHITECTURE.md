@@ -4,6 +4,8 @@
 > [JavaScript-only deployment roadmap](ROADMAP.md) defines the target
 > IndexedDB architecture and migration sequence; roadmap work must not treat
 > the prototype storage or replication model as the target contract.
+>
+> [ADR 0001](adr/0001-js-package-boundaries.md) is the accepted package-boundary decision and defines the enforced dependency direction.
 
 ## Product definition
 
@@ -168,7 +170,7 @@ backpressure handled server-side.
 
 Browser actors are disabled until enabled in Settings. Each actor manifest declares an identifier, label, version, accepted dtypes, and JavaScript function source.
 
-Actors run in dedicated Web Workers. They receive cloned selection/corpus data and return a document batch. The main application validates and applies that batch through the normal operation pipeline.
+Actors run in dedicated Web Workers. They receive cloned selection/corpus data and return declarative transform plans. The main application preflights and applies each plan as one reversible batch through the normal operation pipeline.
 
 ## Deployment
 
