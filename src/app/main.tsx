@@ -14,6 +14,7 @@ import "../mobile.css";
 import "../mobile-editor.css";
 import "../gesture-menu.css";
 import "../operator-ui.css";
+import "../graph-fullscreen.css";
 
 initializeTheme();
 
