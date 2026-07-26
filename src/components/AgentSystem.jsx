@@ -12,7 +12,7 @@ import {
   Square,
   X
 } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import {
   AGENT_PERMISSIONS,
   AGENT_RECORD_TYPES,
@@ -52,6 +52,7 @@ import { useQuasar } from "../store";
 const AgentSystemContext = createContext(null);
 const BUBBLE_POSITION_KEY = "quasar:agent-bubble-position";
 const SLASH_COMMANDS = ["/run", "/pause", "/resume", "/stop", "/retry", "/budget", "/cost", "/target", "/dataset", "/graph", "/actor", "/role", "/skill", "/mcp", "/web", "/tools", "/inspect", "/checkpoint", "/rollback", "/clear"];
+const AGENT_TABS = ["run", "agents", "roles", "providers", "web", "mcp", "skills", "memory"];
 let initializationPromise = null;
 
 function initializeAgentRecords() {
@@ -692,7 +693,7 @@ export function AgentBubble() {
             <div>
               <Link
                 className="icon-button"
-                to="/agents"
+                to="/agents?tab=run"
                 title="Open chat"
                 aria-label="Open chat"
                 onClick={() => setOpen(false)}
@@ -723,7 +724,7 @@ export function AgentBubble() {
                 ? <button className="button" onClick={() => command("/pause")}><Pause size={14} /> Pause</button>
                 : <button className="button" disabled={!activeRun} onClick={() => command("/resume")}><Play size={14} /> Resume</button>}
               <button className="button danger" disabled={!activeRun} onClick={() => command("/stop")}><Square size={13} /> Stop</button>
-              <Link className="button primary agent-open-chat" to="/agents" onClick={() => setOpen(false)}>
+              <Link className="button primary agent-open-chat" to="/agents?tab=run" onClick={() => setOpen(false)}>
                 <MessageSquareCode size={14} /> Open chat
               </Link>
             </div>
@@ -1023,7 +1024,9 @@ function MemoryEditor({ memory, agents, run, onSave, onClear }) {
 
 export function AgentConsole() {
   const system = useAgentSystem();
-  const [tab, setTab] = useState("run");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const tab = AGENT_TABS.includes(requestedTab) ? requestedTab : "run";
   const [agentId, setAgentId] = useState(system.activeAgentId);
   const [providerId, setProviderId] = useState(system.providers[0]?.id || "");
   const [roleId, setRoleId] = useState(system.roles[0]?.id || "");
@@ -1069,7 +1072,15 @@ export function AgentConsole() {
         </div>
       </header>
       <nav className="agent-console-tabs">
-        {["run", "agents", "roles", "providers", "web", "mcp", "skills", "memory"].map((item) => <button key={item} className={tab === item ? "active" : ""} onClick={() => setTab(item)}>{item}</button>)}
+        {AGENT_TABS.map((item) => (
+          <button
+            key={item}
+            className={tab === item ? "active" : ""}
+            onClick={() => setSearchParams({ tab: item }, { replace: true })}
+          >
+            {item}
+          </button>
+        ))}
       </nav>
       {tab === "run" && (
         <div className="agent-console-grid">
