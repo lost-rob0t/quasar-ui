@@ -23,7 +23,9 @@ test("creates a blank graph and runs a bundled actor", async ({ page }) => {
   await page.goto("/graph");
 
   await expect(page.getByRole("heading", { name: "Start a blank graph" })).toBeVisible();
-  await page.getByRole("button", { name: "Create first node" }).click();
+  await page.locator(".graph-stage").click({ button: "right", position: { x: 240, y: 220 } });
+  await expect(page.getByRole("menu", { name: "Graph canvas actions" })).toBeVisible();
+  await page.getByRole("menuitem", { name: "Create node here" }).click();
   await page.getByLabel("Title").fill("Jane Doe");
   await page.getByRole("button", { name: "Create and select" }).click();
 

@@ -156,7 +156,7 @@ function GraphMembershipAdd({ documents, existingIds, onAdd, onClose }) {
   );
 }
 
-function QuickAdd({ selectedDataset, onClose, onCreated }) {
+function QuickAdd({ selectedDataset, onClose, onCreated, position }) {
   const { execute, setNotice, addDocumentsToActiveGraph, workspace } = useQuasar();
   const [form, setForm] = useState({ dtype: "entity", dataset: selectedDataset || "default", id: "", title: "", data: "{}" });
   const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
@@ -172,7 +172,7 @@ function QuickAdd({ selectedDataset, onClose, onCreated }) {
       }));
       await execute(operation.save(document), `Graph add ${document._id}`);
       addDocumentsToActiveGraph([document._id], {
-        positions: { ...(workspace?.positions || {}), [document._id]: { x: 0, y: 0 } },
+        positions: { ...(workspace?.positions || {}), [document._id]: position || { x: 0, y: 0 } },
         selectedIds: [document._id]
       });
       onCreated(document);
@@ -264,6 +264,9 @@ export default function GraphPage() {
   const [showRelation, setShowRelation] = useState(false);
   const [showGraphCreate, setShowGraphCreate] = useState(false);
   const [showMembershipAdd, setShowMembershipAdd] = useState(false);
+  const [quickAddPosition, setQuickAddPosition] = useState(null);
+  const [canvasMenu, setCanvasMenu] = useState(null);
+  const [emptyStateDismissed, setEmptyStateDismissed] = useState(false);
   const [pathStart, setPathStart] = useState("");
   const [pathEnd, setPathEnd] = useState("");
   const [paths, setPaths] = useState([]);
@@ -308,6 +311,20 @@ export default function GraphPage() {
   }, [persistWorkspace, workspace?.positions]);
   const onViewport = useMemo(() => (viewport) => persistWorkspace({ viewport }), [persistWorkspace]);
   const onSelection = useMemo(() => (ids) => select(ids), [select]);
+
+  useEffect(() => {
+    setCanvasMenu(null);
+    setEmptyStateDismissed(false);
+  }, [activeGraph?.id]);
+
+  useEffect(() => {
+    if (!canvasMenu) return undefined;
+    const close = (event) => {
+      if (event.key === "Escape") setCanvasMenu(null);
+    };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [canvasMenu]);
 
   useEffect(() => {
     const retained = selectedIds.filter((id) => graphDocumentIds.has(id));
@@ -406,6 +423,37 @@ export default function GraphPage() {
     setReviewStatus("all");
     clearFilters();
     select([document._id]);
+  }
+
+  function openQuickAdd(position = null) {
+    setQuickAddPosition(position);
+    setCanvasMenu(null);
+    setShowQuickAdd(true);
+  }
+
+  function openCanvasMenu(event) {
+    event.preventDefault();
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const rendered = {
+      x: event.clientX - bounds.left,
+      y: event.clientY - bounds.top
+    };
+    const cy = apiRef.current;
+    const pan = cy?.pan() || { x: 0, y: 0 };
+    const zoom = cy?.zoom() || 1;
+    setEmptyStateDismissed(true);
+    setCanvasMenu({
+      x: Math.max(8, Math.min(rendered.x, bounds.width - 220)),
+      y: Math.max(8, Math.min(rendered.y, bounds.height - 190)),
+      position: {
+        x: (rendered.x - pan.x) / zoom,
+        y: (rendered.y - pan.y) / zoom
+      }
+    });
+  }
+
+  function closeCanvasMenu(event) {
+    if (canvasMenu && !event.target.closest(".graph-context-menu")) setCanvasMenu(null);
   }
 
   function createNamedGraph(name) {
@@ -527,7 +575,7 @@ export default function GraphPage() {
             {activeGraph?.documentIds !== null && <button className="button" onClick={() => setShowMembershipAdd(true)}><Plus size={16} /> Add from corpus</button>}
             {activeGraph?.documentIds !== null && <button className="button danger" onClick={removeSelectionFromGraph} disabled={!selectedIds.length}>Remove from graph</button>}
             <button className="button" onClick={() => setShowRelation(true)} disabled={selectedIds.length !== 2}><Link2 size={16} /> Connect selected</button>
-            <button className="button primary" onClick={() => setShowQuickAdd(true)}><Plus size={16} /> Add graph document</button>
+            <button className="button primary" onClick={() => openQuickAdd()}><Plus size={16} /> Add graph document</button>
           </div>
         </div>
       </div>
@@ -572,7 +620,11 @@ export default function GraphPage() {
       )}
 
       <div className="graph-workbench">
-        <div className="graph-stage">
+        <div
+          className="graph-stage"
+          onContextMenu={openCanvasMenu}
+          onPointerDown={closeCanvasMenu}
+        >
           <GraphCanvas
             graph={visibleGraph}
             layout={workspace?.layout || "cose"}
@@ -583,7 +635,7 @@ export default function GraphPage() {
             apiRef={apiRef}
             labels={labels}
           />
-          {!visibleGraph.nodes.length && (
+          {!visibleGraph.nodes.length && !emptyStateDismissed && (
             <div className="graph-empty-state">
               <Network size={38} />
               <h2>{scopedDocuments.length ? "No graph nodes match" : "Start a blank graph"}</h2>
@@ -592,15 +644,30 @@ export default function GraphPage() {
                   ? "Change or clear the active filters."
                   : reviewGroups.unreviewed.length
                     ? `${reviewGroups.unreviewed.length.toLocaleString()} unreviewed document(s) are hidden by the current review filter.`
-                    : "Create the first document here or import an existing StarIntel dataset."}
+                    : "Right-click anywhere to create the first node, or use an action below."}
               </p>
               <div className="button-row">
                 {graph.nodes.length && <button className="button small" onClick={clearFilters}>Clear filters</button>}
                 {!graph.nodes.length && reviewGroups.unreviewed.length > 0 && <button className="button small" onClick={() => setReviewStatus("all")}>Show unreviewed</button>}
                 {!graph.nodes.length && activeGraph?.documentIds !== null && <button className="button small" onClick={() => setShowMembershipAdd(true)}>Add from corpus</button>}
-                {!graph.nodes.length && <button className="button primary small" onClick={() => setShowQuickAdd(true)}><Plus size={15} /> Create first node</button>}
+                {!graph.nodes.length && <button className="button primary small" onClick={() => openQuickAdd()}><Plus size={15} /> Create first node</button>}
                 {!graph.nodes.length && <Link className="button small" to="/import">Import documents</Link>}
+                <button className="button small" onClick={() => setEmptyStateDismissed(true)}>Enter blank canvas</button>
               </div>
+            </div>
+          )}
+          {canvasMenu && (
+            <div
+              className="graph-context-menu"
+              role="menu"
+              aria-label="Graph canvas actions"
+              style={{ left: canvasMenu.x, top: canvasMenu.y }}
+              onContextMenu={(event) => event.preventDefault()}
+            >
+              <button role="menuitem" onClick={() => openQuickAdd(canvasMenu.position)}><Plus size={15} /> Create node here</button>
+              {activeGraph?.documentIds !== null && <button role="menuitem" onClick={() => { setCanvasMenu(null); setShowMembershipAdd(true); }}><Database size={15} /> Add from corpus</button>}
+              <button role="menuitem" onClick={() => { setCanvasMenu(null); setShowGraphCreate(true); }}><FolderPlus size={15} /> Create another graph</button>
+              <Link role="menuitem" to="/import"><ExternalLink size={15} /> Import documents</Link>
             </div>
           )}
         </div>
@@ -686,7 +753,17 @@ export default function GraphPage() {
           onClose={() => setShowMembershipAdd(false)}
         />
       )}
-      {showQuickAdd && <QuickAdd selectedDataset={selected?.dataset} onCreated={revealCreated} onClose={() => setShowQuickAdd(false)} />}
+      {showQuickAdd && (
+        <QuickAdd
+          selectedDataset={selected?.dataset}
+          position={quickAddPosition}
+          onCreated={revealCreated}
+          onClose={() => {
+            setShowQuickAdd(false);
+            setQuickAddPosition(null);
+          }}
+        />
+      )}
       {showRelation && <RelationAdd ids={selectedIds} documents={scopedDocuments} onClose={() => setShowRelation(false)} />}
     </section>
   );

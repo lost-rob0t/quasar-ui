@@ -50,8 +50,10 @@ describe("graph local corpus status", () => {
     );
 
     expect(html).toContain("Start a blank graph");
+    expect(html).toContain("Right-click anywhere to create the first node");
     expect(html).toContain("Create first node");
     expect(html).toContain("Import documents");
+    expect(html).toContain("Enter blank canvas");
   });
 
   it("reveals why newly-created unreviewed nodes are hidden", () => {
