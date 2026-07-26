@@ -157,6 +157,24 @@ textarea {
     font-size: clamp(1.7rem, 9vw, 2.35rem);
   }
 
+  .dashboard-empty-page > .page-heading {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .dashboard-empty-page > .page-heading > div {
+    margin-inline: auto;
+  }
+
+  .dashboard-empty-page .dashboard-empty {
+    width: min(100%, 650px);
+    margin-inline: auto;
+  }
+
+  .dashboard-empty-page .dashboard-empty .button-row {
+    justify-content: center;
+  }
+
   .page-heading > *,
   .page-heading .button-row,
   .graph-heading-actions,
