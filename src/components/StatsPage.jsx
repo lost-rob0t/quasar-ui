@@ -111,7 +111,7 @@ export default function StatsPage() {
 
   if (!documents.length) {
     return (
-      <section>
+      <section className="dashboard-empty-page">
         <div className="page-heading">
           <div><span className="eyebrow">Corpus telemetry</span><h1>Statistics dashboard</h1><p>Reviewed and unreviewed StarIntel records are counted separately.</p></div>
         </div>
