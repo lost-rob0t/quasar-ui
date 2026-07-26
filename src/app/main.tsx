@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "../App.jsx";
+import MobileGraphToolTray from "../components/MobileGraphToolTray.jsx";
 import OperatorUiEnhancer from "../components/OperatorUiEnhancer.jsx";
 import { QuasarProvider } from "../store.jsx";
 import { registerServiceWorker } from "../lib/service-worker-registration.js";
@@ -15,6 +16,7 @@ import "../mobile-editor.css";
 import "../gesture-menu.css";
 import "../operator-ui.css";
 import "../graph-fullscreen.css";
+import "../mobile-graph-tools.css";
 
 initializeTheme();
 
@@ -30,6 +32,7 @@ createRoot(rootElement).render(
       <QuasarProvider>
         <App />
         <OperatorUiEnhancer />
+        <MobileGraphToolTray />
       </QuasarProvider>
     </BrowserRouter>
   </StrictMode>
