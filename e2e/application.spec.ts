@@ -28,11 +28,23 @@ test("creates a blank graph and runs a bundled actor", async ({ page }) => {
   await expect(page.locator(".graph-context-menu")).toHaveClass(/compact/);
   await expect(page.getByRole("menuitem", { name: "Create person here" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Create organization here" })).toBeVisible();
-  await page.getByRole("menuitem", { name: "Create entity here" }).click();
-  await expect(page.getByLabel("Dtype")).toHaveValue("entity");
+  await page.getByRole("menuitem", { name: "Create person here" }).click();
+  await expect(page).toHaveURL(/\/documents\/new\?/);
+  await expect(page.getByLabel("Dtype")).toHaveValue("person");
+  await expect(page.getByLabel("fname")).toBeVisible();
+  await expect(page.getByLabel("mname")).toBeVisible();
+  await expect(page.getByLabel("lname")).toBeVisible();
+  await page.getByLabel("Dtype").selectOption("org");
+  await expect(page.getByLabel("org_type")).toBeVisible();
+  await expect(page.getByLabel("legal_name")).toBeVisible();
+  await expect(page.getByLabel("fname")).toHaveCount(0);
+  await page.getByLabel("Dtype").selectOption("person");
+  await page.getByLabel("fname").fill("Jane");
+  await page.getByLabel("lname").fill("Doe");
   await page.getByLabel("Title").fill("Jane Doe");
-  await page.getByRole("button", { name: "Create and select" }).click();
+  await page.getByRole("button", { name: "Save document" }).click();
 
+  await expect(page).toHaveURL(/\/graph\?node=/);
   await expect(page.locator(".graph-count")).toContainText("1 nodes");
   await expect(page.getByRole("button", { name: /Generate username candidates/ })).toBeEnabled();
   await page.getByRole("button", { name: /Generate username candidates/ }).click();

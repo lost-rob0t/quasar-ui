@@ -7,7 +7,7 @@ import {
   Trash2, TriangleAlert, UserRound, X
 } from "lucide-react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { assertDocument, createDocument, createRelation, dtypes, documentLabel } from "starintel_doc";
+import { assertDocument, createRelation, dtypes, documentLabel } from "starintel_doc";
 import { actorApplicability, isBuiltinActor } from "../lib/actors";
 import { buildGraph, filterGraph, findPaths, importedGraphNodeIds, partitionDocumentsByReview } from "../lib/graph";
 import { documentsForActiveGraph } from "../lib/graph-workspaces";
@@ -193,47 +193,6 @@ function GraphMembershipAdd({ documents, existingIds, onAdd, onClose }) {
   );
 }
 
-function QuickAdd({ selectedDataset, initialDtype = "entity", onClose, onCreated, position }) {
-  const { execute, setNotice, addDocumentsToActiveGraph, workspace } = useQuasar();
-  const [form, setForm] = useState({ dtype: initialDtype, dataset: selectedDataset || "default", id: "", title: "", data: "{}" });
-  const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
-
-  async function submit(event) {
-    event.preventDefault();
-    try {
-      const document = assertDocument(createDocument(form.dtype, {
-        _id: form.id || undefined,
-        dataset: form.dataset,
-        title: form.title,
-        data: JSON.parse(form.data || "{}")
-      }));
-      await execute(operation.save(document), `Graph add ${document._id}`);
-      addDocumentsToActiveGraph([document._id], {
-        positions: { ...(workspace?.positions || {}), [document._id]: position || { x: 0, y: 0 } },
-        selectedIds: [document._id]
-      });
-      onCreated(document);
-      onClose();
-    } catch (error) {
-      setNotice({ kind: "error", message: error.message });
-    }
-  }
-
-  return (
-    <Modal title="Add graph document" onClose={onClose}>
-      <form className="modal-form" onSubmit={submit}>
-        <label className="field"><span>Dtype</span><select value={form.dtype} onChange={update("dtype")}>{dtypes.map((name) => <option key={name}>{name}</option>)}</select></label>
-        <label className="field"><span>Dataset</span><input required value={form.dataset} onChange={update("dataset")} /></label>
-        <label className="field"><span>Document ID</span><input value={form.id} onChange={update("id")} placeholder="Generated when blank" /></label>
-        <label className="field"><span>Title</span><input value={form.title} onChange={update("title")} autoFocus /></label>
-        <label className="field"><span>Typed data JSON</span><textarea className="code-editor" value={form.data} onChange={update("data")} /></label>
-        <p className="muted graph-form-note">New records remain unreviewed until verification metadata marks them reviewed.</p>
-        <div className="form-actions"><button type="button" className="button" onClick={onClose}>Cancel</button><button className="button primary">Create and select</button></div>
-      </form>
-    </Modal>
-  );
-}
-
 function RelationAdd({ ids, documents, onClose }) {
   const { execute, setNotice, addDocumentsToActiveGraph } = useQuasar();
   const source = documents.find((document) => document._id === ids[0]);
@@ -278,6 +237,7 @@ function RelationAdd({ ids, documents, onClose }) {
 export default function GraphPage() {
   const [params] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const {
     documents, workspace, selectedIds, selectedDocuments, select, persistWorkspace,
     actors, runActor, settings, setNotice, graphs, activeGraph,
@@ -297,12 +257,9 @@ export default function GraphPage() {
   const [predicate, setPredicate] = useState("");
   const [reviewStatus, setReviewStatus] = useState(location.state?.revealUnreviewed || !documents.length ? "all" : "reviewed");
   const [labels, setLabels] = useState(true);
-  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showRelation, setShowRelation] = useState(false);
   const [showGraphCreate, setShowGraphCreate] = useState(false);
   const [showMembershipAdd, setShowMembershipAdd] = useState(false);
-  const [quickAddPosition, setQuickAddPosition] = useState(null);
-  const [quickAddDtype, setQuickAddDtype] = useState("entity");
   const [canvasMenu, setCanvasMenu] = useState(null);
   const [canvasMenuCompact, setCanvasMenuCompact] = useState(true);
   const [emptyStateDismissed, setEmptyStateDismissed] = useState(false);
@@ -458,17 +415,18 @@ export default function GraphPage() {
     setPredicate("");
   }
 
-  function revealCreated(document) {
-    setReviewStatus("all");
-    clearFilters();
-    select([document._id]);
-  }
-
   function openQuickAdd(position = null, dtype = "entity") {
-    setQuickAddPosition(position);
-    setQuickAddDtype(dtype);
     setCanvasMenu(null);
-    setShowQuickAdd(true);
+    const editorParams = new URLSearchParams({
+      dtype,
+      dataset: selected?.dataset || dataset || "default",
+      returnTo: "graph"
+    });
+    if (position) {
+      editorParams.set("x", String(position.x));
+      editorParams.set("y", String(position.y));
+    }
+    navigate(`/documents/new?${editorParams}`);
   }
 
   function openCanvasMenu(event) {
@@ -835,19 +793,6 @@ export default function GraphPage() {
           existingIds={activeGraph?.documentIds || []}
           onAdd={addExistingDocuments}
           onClose={() => setShowMembershipAdd(false)}
-        />
-      )}
-      {showQuickAdd && (
-        <QuickAdd
-          selectedDataset={selected?.dataset}
-          initialDtype={quickAddDtype}
-          position={quickAddPosition}
-          onCreated={revealCreated}
-          onClose={() => {
-            setShowQuickAdd(false);
-            setQuickAddPosition(null);
-            setQuickAddDtype("entity");
-          }}
         />
       )}
       {showRelation && <RelationAdd ids={selectedIds} documents={scopedDocuments} onClose={() => setShowRelation(false)} />}

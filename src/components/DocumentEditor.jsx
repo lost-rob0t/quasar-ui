@@ -7,11 +7,16 @@ import {
   dtypes,
   documentLabel,
   expansion,
-  fieldsForDtype,
-  schema,
   touchDocument
 } from "starintel_doc";
 import { operation } from "../lib/operations";
+import {
+  dataFieldsForDtype,
+  dataSchemaForDtype,
+  effectiveFieldSchema,
+  formatSchemaValue,
+  parseSchemaField
+} from "../lib/schema-form";
 import { useQuasar } from "../store";
 
 function parseJson(text, label, fallback) {
@@ -23,64 +28,15 @@ function parseJson(text, label, fallback) {
   }
 }
 
-function humanize(name) {
-  return String(name)
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function schemaVariant(dtype) {
-  return (schema.allOf || []).find((variant) => variant.if?.properties?.dtype?.const === dtype);
-}
-
-function dataSchema(dtype) {
-  return schemaVariant(dtype)?.then?.properties?.data || { properties: {}, required: [] };
-}
-
-function effectiveSchema(fieldSchema = {}) {
-  if (!Array.isArray(fieldSchema.anyOf)) return fieldSchema;
-  return fieldSchema.anyOf.find((candidate) => candidate.type && candidate.type !== "null") || fieldSchema;
-}
-
-function formatValue(value, fieldSchema) {
-  if (value == null) return "";
-  const resolved = effectiveSchema(fieldSchema);
-  if (resolved.type === "object" || resolved.type === "array" || typeof value === "object") {
-    return JSON.stringify(value, null, 2);
-  }
-  return String(value);
-}
-
-function parseFieldValue(name, value, fieldSchema) {
-  if (value === "" || value == null) return undefined;
-  const resolved = effectiveSchema(fieldSchema);
-  if (resolved.type === "boolean") return value === true || value === "true";
-  if (resolved.type === "integer") {
-    const number = Number(value);
-    if (!Number.isInteger(number)) throw new Error(`${humanize(name)} must be an integer`);
-    return number;
-  }
-  if (resolved.type === "number") {
-    const number = Number(value);
-    if (!Number.isFinite(number)) throw new Error(`${humanize(name)} must be a number`);
-    return number;
-  }
-  if (resolved.type === "object" || resolved.type === "array" || !resolved.type) {
-    return parseJson(value, humanize(name), resolved.type === "array" ? [] : {});
-  }
-  return value;
-}
-
 function DynamicField({ name, fieldSchema, required, value, onChange }) {
-  const resolved = effectiveSchema(fieldSchema);
-  const label = humanize(name);
+  const resolved = effectiveFieldSchema(fieldSchema);
   const enumValues = resolved.enum || fieldSchema.enum;
   const hint = resolved.description || fieldSchema.description || resolved.format || resolved.type || "value";
 
   if (enumValues) {
     return (
       <label className="field">
-        <span>{label}{required ? " *" : ""}</span>
+        <span><code>{name}</code>{required ? " *" : ""}</span>
         <select value={value} onChange={(event) => onChange(event.target.value)} required={required}>
           <option value="">Select…</option>
           {enumValues.map((item) => <option key={String(item)} value={String(item)}>{String(item)}</option>)}
@@ -93,7 +49,7 @@ function DynamicField({ name, fieldSchema, required, value, onChange }) {
   if (resolved.type === "boolean") {
     return (
       <label className="field">
-        <span>{label}{required ? " *" : ""}</span>
+        <span><code>{name}</code>{required ? " *" : ""}</span>
         <select value={value} onChange={(event) => onChange(event.target.value)} required={required}>
           <option value="">Unset</option>
           <option value="true">True</option>
@@ -107,9 +63,9 @@ function DynamicField({ name, fieldSchema, required, value, onChange }) {
   if (resolved.type === "object" || resolved.type === "array" || !resolved.type) {
     return (
       <label className="field full dtype-data-field">
-        <span>{label}{required ? " *" : ""}</span>
+        <span><code>{name}</code>{required ? " *" : ""}</span>
         <textarea
-          className="code-editor"
+          className="schema-json-input"
           value={value}
           onChange={(event) => onChange(event.target.value)}
           required={required}
@@ -122,7 +78,7 @@ function DynamicField({ name, fieldSchema, required, value, onChange }) {
 
   return (
     <label className="field">
-      <span>{label}{required ? " *" : ""}</span>
+      <span><code>{name}</code>{required ? " *" : ""}</span>
       <input
         type={resolved.type === "number" || resolved.type === "integer" ? "number" : "text"}
         step={resolved.type === "integer" ? "1" : resolved.type === "number" ? "any" : undefined}
@@ -140,7 +96,7 @@ export default function DocumentEditor({ mode }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const { documents, execute, setNotice } = useQuasar();
+  const { documents, execute, setNotice, workspace, addDocumentsToActiveGraph } = useQuasar();
   const existing = mode === "edit" ? documents.find((document) => document._id === id) : null;
   const initialDtype = params.get("dtype") || "entity";
   const [rawMode, setRawMode] = useState(false);
@@ -160,8 +116,8 @@ export default function DocumentEditor({ mode }) {
     raw: "{}"
   });
 
-  const currentDataSchema = useMemo(() => dataSchema(form.dtype), [form.dtype]);
-  const allFields = useMemo(() => fieldsForDtype(form.dtype), [form.dtype]);
+  const currentDataSchema = useMemo(() => dataSchemaForDtype(form.dtype), [form.dtype]);
+  const allFields = useMemo(() => dataFieldsForDtype(form.dtype), [form.dtype]);
   const commonFields = useMemo(() => new Set(expansion.common_data_fields || []), []);
   const dtypeFields = useMemo(
     () => allFields.filter((name) => !commonFields.has(name)),
@@ -192,10 +148,10 @@ export default function DocumentEditor({ mode }) {
 
   useEffect(() => {
     const source = existing?.dtype === form.dtype ? existing.data || {} : {};
-    const properties = dataSchema(form.dtype).properties || {};
-    setDataValues((current) => Object.fromEntries(fieldsForDtype(form.dtype).map((name) => [
+    const properties = dataSchemaForDtype(form.dtype).properties || {};
+    setDataValues((current) => Object.fromEntries(dataFieldsForDtype(form.dtype).map((name) => [
       name,
-      name in source ? formatValue(source[name], properties[name]) : current[name] || ""
+      name in source ? formatSchemaValue(source[name], properties[name]) : current[name] || ""
     ])));
   }, [existing, form.dtype]);
 
@@ -206,7 +162,7 @@ export default function DocumentEditor({ mode }) {
     const properties = currentDataSchema.properties || {};
     const data = {};
     for (const name of allFields) {
-      const parsed = parseFieldValue(name, dataValues[name], properties[name] || {});
+      const parsed = parseSchemaField(name, dataValues[name], properties[name] || {}, parseJson);
       if (parsed !== undefined) data[name] = parsed;
     }
     return data;
@@ -237,6 +193,21 @@ export default function DocumentEditor({ mode }) {
         document = assertDocument(document);
       }
       await execute(operation.save(document), `${existing ? "Update" : "Create"} ${document._id}`);
+      if (!existing && params.get("returnTo") === "graph") {
+        const hasPosition = params.has("x") && params.has("y");
+        const position = hasPosition
+          ? { x: Number(params.get("x")), y: Number(params.get("y")) }
+          : null;
+        const changes = { selectedIds: [document._id] };
+        if (position && Number.isFinite(position.x) && Number.isFinite(position.y)) {
+          changes.positions = { ...(workspace?.positions || {}), [document._id]: position };
+        }
+        addDocumentsToActiveGraph([document._id], changes);
+        navigate(`/graph?node=${encodeURIComponent(document._id)}`, {
+          state: { revealUnreviewed: true, createdIds: [document._id] }
+        });
+        return;
+      }
       navigate(`/documents/${encodeURIComponent(document._id)}`);
     } catch (error) {
       setNotice({ kind: "error", message: error.message });
@@ -266,7 +237,7 @@ export default function DocumentEditor({ mode }) {
         <div>
           <span className="eyebrow">{mode === "edit" ? "Editor" : "Manual document adder"}</span>
           <h1>{mode === "edit" ? `Edit ${documentLabel(existing)}` : "Create StarIntel document"}</h1>
-          <p>The typed-data form is generated from the canonical field inventory for the selected dtype.</p>
+          <p>The form is generated directly from the selected dtype&apos;s canonical JSON Schema properties.</p>
         </div>
         <button className="button" type="button" onClick={() => setRawMode((value) => !value)}>{rawMode ? "Structured form" : "Raw JSON"}</button>
       </div>

@@ -129,6 +129,7 @@ td small { max-width: 65ch; color: var(--muted); }
 .field textarea { min-height: 88px; resize: vertical; }
 .code-editor { min-height: 280px !important; tab-size: 2; font-size: .78rem; line-height: 1.5; }
 .code-editor.tall { min-height: 480px !important; }
+.schema-json-input { min-height: 74px !important; tab-size: 2; font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace; font-size: .75rem; line-height: 1.4; }
 .editor-columns { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: .85rem; margin-top: .9rem; }
 .form-actions { display: flex; align-items: center; justify-content: flex-end; gap: .6rem; margin-top: 1rem; }
 .checkbox { display: inline-flex; align-items: center; gap: .45rem; color: #b8c9db; font-size: .82rem; }
