@@ -148,9 +148,7 @@ describe("graph transaction history", () => {
       viewport: { zoom: 1.5, pan: { x: 20, y: -30 } }
     });
 
-    const undone = expectSuccess(
-      undoGraphTransaction(committed.state, { expectedRevision: 1 })
-    );
+    const undone = expectSuccess(undoGraphTransaction(committed.state, { expectedRevision: 1 }));
 
     expect(undone.state.revision).toBe(2);
     expect(undone.state.undoStack).toEqual([]);
@@ -178,12 +176,8 @@ describe("graph transaction history", () => {
         { expectedRevision: 0, timestamp: SECOND_TIMESTAMP }
       )
     );
-    const undone = expectSuccess(
-      undoGraphTransaction(committed.state, { expectedRevision: 1 })
-    );
-    const redone = expectSuccess(
-      redoGraphTransaction(undone.state, { expectedRevision: 2 })
-    );
+    const undone = expectSuccess(undoGraphTransaction(committed.state, { expectedRevision: 1 }));
+    const redone = expectSuccess(redoGraphTransaction(undone.state, { expectedRevision: 2 }));
 
     expect(redone.state.revision).toBe(3);
     expect(redone.state.graph).toEqual(committed.state.graph);
@@ -204,12 +198,8 @@ describe("graph transaction history", () => {
         { expectedRevision: 4 }
       )
     );
-    const staleUndo = expectRejection(
-      undoGraphTransaction(state, { expectedRevision: 4 })
-    );
-    const staleRedo = expectRejection(
-      redoGraphTransaction(state, { expectedRevision: 6 })
-    );
+    const staleUndo = expectRejection(undoGraphTransaction(state, { expectedRevision: 4 }));
+    const staleRedo = expectRejection(redoGraphTransaction(state, { expectedRevision: 6 }));
 
     for (const rejection of [staleCommit, staleUndo, staleRedo]) {
       expect(rejection.errors[0]).toMatchObject({
@@ -329,9 +319,7 @@ describe("graph transaction history", () => {
 
   it("rejects empty transactions", () => {
     const state = createGraphHistoryState(graphFixture());
-    const result = expectRejection(
-      commitGraphTransaction(state, [], { expectedRevision: 0 })
-    );
+    const result = expectRejection(commitGraphTransaction(state, [], { expectedRevision: 0 }));
 
     expect(result.errors).toEqual([
       expect.objectContaining({
