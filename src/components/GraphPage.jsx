@@ -526,7 +526,7 @@ function NodeQuickEditor({ document, onClose }) {
 }
 
 function TargetSubmit({ document, onClose }) {
-  const { settings, submitTarget, setNotice } = useQuasar();
+  const { settings, submitTarget, runTargetActors, setNotice } = useQuasar();
   const [actor, setActor] = useState("");
   const [target, setTarget] = useState(document._id);
   const [dataset, setDataset] = useState(document.dataset || "default");
@@ -552,6 +552,7 @@ function TargetSubmit({ document, onClose }) {
         }
       }));
       await submitTarget(targetDocument, settings);
+      await runTargetActors(targetDocument);
       setNotice({ kind: "success", message: `Submitted ${documentLabel(document)} to ${actor}` });
       onClose();
     } catch (error) {

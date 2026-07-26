@@ -47,6 +47,13 @@ export function generateUsernameCandidatesActor(context) {
     addValue(candidates, data.handle);
     addValue(candidates, data.usernames);
     addValue(candidates, data.handles);
+    if (source.dtype === "target") {
+      const targetType = String(data.target_type || "").toLowerCase();
+      const targetValue = String(data.target || "").trim();
+      if (["username", "handle", "user"].some((type) => targetType.includes(type)) || targetValue.startsWith("@")) {
+        addValue(candidates, targetValue);
+      }
+    }
     if (Array.isArray(data.external_ids)) {
       data.external_ids
         .filter((identifier) => ["username", "handle"].includes(String(identifier?.scheme || "").toLowerCase()))
@@ -188,6 +195,13 @@ export function prepareWhatsMyNameSearchesActor(context) {
     addValue(usernames, data.handle);
     addValue(usernames, data.usernames);
     addValue(usernames, data.handles);
+    if (source.dtype === "target") {
+      const targetType = String(data.target_type || "").toLowerCase();
+      const targetValue = String(data.target || "").trim();
+      if (["username", "handle", "user"].some((type) => targetType.includes(type)) || targetValue.startsWith("@")) {
+        addValue(usernames, targetValue);
+      }
+    }
     if (Array.isArray(data.external_ids)) {
       data.external_ids
         .filter((identifier) => ["username", "handle"].includes(String(identifier?.scheme || "").toLowerCase()))
@@ -374,6 +388,379 @@ export function markUnverifiedActor(context) {
   };
 }
 
+export function resolveLegistarClient(input) {
+  const data = input?.data && typeof input.data === "object" ? input.data : input || {};
+  const candidates = [
+    data.legistar_client,
+    data.legistarClient,
+    data.client,
+    data.city,
+    data.municipality,
+    data.target,
+    data.name,
+    input?.title
+  ];
+
+  for (const candidate of candidates) {
+    const raw = String(candidate || "").trim();
+    if (!raw || raw.includes("@")) continue;
+    try {
+      const url = new URL(raw);
+      const host = url.hostname.toLowerCase();
+      if (host === "webapi.legistar.com") {
+        const match = url.pathname.match(/\/v1\/([^/]+)/i);
+        if (match?.[1]) return decodeURIComponent(match[1]).toLowerCase();
+      }
+      if (host.endsWith(".legistar.com")) {
+        const client = host.slice(0, -".legistar.com".length);
+        if (client && client !== "www" && client !== "webapi") return client;
+      }
+      continue;
+    } catch {
+      // Plain city and client names are handled below.
+    }
+
+    const clean = raw
+      .replace(/^city\s*:\s*/i, "")
+      .replace(/,.*$/, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "")
+      .slice(0, 64);
+    if (clean.length >= 2) return clean;
+  }
+  return "";
+}
+
+export function targetInputExpansionActor(context) {
+  const selection = Array.isArray(context.selection) ? context.selection.slice(0, 16) : [];
+  const corpus = new Map((context.documents || []).map((document) => [document._id, document]));
+  const existing = new Set(corpus.keys());
+  const documents = [];
+
+  const hash = (value) => {
+    let state = 0x811c9dc5;
+    for (let index = 0; index < value.length; index += 1) {
+      state ^= value.charCodeAt(index);
+      state = Math.imul(state, 0x01000193);
+    }
+    return (state >>> 0).toString(36);
+  };
+  const addInput = (values, value) => {
+    if (Array.isArray(value)) {
+      value.forEach((item) => addInput(values, item));
+      return;
+    }
+    if (value && typeof value === "object") {
+      addInput(values, value.target);
+      addInput(values, value.value);
+      addInput(values, value.url);
+      addInput(values, value.domain);
+      addInput(values, value.email);
+      addInput(values, value.username);
+      return;
+    }
+    const clean = String(value || "").trim();
+    if (clean) values.add(clean.slice(0, 2048));
+  };
+  const classify = (raw) => {
+    if (/^starintel:[^\s]+$/i.test(raw)) return { kind: "document-reference", value: raw };
+    try {
+      const url = new URL(raw);
+      if (["http:", "https:"].includes(url.protocol)) {
+        return { kind: "url", value: url.href, website: url.href };
+      }
+    } catch {
+      // Non-URL input continues through typed classifiers.
+    }
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) {
+      return { kind: "email", value: raw.toLowerCase() };
+    }
+    if (/^@[a-z0-9._-]{2,64}$/i.test(raw)) {
+      return { kind: "username", value: raw.replace(/^@/, "").toLowerCase() };
+    }
+    if (/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(raw)) {
+      const value = raw.toLowerCase();
+      return { kind: "domain", value, website: `https://${value}` };
+    }
+    return { kind: "search-term", value: raw };
+  };
+
+  for (const source of selection) {
+    if (source?.dtype !== "target") continue;
+    const data = source.data && typeof source.data === "object" ? source.data : {};
+    const inputs = new Set();
+    addInput(inputs, data.target);
+    addInput(inputs, data.targets);
+    addInput(inputs, data.value);
+    addInput(inputs, data.input);
+    addInput(inputs, data.query);
+    addInput(inputs, data.url);
+    addInput(inputs, data.domain);
+    addInput(inputs, data.email);
+    addInput(inputs, data.username);
+    addInput(inputs, data.options);
+
+    for (const raw of [...inputs].slice(0, 64)) {
+      const classified = classify(raw);
+      let objectId = classified.value;
+      if (classified.kind !== "document-reference" || !corpus.has(classified.value)) {
+        const slug = classified.value
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .slice(0, 42) || classified.kind;
+        objectId = `starintel:entity:target-input:${slug}-${hash(`${source._id}\0${classified.kind}\0${classified.value}`)}`;
+        if (!existing.has(objectId)) {
+          const stamp = new Date().toISOString();
+          const actorExtension = {
+            actor_id: "quasar.actor.target-input-expansion",
+            input_ids: [source._id],
+            generated: true
+          };
+          const externalId = {
+            scheme: classified.kind,
+            value: classified.value,
+            notes: `Expanded from target ${source._id}`
+          };
+          if (classified.website) externalId.url = classified.website;
+          documents.push({
+            _id: objectId,
+            dataset: source.dataset || "default",
+            dtype: "entity",
+            schema_version: "0.9.0",
+            version: 1,
+            date_added: stamp,
+            date_updated: stamp,
+            title: classified.kind === "username" ? `@${classified.value}` : classified.value,
+            summary: `${classified.kind} expanded from ${source.title || source._id}`,
+            sources: source.sources || [],
+            evidence: source.evidence || [],
+            data: {
+              name: classified.value,
+              etype: classified.kind,
+              status: "target-input",
+              ...(classified.website ? { website: classified.website } : {}),
+              external_ids: [externalId]
+            },
+            extensions: { "quasar.actor": actorExtension }
+          });
+          existing.add(objectId);
+        }
+      }
+
+      const relationId = `starintel:relation:target-input:${hash(`${source._id}\0${objectId}`)}`;
+      if (existing.has(relationId)) continue;
+      const stamp = new Date().toISOString();
+      documents.push({
+        _id: relationId,
+        dataset: source.dataset || "default",
+        dtype: "relation",
+        schema_version: "0.9.0",
+        version: 1,
+        date_added: stamp,
+        date_updated: stamp,
+        title: "targets",
+        sources: source.sources || [],
+        evidence: source.evidence || [],
+        data: {
+          subject: source._id,
+          predicate: "targets",
+          object: objectId,
+          directed: true
+        },
+        extensions: {
+          "quasar.actor": {
+            actor_id: "quasar.actor.target-input-expansion",
+            input_ids: [source._id],
+            generated: true
+          }
+        }
+      });
+      existing.add(relationId);
+    }
+  }
+
+  return {
+    documents,
+    message: `Expanded ${documents.filter((document) => document.dtype !== "relation").length} target input(s).`
+  };
+}
+
+export async function cityLegistarCalendarActor(context) {
+  const source = Array.isArray(context.selection) ? context.selection[0] : null;
+  if (!source) return { documents: [], message: "Select a city, location, organization, entity, or target." };
+
+  const resolveClient = (input) => {
+    const data = input?.data && typeof input.data === "object" ? input.data : input || {};
+    const candidates = [
+      data.legistar_client,
+      data.legistarClient,
+      data.client,
+      data.city,
+      data.municipality,
+      data.target,
+      data.name,
+      input?.title
+    ];
+    for (const candidate of candidates) {
+      const raw = String(candidate || "").trim();
+      if (!raw || raw.includes("@")) continue;
+      try {
+        const url = new URL(raw);
+        const host = url.hostname.toLowerCase();
+        if (host === "webapi.legistar.com") {
+          const match = url.pathname.match(/\/v1\/([^/]+)/i);
+          if (match?.[1]) return decodeURIComponent(match[1]).toLowerCase();
+        }
+        if (host.endsWith(".legistar.com")) {
+          const client = host.slice(0, -".legistar.com".length);
+          if (client && client !== "www" && client !== "webapi") return client;
+        }
+        continue;
+      } catch {
+        // Plain city and client names are handled below.
+      }
+      const clean = raw
+        .replace(/^city\s*:\s*/i, "")
+        .replace(/,.*$/, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "")
+        .slice(0, 64);
+      if (clean.length >= 2) return clean;
+    }
+    return "";
+  };
+  const hash = (value) => {
+    let state = 0x811c9dc5;
+    for (let index = 0; index < value.length; index += 1) {
+      state ^= value.charCodeAt(index);
+      state = Math.imul(state, 0x01000193);
+    }
+    return (state >>> 0).toString(36);
+  };
+  const absolute = (value, site) => {
+    if (!value) return "";
+    try {
+      return new URL(value, site).href;
+    } catch {
+      return "";
+    }
+  };
+
+  const client = resolveClient(source);
+  if (!client) return { documents: [], message: "No Legistar city/client input was found." };
+  const data = source.data && typeof source.data === "object" ? source.data : {};
+  const DAY = 86_400_000;
+  const now = Date.now();
+  const from = new Date(data.from || now - 30 * DAY);
+  const to = new Date(data.to || now + 180 * DAY);
+  const limit = Math.max(1, Math.min(Number(data.limit) || 100, 200));
+  const api = `https://webapi.legistar.com/v1/${encodeURIComponent(client)}`;
+  const site = `https://${client}.legistar.com`;
+  const response = await fetch(`${api}/events?$top=${limit}`, {
+    headers: { accept: "application/json" }
+  });
+  if (!response.ok) throw new Error(`Legistar ${client} returned HTTP ${response.status}`);
+  const payload = await response.json();
+  const events = Array.isArray(payload) ? payload : Array.isArray(payload?.value) ? payload.value : [];
+  const existing = new Set((context.documents || []).map((document) => document._id));
+  const documents = [];
+
+  for (const event of events.slice(0, limit)) {
+    const rawDate = event.EventDate || event.EventDateTime || event.EventLastModifiedUtc;
+    const eventDate = rawDate ? new Date(rawDate) : null;
+    if (eventDate && Number.isFinite(eventDate.getTime())) {
+      if (eventDate < from || eventDate > to) continue;
+    }
+    const eventIdValue = String(event.EventId || hash(JSON.stringify(event))).slice(0, 80);
+    const eventId = `starintel:event:legistar-${client}-${eventIdValue}`;
+    const relationId = `starintel:relation:legistar-calendar:${hash(`${source._id}\0${eventId}`)}`;
+    const stamp = new Date().toISOString();
+    const name = [event.EventBodyName, event.EventDate ? new Date(event.EventDate).toLocaleDateString("en-US") : ""]
+      .filter(Boolean)
+      .join(" · ") || `Legistar event ${eventIdValue}`;
+    const website = absolute(event.EventInSiteURL || event.EventAgendaFile || event.EventMinutesFile, site);
+    const actorExtension = {
+      actor_id: "quasar.actor.city-legistar-calendar",
+      input_ids: [source._id],
+      generated: true,
+      client
+    };
+
+    if (!existing.has(eventId)) {
+      documents.push({
+        _id: eventId,
+        dataset: source.dataset || `legistar-${client}`,
+        dtype: "event",
+        schema_version: "0.9.0",
+        version: 1,
+        date_added: stamp,
+        date_updated: stamp,
+        title: name,
+        summary: `Public meeting from the ${client} Legistar calendar`,
+        sources: [],
+        evidence: [],
+        data: {
+          name,
+          event_type: "government-meeting",
+          start_time: eventDate && Number.isFinite(eventDate.getTime()) ? eventDate.toISOString() : "",
+          location: event.EventLocation || "",
+          status: event.EventAgendaStatusName || String(event.EventAgendaStatusId || ""),
+          website,
+          legistar_client: client,
+          legistar_event_id: event.EventId,
+          body: event.EventBodyName || ""
+        },
+        extensions: { "quasar.actor": actorExtension }
+      });
+      existing.add(eventId);
+    }
+    if (!existing.has(relationId)) {
+      documents.push({
+        _id: relationId,
+        dataset: source.dataset || `legistar-${client}`,
+        dtype: "relation",
+        schema_version: "0.9.0",
+        version: 1,
+        date_added: stamp,
+        date_updated: stamp,
+        title: "has-calendar-event",
+        sources: [],
+        evidence: [],
+        data: {
+          subject: source._id,
+          predicate: "has-calendar-event",
+          object: eventId,
+          directed: true
+        },
+        extensions: { "quasar.actor": actorExtension }
+      });
+      existing.add(relationId);
+    }
+  }
+
+  return {
+    documents,
+    message: `Loaded ${documents.filter((document) => document.dtype === "event").length} ${client} Legistar event(s).`
+  };
+}
+
+export function actorsForTarget(actors, target, trigger = "target:create") {
+  const data = target?.data && typeof target.data === "object" ? target.data : {};
+  const requested = new Set();
+  const add = (value) => {
+    if (Array.isArray(value)) value.forEach(add);
+    else String(value || "").split(",").map((item) => item.trim()).filter(Boolean).forEach((item) => requested.add(item));
+  };
+  add(data.actor);
+  add(data.actors);
+
+  return (actors || []).filter((actor) => {
+    const normalized = normalizeActorManifest(actor);
+    return normalized.triggers.includes(trigger) || requested.has(normalized.id);
+  });
+}
+
 export const BUILTIN_ACTORS = Object.freeze([
   {
     id: "quasar.actor.derive-node",
@@ -428,7 +815,7 @@ export const BUILTIN_ACTORS = Object.freeze([
     label: "Generate username candidates",
     description: "Generate bounded username variants from selected names and existing handles.",
     version: 1,
-    accepts: ["person", "entity", "user", "org"],
+    accepts: ["person", "entity", "user", "org", "target"],
     minSelection: 1,
     maxSelection: 8,
     source: generateUsernameCandidatesActor.toString()
@@ -438,10 +825,32 @@ export const BUILTIN_ACTORS = Object.freeze([
     label: "Prepare WhatsMyName searches",
     description: "Create WhatsMyName query documents from selected usernames or person names.",
     version: 1,
-    accepts: ["person", "entity", "user", "org"],
+    accepts: ["person", "entity", "user", "org", "target"],
     minSelection: 1,
     maxSelection: 16,
     source: prepareWhatsMyNameSearchesActor.toString()
+  },
+  {
+    id: "quasar.actor.target-input-expansion",
+    label: "Expand target inputs",
+    description: "Turn target values into typed graph entities and explicit target relations.",
+    version: 1,
+    accepts: ["target"],
+    triggers: ["target:create"],
+    minSelection: 1,
+    maxSelection: 16,
+    source: targetInputExpansionActor.toString()
+  },
+  {
+    id: "quasar.actor.city-legistar-calendar",
+    label: "Load city Legistar calendar",
+    description: "Load bounded public meeting records for a city or Legistar client supplied by the selected input.",
+    version: 1,
+    accepts: ["target", "location", "org", "entity"],
+    triggers: [],
+    minSelection: 1,
+    maxSelection: 1,
+    source: cityLegistarCalendarActor.toString()
   },
   {
     id: "quasar.actor.normalize-names",
@@ -485,6 +894,9 @@ export function normalizeActorManifest(manifest) {
     description: String(manifest.description || "").trim(),
     version: Number(manifest.version || 1),
     accepts: Array.isArray(manifest.accepts) ? [...new Set(manifest.accepts.map(String))] : ["*"],
+    triggers: Array.isArray(manifest.triggers)
+      ? [...new Set(manifest.triggers.map((trigger) => String(trigger || "").trim()).filter(Boolean))]
+      : [],
     minSelection,
     maxSelection,
     source: String(manifest.source || "").trim()

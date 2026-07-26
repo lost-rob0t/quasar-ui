@@ -3,13 +3,16 @@ import { describe, expect, it } from "vitest";
 import {
   BUILTIN_ACTORS,
   actorApplicability,
+  actorsForTarget,
   generateUsernameCandidatesActor,
   isBuiltinActor,
   markUnverifiedActor,
   normalizeActorManifest,
+  resolveLegistarClient,
   normalizeNamesActor,
   prepareWhatsMyNameSearchesActor,
-  relationsFromRelatedIdsActor
+  relationsFromRelatedIdsActor,
+  targetInputExpansionActor
 } from "./actors";
 
 const stamp = "2026-07-26T00:00:00.000Z";
@@ -144,4 +147,60 @@ describe("operator actors", () => {
     });
     expect(result.operations[0].document.data).toEqual(person.data);
   });
+  it("normalizes target-create triggers", () => {
+    const actor = normalizeActorManifest({
+      id: "test.triggered",
+      source: "() => ({ documents: [] })",
+      triggers: ["target:create", "target:create", ""]
+    });
+    expect(actor.triggers).toEqual(["target:create"]);
+  });
+
+  it("selects trigger actors and explicitly requested target actors", () => {
+    const target = {
+      ...person,
+      _id: "starintel:target:test",
+      dtype: "target",
+      data: { target: "Columbus", actor: "quasar.actor.city-legistar-calendar" }
+    };
+    const selected = actorsForTarget(BUILTIN_ACTORS, target);
+    expect(selected.map((actor) => actor.id)).toEqual(expect.arrayContaining([
+      "quasar.actor.target-input-expansion",
+      "quasar.actor.city-legistar-calendar"
+    ]));
+  });
+
+  it("expands URL target inputs into canonical entities and relations", () => {
+    const target = {
+      ...person,
+      _id: "starintel:target:url",
+      dtype: "target",
+      data: { target: "https://example.com/path" }
+    };
+    const result = targetInputExpansionActor({ selection: [target], documents: [target] });
+    const entity = result.documents.find((document) => document.dtype === "entity");
+    const relation = result.documents.find((document) => document.dtype === "relation");
+    expect(entity.data).toMatchObject({ etype: "url", website: "https://example.com/path" });
+    expect(relation.data).toMatchObject({ subject: target._id, object: entity._id, predicate: "targets" });
+    result.documents.forEach((document) => expect(() => assertDocument(document)).not.toThrow());
+  });
+
+  it("links target document references without duplicating the referenced document", () => {
+    const target = {
+      ...person,
+      _id: "starintel:target:reference",
+      dtype: "target",
+      data: { target: person._id }
+    };
+    const result = targetInputExpansionActor({ selection: [target], documents: [target, person] });
+    expect(result.documents.filter((document) => document.dtype !== "relation")).toHaveLength(0);
+    expect(result.documents[0].data.object).toBe(person._id);
+  });
+
+  it("resolves generic city and Legistar URL inputs", () => {
+    expect(resolveLegistarClient({ data: { target: "Columbus, Ohio" } })).toBe("columbus");
+    expect(resolveLegistarClient({ data: { target: "https://webapi.legistar.com/v1/newyork/events" } })).toBe("newyork");
+    expect(resolveLegistarClient({ data: { target: "https://chicago.legistar.com/Calendar.aspx" } })).toBe("chicago");
+  });
+
 });

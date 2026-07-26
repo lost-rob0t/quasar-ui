@@ -17,7 +17,13 @@ import {
 } from "./lib/db";
 import { importFiles } from "./lib/importer";
 import { applyOperation, operation, saveDocumentBatch } from "./lib/operations";
-import { BUILTIN_ACTORS, actorApplicability, isBuiltinActor, runBrowserActor } from "./lib/actors";
+import {
+  BUILTIN_ACTORS,
+  actorApplicability,
+  actorsForTarget,
+  isBuiltinActor,
+  runBrowserActor
+} from "./lib/actors";
 import { actorWithTransformEnvelope, buildActorTransform } from "./lib/actor-transforms";
 import { startDocumentSource } from "./lib/document-source";
 import { startRabbitMqIngest } from "./lib/rabbitmq-ingest";
@@ -356,18 +362,26 @@ export function QuasarProvider({ children }) {
     ...(settings?.actors || [])
   ], [settings?.actors]);
 
-  const runActor = useCallback(async (actor, requestedSelectionIds = selectedIds) => {
+  const runActor = useCallback(async (actor, requestedSelection = selectedIds) => {
     if (!isBuiltinActor(actor) && !settings?.actorsEnabled) throw new Error("Custom browser actors are disabled in settings");
-    const selection = documents.filter((document) => requestedSelectionIds.includes(document._id));
+    const requested = Array.isArray(requestedSelection) ? requestedSelection : [requestedSelection];
+    const explicitDocuments = requested.filter((item) => item && typeof item === "object");
+    const requestedIds = requested
+      .map((item) => typeof item === "string" ? item : item?._id)
+      .filter(Boolean);
+    const corpus = new Map(documents.map((document) => [document._id, document]));
+    explicitDocuments.forEach((document) => corpus.set(document._id, document));
+    const selection = requestedIds.map((id) => corpus.get(id)).filter(Boolean);
     const availability = actorApplicability(actor, selection);
     if (!availability.applicable) throw new Error(availability.reason);
+    const corpusDocuments = [...corpus.values()];
     const result = await runBrowserActor(actorWithTransformEnvelope(actor), {
       selection,
-      documents: documents.map((document) => ({ ...document })),
+      documents: corpusDocuments.map((document) => ({ ...document })),
       workspace: { layout: workspace?.layout || "cose" }
     });
     const label = `Actor: ${actor.label}`;
-    const transform = buildActorTransform(result, documents, label);
+    const transform = buildActorTransform(result, corpusDocuments, label);
     if (transform.command) await execute(transform.command, label);
     if (transform.documents.length) {
       addDocumentsToActiveGraph(transform.documents.map((document) => document._id));
@@ -375,6 +389,29 @@ export function QuasarProvider({ children }) {
     setNotice({ kind: "success", message: transform.message });
     return { ...result, ...transform, documents: transform.documents };
   }, [addDocumentsToActiveGraph, documents, execute, selectedIds, settings?.actorsEnabled, workspace?.layout]);
+
+  const runTargetActors = useCallback(async (target) => {
+    const candidates = actorsForTarget(actors, target);
+    const reports = [];
+    for (const actor of candidates) {
+      try {
+        const result = await runActor(actor, [target]);
+        reports.push({ actorId: actor.id, status: "completed", produced: result.documents.length });
+      } catch (error) {
+        reports.push({ actorId: actor.id, status: "failed", error: error.message });
+      }
+    }
+    if (reports.length) {
+      const failed = reports.filter((report) => report.status === "failed");
+      setNotice({
+        kind: failed.length ? "error" : "success",
+        message: failed.length
+          ? `Target saved; ${failed.length} actor(s) failed and ${reports.length - failed.length} completed.`
+          : `Target saved; ${reports.length} actor(s) completed.`
+      });
+    }
+    return reports;
+  }, [actors, runActor]);
 
   const activeGraph = useMemo(() => getActiveGraph(workspace || {}), [workspace]);
 
@@ -419,6 +456,7 @@ export function QuasarProvider({ children }) {
     stopQueue,
     actors,
     runActor,
+    runTargetActors,
     exportDocuments,
     databaseInfo,
     bulkSaveDocuments,
@@ -431,7 +469,7 @@ export function QuasarProvider({ children }) {
     addDocumentsToActiveGraph, removeDocumentsFromActiveGraph,
     createGraph, switchGraph, renameGraph, deleteGraph, clearGraph,
     activeGraph, select, startSync, stopSync, synchronize, testServer, submitTarget,
-    startQueue, stopQueue, actors, runActor
+    startQueue, stopQueue, actors, runActor, runTargetActors
   ]);
 
   return <QuasarContext.Provider value={value}>{children}</QuasarContext.Provider>;

@@ -255,7 +255,14 @@ export default function DocumentEditor({ mode }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const { documents, execute, setNotice, workspace, addDocumentsToActiveGraph } = useQuasar();
+  const {
+    documents,
+    execute,
+    setNotice,
+    workspace,
+    addDocumentsToActiveGraph,
+    runTargetActors
+  } = useQuasar();
   const existing = mode === "edit" ? documents.find((document) => document._id === id) : null;
   const initialDtype = params.get("dtype") || "entity";
   const [rawMode, setRawMode] = useState(false);
@@ -385,6 +392,7 @@ export default function DocumentEditor({ mode }) {
         document = assertDocument(document);
       }
       await execute(operation.save(document), `${existing ? "Update" : "Create"} ${document._id}`);
+      if (!existing && document.dtype === "target") await runTargetActors(document);
       if (!existing && params.get("returnTo") === "graph") {
         const hasPosition = params.has("x") && params.has("y");
         const position = hasPosition
