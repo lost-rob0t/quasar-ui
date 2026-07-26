@@ -2,6 +2,10 @@
   display: none;
 }
 
+.mobile-menu-button {
+  display: none;
+}
+
 @media (max-width: 850px) {
   :root {
     --mobile-nav-height: 0px;
@@ -28,6 +32,12 @@
     position: relative;
     z-index: 120;
     display: block;
+  }
+
+  .mobile-menu-button {
+    display: inline-grid;
+    flex: 0 0 44px;
+    place-items: center;
   }
 
   .mobile-gesture-launcher {
