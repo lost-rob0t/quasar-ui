@@ -110,6 +110,8 @@ test.describe("responsive application shell", () => {
     await expect(page.locator(".sidebar")).toBeHidden();
     await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Mobile navigation" }).getByText("Graph")).toBeVisible();
+    await expect(page.locator(".dashboard-empty-page > .page-heading")).toHaveCSS("text-align", "center");
+    await expect(page.locator(".dashboard-empty .button-row")).toHaveCSS("justify-content", "center");
     const viewport = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth
