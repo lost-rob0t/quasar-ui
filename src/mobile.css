@@ -195,14 +195,28 @@ textarea {
 
   .agent-console[data-tab="run"] .agent-conversation-actions {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     width: 100%;
   }
 
-  .agent-console[data-tab="run"] .agent-conversation-actions > select {
+  .agent-console[data-tab="run"] .agent-chat-picker {
     width: 100%;
     min-width: 0;
+  }
+
+  .agent-console[data-tab="run"] .agent-chat-picker-trigger {
     min-height: 44px;
+  }
+
+  .agent-console[data-tab="run"] .agent-chat-picker-popover {
+    right: 0;
+    left: 0;
+    width: 100%;
+    max-height: min(58dvh, 480px);
+  }
+
+  .agent-console[data-tab="run"] .agent-mobile-run-controls {
+    justify-self: end;
   }
 
   .agent-console[data-tab="run"] .agent-mobile-run-controls {
