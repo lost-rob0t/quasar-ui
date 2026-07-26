@@ -152,7 +152,7 @@ export default function MobileGraphToolTray() {
         <button
           type="button"
           className="graph-mobile-primary-button"
-          aria-label="Import documents"
+          aria-label="Import"
           onClick={() => navigate("/import")}
         >
           <FolderInput size={22} aria-hidden="true" />
