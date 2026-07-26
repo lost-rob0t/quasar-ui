@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, Menu } from "lucide-react";
+import { Focus, Maximize2, Plus, Tags } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
 
 function isAgentDisclosure(entry) {
@@ -21,7 +22,10 @@ function prepareAgentEntry(entry) {
   entry.tabIndex = 0;
   entry.setAttribute("role", "button");
   entry.setAttribute("aria-expanded", entry.dataset.expanded);
-  entry.setAttribute("aria-label", `${entry.dataset.expanded === "true" ? "Collapse" : "Expand"} ${disclosureLabel(entry)}`);
+  entry.setAttribute(
+    "aria-label",
+    `${entry.dataset.expanded === "true" ? "Collapse" : "Expand"} ${disclosureLabel(entry)}`
+  );
 }
 
 function prepareAgentEntries() {
@@ -41,7 +45,39 @@ function toggleAgentEntry(entry) {
 
 function prepareGraphControls() {
   document.querySelectorAll(".graph-toolbar .button.small").forEach((button) => {
-    if (button.textContent.trim() === "Fit") button.setAttribute("aria-label", "Fit");
+    const label = button.textContent.trim();
+    if (label === "Fit" || label === "Focus") button.setAttribute("aria-label", label);
+  });
+}
+
+function prepareRadialMenus() {
+  document.querySelectorAll(".graph-context-menu").forEach((menu) => {
+    const isBlankCanvasRoot = menu.classList.contains("canvas-actions")
+      && Boolean(menu.querySelector(".graph-context-palette"));
+    menu.classList.toggle("radial-root", isBlankCanvasRoot);
+    if (!isBlankCanvasRoot || menu.dataset.radialPositioned === "true") return;
+
+    const stage = menu.closest(".graph-stage");
+    const width = 228;
+    const height = 228;
+    const stageWidth = stage?.clientWidth || width + 16;
+    const stageHeight = stage?.clientHeight || height + 16;
+    const sourceLeft = Number.parseFloat(menu.style.left || "0");
+    const sourceTop = Number.parseFloat(menu.style.top || "0");
+    menu.style.left = `${Math.max(8, Math.min(sourceLeft - width / 2, stageWidth - width - 8))}px`;
+    menu.style.top = `${Math.max(8, Math.min(sourceTop - height / 2, stageHeight - height - 8))}px`;
+    menu.dataset.radialPositioned = "true";
+  });
+}
+
+function updateGraphEmptyCopy() {
+  document.querySelectorAll(".graph-empty-state p").forEach((node) => {
+    if (node.textContent.includes("Right-click anywhere")) {
+      node.textContent = node.textContent.replace(
+        "Right-click anywhere",
+        "Hold or right-click the blank canvas"
+      );
+    }
   });
 }
 
@@ -70,22 +106,47 @@ function updatePersistentSecretCopy() {
 function prepareUi() {
   prepareAgentEntries();
   prepareGraphControls();
+  prepareRadialMenus();
+  updateGraphEmptyCopy();
   updatePersistentSecretCopy();
+}
+
+function clickToolbarButton(label) {
+  const button = [...document.querySelectorAll(".graph-toolbar .button.small")]
+    .find((candidate) => candidate.textContent.trim() === label);
+  button?.click();
+}
+
+function clickHeadingButton(label) {
+  const button = [...document.querySelectorAll(".graph-heading-actions button")]
+    .find((candidate) => candidate.textContent.trim() === label);
+  button?.click();
+}
+
+function labelsInput() {
+  return [...document.querySelectorAll(".graph-toolbar .checkbox input")]
+    .find((input) => input.closest("label")?.textContent.includes("Labels"));
 }
 
 export default function OperatorUiEnhancer() {
   const location = useLocation();
   const graphRoute = location.pathname === "/graph";
-  const [graphControlsOpen, setGraphControlsOpen] = useState(false);
-
-  useEffect(() => setGraphControlsOpen(false), [location.pathname]);
+  const [graphStage, setGraphStage] = useState(null);
+  const [labelsOn, setLabelsOn] = useState(true);
+  const [focusDisabled, setFocusDisabled] = useState(true);
 
   useEffect(() => {
     const apply = () => {
-      const toolbar = document.querySelector(".graph-toolbar");
-      if (toolbar) toolbar.dataset.mobileCollapsed = graphControlsOpen ? "false" : "true";
       prepareUi();
+      const nextStage = graphRoute ? document.querySelector(".graph-stage") : null;
+      setGraphStage((current) => current === nextStage ? current : nextStage);
+      const focus = [...document.querySelectorAll(".graph-toolbar .button.small")]
+        .find((button) => button.textContent.trim() === "Focus");
+      setFocusDisabled(Boolean(focus?.disabled));
+      const input = labelsInput();
+      if (input) setLabelsOn(input.checked);
     };
+
     let frame = 0;
     const schedule = () => {
       if (frame) return;
@@ -95,13 +156,18 @@ export default function OperatorUiEnhancer() {
       });
     };
     const observer = new MutationObserver(schedule);
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["disabled"]
+    });
     schedule();
     return () => {
       observer.disconnect();
       if (frame) cancelAnimationFrame(frame);
     };
-  }, [graphControlsOpen, location.pathname]);
+  }, [graphRoute, location.pathname]);
 
   useEffect(() => {
     const onClick = (event) => {
@@ -123,18 +189,33 @@ export default function OperatorUiEnhancer() {
     };
   }, []);
 
-  if (!graphRoute) return null;
-  return (
-    <button
-      className="icon-button graph-toolbar-mobile-toggle"
-      type="button"
-      aria-label="More graph controls"
-      aria-expanded={graphControlsOpen}
-      title="More graph controls"
-      onClick={() => setGraphControlsOpen((value) => !value)}
-    >
-      <Menu size={17} aria-hidden="true" />
-      <ChevronDown size={13} aria-hidden="true" />
-    </button>
+  if (!graphRoute || !graphStage) return null;
+  return createPortal(
+    <div className="graph-canvas-actions" aria-label="Graph actions">
+      <button type="button" className="graph-canvas-action" aria-label="Add graph document" title="Add graph document" onClick={() => clickHeadingButton("Add graph document")}>
+        <Plus size={18} aria-hidden="true" />
+      </button>
+      <button type="button" className="graph-canvas-action" aria-label="Fit graph" title="Fit graph" onClick={() => clickToolbarButton("Fit")}>
+        <Maximize2 size={18} aria-hidden="true" />
+      </button>
+      <button type="button" className="graph-canvas-action" aria-label="Focus selection" title="Focus selection" disabled={focusDisabled} onClick={() => clickToolbarButton("Focus")}>
+        <Focus size={18} aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        className="graph-canvas-action"
+        aria-label="Toggle labels"
+        title="Toggle labels"
+        aria-pressed={labelsOn}
+        onClick={() => {
+          const input = labelsInput();
+          input?.click();
+          requestAnimationFrame(() => setLabelsOn(Boolean(labelsInput()?.checked)));
+        }}
+      >
+        <Tags size={18} aria-hidden="true" />
+      </button>
+    </div>,
+    graphStage
   );
 }
