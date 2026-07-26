@@ -6,6 +6,7 @@ import {
   Download,
   FilePlus2,
   FolderInput,
+  Menu,
   Network,
   Redo2,
   Search,
@@ -21,6 +22,7 @@ import DocumentEditor from "./components/DocumentEditor";
 import { ImportPage, SettingsPage } from "./components/ImportSettings";
 import StatsPage from "./components/StatsPage";
 import { AgentBubble, AgentConsole, AgentSystemProvider } from "./components/AgentSystem";
+import MobileGestureMenu from "./components/MobileGestureMenu";
 
 const navigation = [
   { to: "/", label: "Dashboard", mobileLabel: "Home", Icon: Activity, end: true },
@@ -94,6 +96,7 @@ function WorkbenchShell({ children }) {
   const navigate = useNavigate();
   const { loading, notice, setNotice, canUndo, canRedo, undo, redo, documents } = useQuasar();
   const [query, setQuery] = useState("");
+  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
 
   function submitSearch(event) {
     event.preventDefault();
@@ -120,6 +123,15 @@ function WorkbenchShell({ children }) {
 
       <section className="workbench">
         <header className="topbar">
+          <button
+            className="icon-button mobile-menu-button"
+            type="button"
+            aria-label="Open menu"
+            aria-expanded={mobileNavigationOpen}
+            onClick={() => setMobileNavigationOpen(true)}
+          >
+            <Menu size={21} aria-hidden="true" />
+          </button>
           <form className="global-search" onSubmit={submitSearch} role="search">
             <Search size={17} aria-hidden="true" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search workspace" placeholder="Search IDs, titles, data, sources…" />
@@ -150,6 +162,7 @@ function WorkbenchShell({ children }) {
       <nav className="mobile-nav" aria-label="Mobile navigation">
         <NavigationLinks mobile />
       </nav>
+      <MobileGestureMenu open={mobileNavigationOpen} onOpenChange={setMobileNavigationOpen} />
     </div>
   );
 }
