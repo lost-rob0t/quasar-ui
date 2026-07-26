@@ -1,7 +1,3 @@
-.graph-toolbar-mobile-toggle {
-  display: none;
-}
-
 .agent-log-collapsible {
   position: relative;
   display: grid;
@@ -97,6 +93,137 @@
   min-height: 44px;
 }
 
+.graph-canvas-actions {
+  position: absolute;
+  top: .7rem;
+  right: .7rem;
+  z-index: 18;
+  display: grid;
+  gap: .4rem;
+  pointer-events: auto;
+}
+
+.graph-canvas-action {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, var(--accent));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  color: var(--text);
+  box-shadow: 0 8px 28px #0008;
+  backdrop-filter: blur(12px);
+}
+
+.graph-canvas-action:hover,
+.graph-canvas-action:focus-visible,
+.graph-canvas-action[aria-pressed="true"] {
+  outline: none;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--panel-2) 72%, var(--accent));
+  color: var(--white);
+}
+
+.graph-toolbar > .button.small,
+.graph-toolbar > .checkbox.compact {
+  display: none;
+}
+
+.graph-context-menu.canvas-actions.radial-root {
+  width: 228px !important;
+  height: 228px;
+  max-height: none;
+  overflow: visible;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.graph-context-menu.canvas-actions.radial-root > .graph-context-header,
+.graph-context-menu.canvas-actions.radial-root > .graph-context-search {
+  display: none;
+}
+
+.graph-context-menu.canvas-actions.radial-root > .graph-context-palette {
+  position: absolute;
+  top: 66px;
+  left: 66px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  place-items: center;
+  gap: 3px;
+  width: 96px;
+  height: 96px;
+  padding: 11px;
+  border: 1px solid color-mix(in srgb, var(--line) 72%, var(--accent));
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  box-shadow: 0 14px 38px #000b;
+  backdrop-filter: blur(14px);
+}
+
+.graph-context-menu.canvas-actions.radial-root > .graph-context-palette button {
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--panel-2);
+}
+
+.graph-context-menu.canvas-actions.radial-root > button[role="menuitem"] {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  gap: .15rem;
+  width: 76px;
+  height: 58px;
+  padding: .35rem;
+  border: 1px solid color-mix(in srgb, var(--line) 76%, var(--accent));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  box-shadow: 0 12px 28px #0009;
+  color: var(--text);
+  font-size: .62rem;
+  font-weight: 750;
+  line-height: 1.05;
+  text-align: center;
+  backdrop-filter: blur(12px);
+}
+
+.graph-context-menu.canvas-actions.radial-root > button[role="menuitem"] svg:last-child {
+  display: none;
+}
+
+.graph-context-menu.canvas-actions.radial-root > button[role="menuitem"]:nth-of-type(1) {
+  top: 0;
+  left: 76px;
+}
+
+.graph-context-menu.canvas-actions.radial-root > button[role="menuitem"]:nth-of-type(2) {
+  top: 85px;
+  right: 0;
+}
+
+.graph-context-menu.canvas-actions.radial-root > button[role="menuitem"]:nth-of-type(3) {
+  bottom: 0;
+  left: 76px;
+}
+
+.graph-context-menu.canvas-actions.radial-root > button[role="menuitem"]:nth-of-type(4) {
+  top: 85px;
+  left: 0;
+}
+
+.graph-context-menu.canvas-actions.radial-root > button[role="menuitem"]:hover,
+.graph-context-menu.canvas-actions.radial-root > button[role="menuitem"]:focus-visible {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--panel-2) 68%, var(--accent));
+}
+
 @media (max-width: 850px) {
   body:has(.graph-page) {
     overflow: hidden;
@@ -133,7 +260,7 @@
 
   .graph-toolbar {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 48px 48px;
+    grid-template-columns: minmax(0, 1fr);
     gap: .35rem;
     padding: .4rem;
     border: 0;
@@ -141,26 +268,8 @@
     border-radius: 0;
   }
 
-  .graph-toolbar-mobile-toggle {
-    position: fixed;
-    top: calc(env(safe-area-inset-top) + 48px);
-    right: max(.4rem, env(safe-area-inset-right));
-    z-index: 95;
-    display: inline-flex;
-    width: 48px;
-    height: 44px;
-  }
-
-  .graph-toolbar-mobile-toggle svg:last-child {
-    transition: transform .14s ease;
-  }
-
-  .graph-toolbar-mobile-toggle[aria-expanded="true"] svg:last-child {
-    transform: rotate(180deg);
-  }
-
   .graph-toolbar .graph-search {
-    grid-column: 1 / -1;
+    grid-column: 1;
     min-height: 40px;
   }
 
@@ -173,28 +282,12 @@
   .graph-toolbar > select[aria-label="Dataset filter"] {
     display: block;
     grid-column: 1;
-    grid-row: 2;
     width: 100%;
     min-height: 44px;
   }
 
-  .graph-toolbar > button.button.small:nth-of-type(1) {
-    display: inline-flex;
-    grid-column: 2;
-    grid-row: 2;
-    width: 48px;
-    min-height: 44px;
-    padding: 0;
-    font-size: 0;
-  }
-
-  .graph-toolbar > button.button.small:nth-of-type(1)::before {
-    content: "Fit";
-    font-size: .7rem;
-  }
-
   .graph-toolbar .graph-count {
-    grid-column: 1 / -1;
+    grid-column: 1;
     margin: 0;
     padding: 0 .2rem;
     overflow: hidden;
@@ -204,30 +297,6 @@
     text-align: left;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .graph-toolbar[data-mobile-collapsed="false"] {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    padding-right: 3.55rem;
-  }
-
-  .graph-toolbar[data-mobile-collapsed="false"] .graph-search,
-  .graph-toolbar[data-mobile-collapsed="false"] .graph-count {
-    grid-column: 1 / -1;
-  }
-
-  .graph-toolbar[data-mobile-collapsed="false"] > select,
-  .graph-toolbar[data-mobile-collapsed="false"] > .button.small,
-  .graph-toolbar[data-mobile-collapsed="false"] > .checkbox {
-    display: flex;
-    grid-column: auto;
-    grid-row: auto;
-    width: 100%;
-    min-height: 40px;
-  }
-
-  .graph-toolbar[data-mobile-collapsed="false"] > select {
-    display: block;
   }
 
   .graph-workbench {
@@ -268,6 +337,17 @@
     display: none;
   }
 
+  .graph-canvas-actions {
+    top: .5rem;
+    right: .5rem;
+    gap: .3rem;
+  }
+
+  .graph-canvas-action {
+    width: 40px;
+    height: 40px;
+  }
+
   .graph-empty-state {
     padding: 1rem;
   }
@@ -279,6 +359,11 @@
   .graph-empty-state p {
     max-width: 32ch;
     font-size: .85rem;
+  }
+
+  .graph-context-menu.canvas-actions.radial-root {
+    transform: scale(.92);
+    transform-origin: top left;
   }
 
   .agent-float,
