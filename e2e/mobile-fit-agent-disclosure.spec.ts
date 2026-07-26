@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("uses a full-screen graph canvas with only compact buttons", async ({ page }) => {
+test("uses a full-screen graph canvas with three mobile controls", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/graph");
 
@@ -14,15 +14,28 @@ test("uses a full-screen graph canvas with only compact buttons", async ({ page 
   await expect(page.getByLabel("Maltego graph layout", { exact: true })).toBeHidden();
   await expect(page.getByLabel("Active graph", { exact: true })).toBeHidden();
 
-  await expect(page.getByRole("button", { name: "Open menu", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Search graph" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Cycle active graph" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Cycle dataset" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Cycle layout" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Graph tools" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Add graph document" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Fit graph" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Focus selection" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Toggle labels" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Import documents" })).toBeVisible();
+  await expect(page.locator(".graph-mobile-primary-button")).toHaveCount(3);
+  await expect(page.getByRole("button", { name: "Search graph" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Cycle layout" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Fit graph" })).toBeHidden();
+
+  const centers = await page.locator(".graph-mobile-primary-button").evaluateAll((buttons) =>
+    buttons.map((button) => {
+      const buttonRect = button.getBoundingClientRect();
+      const iconRect = button.querySelector("svg")?.getBoundingClientRect();
+      return {
+        x: Math.abs((buttonRect.left + buttonRect.width / 2) - ((iconRect?.left || 0) + (iconRect?.width || 0) / 2)),
+        y: Math.abs((buttonRect.top + buttonRect.height / 2) - ((iconRect?.top || 0) + (iconRect?.height || 0) / 2))
+      };
+    })
+  );
+  for (const center of centers) {
+    expect(center.x).toBeLessThanOrEqual(1);
+    expect(center.y).toBeLessThanOrEqual(1);
+  }
 
   const stage = await page.locator(".graph-stage").boundingBox();
   expect(stage).not.toBeNull();
@@ -31,14 +44,28 @@ test("uses a full-screen graph canvas with only compact buttons", async ({ page 
   expect(stage?.width).toBe(390);
   expect(stage?.height).toBe(844);
 
-  await page.getByRole("button", { name: "Search graph" }).click();
+  await page.getByRole("button", { name: "Graph tools" }).click();
+  const tray = page.getByRole("menu", { name: "Graph tools" });
+  await expect(tray).toBeVisible();
+  await expect(tray.getByRole("menuitem", { name: "Navigation" })).toBeVisible();
+  await expect(tray.getByRole("menuitem", { name: "Search" })).toBeVisible();
+  await expect(tray.getByRole("menuitem", { name: "Graph" })).toBeVisible();
+  await expect(tray.getByRole("menuitem", { name: "Dataset" })).toBeVisible();
+  await expect(tray.getByRole("menuitem", { name: "Layout" })).toBeVisible();
+  await expect(tray.getByRole("menuitem", { name: "Fit" })).toBeVisible();
+  await expect(tray.getByRole("menuitem", { name: "Focus" })).toBeVisible();
+  await expect(tray.getByRole("menuitem", { name: "Labels" })).toBeVisible();
+  await expect(tray.getByRole("menuitem", { name: "Remove" })).toBeVisible();
+
+  await tray.getByRole("menuitem", { name: "Search" }).click();
   await expect(page.getByRole("textbox", { name: "Graph search overlay" })).toBeVisible();
   await page.getByRole("textbox", { name: "Graph search overlay" }).fill("Jane");
   await expect(page.locator(".graph-search input")).toHaveValue("Jane");
   await page.getByRole("button", { name: "Close graph search" }).click();
 
   await expect(page.getByLabel("Maltego graph layout", { exact: true })).toHaveValue("organic");
-  await page.getByRole("button", { name: "Cycle layout" }).click();
+  await page.getByRole("button", { name: "Graph tools" }).click();
+  await page.getByRole("menu", { name: "Graph tools" }).getByRole("menuitem", { name: "Layout" }).click();
   await expect(page.getByLabel("Maltego graph layout", { exact: true })).toHaveValue("interactive-organic");
 
   await page.locator(".graph-stage").click({ button: "right", position: { x: 180, y: 360 } });
