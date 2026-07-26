@@ -1,4 +1,4 @@
-// Platform-independent graph model, validation, registry, mutation, and history APIs.
+// Platform-independent graph model, validation, mutation, transaction, and history APIs.
 export * from "./graph-commands";
 export * from "./graph-document";
 export * from "./graph-history";
