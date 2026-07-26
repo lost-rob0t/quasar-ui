@@ -18,6 +18,7 @@ import {
 } from "starintel_doc";
 import { SchemaField } from "./DocumentEditor";
 import { actorApplicability, isBuiltinActor } from "../lib/actors";
+import { connectedDocumentIds } from "../lib/document-delete";
 import { buildGraph, filterGraph, findPaths, importedGraphNodeIds, partitionDocumentsByReview } from "../lib/graph";
 import { activeGraphMembershipKey } from "../lib/graph-workspaces";
 import { themedGraphStyle } from "../lib/graph-style";
@@ -587,7 +588,7 @@ export default function GraphPage() {
     documents, workspace, selectedIds, selectedDocuments, select, persistWorkspace,
     actors, runActor, settings, setNotice, graphs, activeGraph,
     addDocumentsToActiveGraph, removeDocumentsFromActiveGraph,
-    createGraph, switchGraph, renameGraph, deleteGraph, execute,
+    createGraph, switchGraph, renameGraph, deleteGraph, clearGraph, execute,
     queueStatus, startQueue, stopQueue
   } = useQuasar();
   const apiRef = useRef(null);
@@ -915,6 +916,27 @@ export default function GraphPage() {
     }
   }
 
+  function clearCurrentGraph() {
+    const corpusView = activeGraph?.documentIds === null;
+    const message = corpusView
+      ? "Clear the All documents view by creating a new empty graph? Corpus documents will not be deleted."
+      : `Clear graph "${activeGraph?.name || ""}"? Corpus documents will not be deleted.`;
+    if (!window.confirm(message)) return;
+    try {
+      clearGraph();
+      setReviewStatus("all");
+      clearFilters();
+      select([]);
+      setCanvasMenu(null);
+      setNotice({
+        kind: "success",
+        message: corpusView ? "Created a new empty graph." : "Graph cleared."
+      });
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
+  }
+
   function addExistingDocuments(ids) {
     const members = new Set([...(activeGraph?.documentIds || []), ...ids]);
     const relationIds = documents
@@ -928,22 +950,13 @@ export default function GraphPage() {
 
   function removeSelectionFromGraph() {
     if (!selectedIds.length || activeGraph?.documentIds === null) return;
-    const selectedSet = new Set(selectedIds);
-    const relationIds = scopedDocuments
-      .filter((document) => document.dtype === "relation")
-      .filter((document) => selectedSet.has(document.data?.subject) || selectedSet.has(document.data?.object))
-      .map((document) => document._id);
-    removeDocumentsFromActiveGraph([...selectedIds, ...relationIds]);
+    removeDocumentsFromActiveGraph(connectedDocumentIds(scopedDocuments, selectedIds));
   }
 
   function removeNodeFromGraph(id) {
     if (activeGraph?.documentIds === null) return;
     select([id]);
-    const relationIds = scopedDocuments
-      .filter((document) => document.dtype === "relation")
-      .filter((document) => document.data?.subject === id || document.data?.object === id)
-      .map((document) => document._id);
-    removeDocumentsFromActiveGraph([id, ...relationIds]);
+    removeDocumentsFromActiveGraph(connectedDocumentIds(scopedDocuments, [id]));
     setCanvasMenu(null);
   }
 
@@ -965,12 +978,7 @@ export default function GraphPage() {
   }
 
   async function deleteCorpusDocuments(ids) {
-    const selectedSet = new Set(ids);
-    const relationIds = documents
-      .filter((document) => document.dtype === "relation")
-      .filter((document) => selectedSet.has(document.data?.subject) || selectedSet.has(document.data?.object))
-      .map((document) => document._id);
-    const deleteIds = [...new Set([...ids, ...relationIds])];
+    const deleteIds = connectedDocumentIds(documents, ids);
     if (!window.confirm(`Delete ${deleteIds.length} corpus document(s)? This includes connected relation documents and can be undone.`)) return;
     try {
       await execute(
@@ -978,6 +986,7 @@ export default function GraphPage() {
         `Delete ${deleteIds.length} graph document(s)`
       );
       if (activeGraph?.documentIds !== null) removeDocumentsFromActiveGraph(deleteIds);
+      select([]);
       setCanvasMenu(null);
     } catch (error) {
       setNotice({ kind: "error", message: error.message });
@@ -1047,6 +1056,8 @@ export default function GraphPage() {
           <div className="button-row">
             {activeGraph?.documentIds !== null && <button className="button" onClick={() => setShowMembershipAdd(true)}><Plus size={16} /> Add from corpus</button>}
             {activeGraph?.documentIds !== null && <button className="button danger" onClick={removeSelectionFromGraph} disabled={!selectedIds.length}>Remove from graph</button>}
+            <button className="button danger" onClick={() => deleteCorpusDocuments(selectedIds)} disabled={!selectedIds.length}>Delete selected documents</button>
+            <button className="button" onClick={clearCurrentGraph}>Clear graph</button>
             <button className="button" onClick={openSelectedRelation} disabled={selectedIds.length !== 2}><Link2 size={16} /> Connect selected</button>
             <button className="button primary" onClick={() => openQuickAdd()}><Plus size={16} /> Add graph document</button>
           </div>
@@ -1265,6 +1276,8 @@ export default function GraphPage() {
                           {menuMatches("Fit graph") && <button role="menuitem" onClick={() => { fit(); setCanvasMenu(null); }}><Focus size={15} /> Fit graph</button>}
                           {menuMatches("Focus selection") && <button role="menuitem" disabled={!selectedIds.length} onClick={() => { focusSelection(); setCanvasMenu(null); }}><Focus size={15} /> Focus selection</button>}
                           {menuMatches("Clear filters") && <button role="menuitem" onClick={() => { clearFilters(); setCanvasMenu(null); }}><X size={15} /> Clear filters</button>}
+                          {menuMatches("Clear graph") && <button role="menuitem" className="danger" onClick={clearCurrentGraph}><Trash2 size={15} /> Clear graph</button>}
+                          {selectedIds.length > 0 && menuMatches("Delete selected documents") && <button role="menuitem" className="danger" onClick={() => deleteCorpusDocuments(selectedIds)}><Trash2 size={15} /> Delete selected documents</button>}
                           {activeGraph?.documentIds !== null && menuMatches("Add from corpus") && <button role="menuitem" onClick={() => { setCanvasMenu(null); setShowMembershipAdd(true); }}><Database size={15} /> Add from corpus</button>}
                           {menuMatches("Create another graph") && <button role="menuitem" onClick={() => { setCanvasMenu(null); setShowGraphCreate(true); }}><FolderPlus size={15} /> Create another graph</button>}
                           {menuMatches("Rename graph") && <button role="menuitem" onClick={() => { setCanvasMenu(null); renameCurrentGraph(); }}><Pencil size={15} /> Rename graph</button>}

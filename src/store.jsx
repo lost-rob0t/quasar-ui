@@ -25,6 +25,7 @@ import { probeStarIntelServer, submitTargetToServer } from "./lib/starintel-serv
 import { applyTheme } from "./lib/themes";
 import {
   addDocumentsToActiveGraph as addDocumentsToGraphWorkspace,
+  clearActiveGraph as clearGraphWorkspace,
   createGraph as createGraphWorkspace,
   deleteActiveGraph as deleteGraphWorkspace,
   getActiveGraph,
@@ -278,6 +279,10 @@ export function QuasarProvider({ children }) {
     return commitWorkspace(deleteGraphWorkspace(workspaceRef.current || {}));
   }, [commitWorkspace]);
 
+  const clearGraph = useCallback(() => {
+    return commitWorkspace(clearGraphWorkspace(workspaceRef.current || {}));
+  }, [commitWorkspace]);
+
   const select = useCallback((ids) => {
     const normalized = [...new Set(ids)];
     const currentIds = workspaceRef.current?.selectedIds || selectedIds;
@@ -403,6 +408,7 @@ export function QuasarProvider({ children }) {
     switchGraph,
     renameGraph,
     deleteGraph,
+    clearGraph,
     select,
     startSync,
     stopSync,
@@ -423,7 +429,7 @@ export function QuasarProvider({ children }) {
     documents, settings, workspace, selectedIds, loading, notice, syncStatus, serverStatus, queueStatus, history,
     execute, executeBatch, undo, redo, importFileSet, persistSettings, persistWorkspace,
     addDocumentsToActiveGraph, removeDocumentsFromActiveGraph,
-    createGraph, switchGraph, renameGraph, deleteGraph,
+    createGraph, switchGraph, renameGraph, deleteGraph, clearGraph,
     activeGraph, select, startSync, stopSync, synchronize, testServer, submitTarget,
     startQueue, stopQueue, actors, runActor
   ]);

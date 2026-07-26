@@ -190,7 +190,9 @@ test.describe("responsive application shell", () => {
     await expect(tray.getByRole("menuitem", { name: "Fit" })).toBeVisible();
     await expect(tray.getByRole("menuitem", { name: "Focus" })).toBeVisible();
     await expect(tray.getByRole("menuitem", { name: "Labels" })).toBeVisible();
+    await expect(tray.getByRole("menuitem", { name: "Clear" })).toBeVisible();
     await expect(tray.getByRole("menuitem", { name: "Remove" })).toBeVisible();
+    await expect(tray.getByRole("menuitem", { name: "Delete" })).toBeVisible();
 
     const layout = await page.locator(".graph-stage").evaluate((stage) => {
       const rect = stage.getBoundingClientRect();

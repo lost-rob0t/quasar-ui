@@ -187,6 +187,7 @@ export default function OperatorUiEnhancer() {
   const [labelsOn, setLabelsOn] = useState(true);
   const [focusDisabled, setFocusDisabled] = useState(true);
   const [removeDisabled, setRemoveDisabled] = useState(true);
+  const [deleteDisabled, setDeleteDisabled] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [datasetLabel, setDatasetLabel] = useState("All datasets");
@@ -206,6 +207,7 @@ export default function OperatorUiEnhancer() {
       setGraphStage((current) => current === nextStage ? current : nextStage);
       setFocusDisabled(Boolean(toolbarButton("Focus")?.disabled));
       setRemoveDisabled(Boolean(headingButton("Remove from graph")?.disabled));
+      setDeleteDisabled(Boolean(headingButton("Delete selected documents")?.disabled));
       const labels = labelsInput();
       if (labels) setLabelsOn(labels.checked);
       const search = searchControl();
@@ -395,6 +397,16 @@ export default function OperatorUiEnhancer() {
         </button>
         <button
           type="button"
+          className="graph-canvas-action"
+          aria-label="Clear graph"
+          title="Clear graph"
+          onClick={() => headingButton("Clear graph")?.click()}
+        >
+          <X size={18} aria-hidden="true" />
+          <span>Clear</span>
+        </button>
+        <button
+          type="button"
           className="graph-canvas-action danger"
           aria-label="Remove from graph"
           title="Remove from graph"
@@ -403,6 +415,17 @@ export default function OperatorUiEnhancer() {
         >
           <Trash2 size={18} aria-hidden="true" />
           <span>Remove</span>
+        </button>
+        <button
+          type="button"
+          className="graph-canvas-action danger"
+          aria-label="Delete selected documents"
+          title="Delete selected documents"
+          disabled={deleteDisabled}
+          onClick={() => headingButton("Delete selected documents")?.click()}
+        >
+          <Trash2 size={18} aria-hidden="true" />
+          <span>Delete</span>
         </button>
       </div>
 

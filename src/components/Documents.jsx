@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { ArrowLeft, Download, Edit3, ExternalLink, Network, Plus, Trash2 } from "lucide-react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { dtypes, documentLabel } from "starintel_doc";
+import { connectedDocumentIds } from "../lib/document-delete";
 import { documentsToJsonl, downloadText } from "../lib/importer";
 import { operation } from "../lib/operations";
 import { useQuasar } from "../store";
@@ -22,7 +23,7 @@ function safeExternalUrl(value) {
 }
 
 export function DocumentsPage() {
-  const { documents } = useQuasar();
+  const { documents, execute, setNotice } = useQuasar();
   const [params, setParams] = useSearchParams();
   const query = params.get("q") || "";
   const dtype = params.get("dtype") || "";
@@ -39,6 +40,19 @@ export function DocumentsPage() {
     if (value) next.set(key, value); else next.delete(key);
     setParams(next);
   };
+
+  async function removeDocument(document) {
+    const deleteIds = connectedDocumentIds(documents, [document._id]);
+    if (!window.confirm(`Delete ${document._id} and ${deleteIds.length - 1} connected relation document(s)?`)) return;
+    try {
+      await execute(
+        operation.batch(deleteIds.map((item) => operation.remove(item)), "Delete corpus documents"),
+        `Delete ${deleteIds.length} corpus document(s)`
+      );
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
+  }
 
   return (
     <section>
@@ -69,7 +83,7 @@ export function DocumentsPage() {
 
       <div className="table-panel">
         <table>
-          <thead><tr><th>Document</th><th>Type</th><th>Dataset</th><th>Updated</th><th>Evidence</th></tr></thead>
+          <thead><tr><th>Document</th><th>Type</th><th>Dataset</th><th>Updated</th><th>Evidence</th><th>Actions</th></tr></thead>
           <tbody>
             {visible.map((document) => (
               <tr key={document._id}>
@@ -82,6 +96,11 @@ export function DocumentsPage() {
                 <td>{document.dataset}</td>
                 <td>{new Date(document.date_updated).toLocaleString()}</td>
                 <td>{document.evidence?.length || 0} evidence · {document.sources?.length || 0} sources</td>
+                <td>
+                  <button className="icon-button danger" type="button" aria-label={`Delete ${documentLabel(document)}`} title="Delete document" onClick={() => removeDocument(document)}>
+                    <Trash2 size={15} />
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -106,9 +125,13 @@ export function DocumentPage() {
   if (!document) return <section className="empty-state"><h1>Document not found</h1><code>{id}</code><Link className="button" to="/documents">Back to documents</Link></section>;
 
   async function remove() {
-    if (!window.confirm(`Delete ${document._id}?`)) return;
+    const deleteIds = connectedDocumentIds(documents, [document._id]);
+    if (!window.confirm(`Delete ${document._id} and ${deleteIds.length - 1} connected relation document(s)?`)) return;
     try {
-      await execute(operation.remove(document._id), `Delete ${document._id}`);
+      await execute(
+        operation.batch(deleteIds.map((item) => operation.remove(item)), "Delete corpus documents"),
+        `Delete ${deleteIds.length} corpus document(s)`
+      );
       navigate("/documents");
     } catch (error) {
       setNotice({ kind: "error", message: error.message });

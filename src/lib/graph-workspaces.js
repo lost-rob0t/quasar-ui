@@ -164,6 +164,19 @@ export function renameActiveGraph(workspace, name) {
   return updateActiveGraph(workspace, { name: cleanName });
 }
 
+export function clearActiveGraph(workspace, { emptyGraphName = "Empty graph" } = {}) {
+  const normalized = normalizeGraphWorkspace(workspace);
+  const active = getActiveGraph(normalized);
+  if (active.documentIds === null) return createGraph(normalized, emptyGraphName);
+  return updateActiveGraph(normalized, {
+    documentIds: [],
+    positions: {},
+    viewport: null,
+    selectedIds: [],
+    groups: {}
+  });
+}
+
 export function deleteActiveGraph(workspace) {
   const normalized = normalizeGraphWorkspace(workspace);
   if (normalized.graphs.length === 1) throw new Error("The last graph cannot be deleted");

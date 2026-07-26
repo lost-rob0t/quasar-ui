@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   activeGraphMembershipKey,
   addDocumentsToActiveGraph,
+  clearActiveGraph,
   createGraph,
   deleteActiveGraph,
   documentsForActiveGraph,
@@ -117,4 +118,30 @@ describe("graph workspaces", () => {
     expect(() => removeDocumentsFromActiveGraph(switchActiveGraph(workspace, "all-documents"), ["b"]))
       .toThrow("All documents");
   });
+  it("clears a custom graph without deleting the graph", () => {
+    let workspace = createGraph({}, "Case Alpha", { id: "case-alpha" });
+    workspace = addDocumentsToActiveGraph(workspace, ["a", "b"], {
+      positions: { a: { x: 1, y: 2 } },
+      selectedIds: ["a"]
+    });
+    workspace = clearActiveGraph(workspace);
+
+    expect(getActiveGraph(workspace)).toMatchObject({
+      id: "case-alpha",
+      documentIds: [],
+      positions: {},
+      viewport: null,
+      selectedIds: []
+    });
+  });
+
+  it("clears the corpus view by opening a new empty graph", () => {
+    const workspace = clearActiveGraph({}, { emptyGraphName: "Fresh graph" });
+    expect(getActiveGraph(workspace)).toMatchObject({
+      name: "Fresh graph",
+      documentIds: []
+    });
+    expect(workspace.graphs.some((graph) => graph.id === "all-documents")).toBe(true);
+  });
+
 });

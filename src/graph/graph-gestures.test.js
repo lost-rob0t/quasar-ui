@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boxesOverlap } from "./graph-gestures";
+import { boxesOverlap, relationDropPadding } from "./graph-gestures";
 
 describe("graph gestures", () => {
   it("detects a relation drop when node boxes overlap", () => {
@@ -24,4 +24,9 @@ describe("graph gestures", () => {
       8
     )).toBe(false);
   });
+  it("uses a larger relation target for touch dragging", () => {
+    expect(relationDropPadding("touch")).toBeGreaterThan(relationDropPadding("mouse"));
+    expect(relationDropPadding("pen")).toBe(relationDropPadding("touch"));
+  });
+
 });

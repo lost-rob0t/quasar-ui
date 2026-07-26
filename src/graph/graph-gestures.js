@@ -1,5 +1,7 @@
 const GESTURE_SCRATCH = "quasar-graph-gestures";
-const DROP_PADDING = 14;
+const DESKTOP_DROP_PADDING = 14;
+const TOUCH_DROP_PADDING = 30;
+const DRAG_THRESHOLD_SQUARED = 36;
 
 function distanceSquared(left, right) {
   const dx = left.x - right.x;
@@ -16,7 +18,13 @@ export function boxesOverlap(left, right, padding = 0) {
   );
 }
 
-export function findRelationDropTarget(cy, sourceNode) {
+export function relationDropPadding(pointerType = "") {
+  return pointerType === "touch" || pointerType === "pen"
+    ? TOUCH_DROP_PADDING
+    : DESKTOP_DROP_PADDING;
+}
+
+export function findRelationDropTarget(cy, sourceNode, padding = DESKTOP_DROP_PADDING) {
   if (!cy || !sourceNode?.length) return null;
   const sourceBox = sourceNode.renderedBoundingBox({ includeLabels: false, includeOverlays: false });
   const sourcePosition = sourceNode.renderedPosition();
@@ -31,7 +39,7 @@ export function findRelationDropTarget(cy, sourceNode) {
     ) return;
 
     const targetBox = candidate.renderedBoundingBox({ includeLabels: false, includeOverlays: false });
-    if (!boxesOverlap(sourceBox, targetBox, DROP_PADDING)) return;
+    if (!boxesOverlap(sourceBox, targetBox, padding)) return;
     const distance = distanceSquared(sourcePosition, candidate.renderedPosition());
     if (distance < bestDistance) {
       best = candidate;
@@ -88,7 +96,8 @@ export function installGraphGestures(cy) {
 
   const state = {
     armedNodeId: null,
-    drag: null
+    drag: null,
+    panningEnabled: true
   };
   cy.scratch(GESTURE_SCRATCH, state);
 
@@ -103,24 +112,58 @@ export function installGraphGestures(cy) {
   });
   cy.on("grab", "node", (event) => {
     const node = event.target;
-    state.drag = state.armedNodeId === node.id()
-      ? { id: node.id(), position: { ...node.position() } }
-      : null;
+    if (node.data("unresolved")) return;
+    const pointerType = event.originalEvent?.pointerType || "";
+    state.panningEnabled = cy.panningEnabled();
+    cy.panningEnabled(false);
+    state.drag = {
+      id: node.id(),
+      position: { ...node.position() },
+      renderedPosition: { ...node.renderedPosition() },
+      relationArmed: state.armedNodeId === node.id() && node.selected(),
+      pointerType,
+      moved: false
+    };
+    if (!node.selected()) {
+      cy.$("node:selected").unselect();
+      node.select();
+    }
+  });
+  cy.on("drag", "node", (event) => {
+    if (!state.drag || state.drag.id !== event.target.id()) return;
+    state.drag.moved = distanceSquared(
+      state.drag.renderedPosition,
+      event.target.renderedPosition()
+    ) >= DRAG_THRESHOLD_SQUARED;
   });
   cy.on("dragfree", "node", (event) => {
     const sourceNode = event.target;
     const drag = state.drag;
     state.drag = null;
+    cy.panningEnabled(state.panningEnabled);
     if (!drag || drag.id !== sourceNode.id()) return;
 
-    const targetNode = findRelationDropTarget(cy, sourceNode);
+    state.armedNodeId = sourceNode.id();
+    if (!drag.moved || !drag.relationArmed) return;
+
+    const targetNode = findRelationDropTarget(
+      cy,
+      sourceNode,
+      relationDropPadding(drag.pointerType)
+    );
     if (!targetNode) return;
 
     sourceNode.position(drag.position);
     state.armedNodeId = null;
     emitRelationDraft(cy, sourceNode, targetNode);
   });
-  cy.on("taphold", emitContextTap);
+  cy.on("free", "node", () => {
+    if (!state.drag) cy.panningEnabled(state.panningEnabled);
+  });
+  cy.on("taphold", (event) => {
+    if (state.drag?.moved) return;
+    emitContextTap(event);
+  });
 
   return cy;
 }
