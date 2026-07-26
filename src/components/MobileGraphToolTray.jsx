@@ -61,7 +61,9 @@ export default function MobileGraphToolTray() {
   const location = useLocation();
   const navigate = useNavigate();
   const graphRoute = location.pathname === "/graph";
-  const [mobile, setMobile] = useState(() => window.matchMedia?.(MOBILE_QUERY).matches ?? false);
+  const [mobile, setMobile] = useState(
+    () => window.matchMedia?.(MOBILE_QUERY).matches ?? false
+  );
   const [stage, setStage] = useState(null);
   const [open, setOpen] = useState(false);
   const [focusDisabled, setFocusDisabled] = useState(true);
@@ -69,6 +71,7 @@ export default function MobileGraphToolTray() {
   const [labelsOn, setLabelsOn] = useState(true);
 
   useEffect(() => {
+    if (!window.matchMedia) return undefined;
     const query = window.matchMedia(MOBILE_QUERY);
     const sync = () => setMobile(query.matches);
     sync();
@@ -89,10 +92,12 @@ export default function MobileGraphToolTray() {
       frame = requestAnimationFrame(() => {
         frame = 0;
         const nextStage = document.querySelector(".graph-stage");
-        setStage((current) => current === nextStage ? current : nextStage);
+        setStage((current) => (current === nextStage ? current : nextStage));
         setFocusDisabled(Boolean(hiddenGraphAction("Focus selection")?.disabled));
         setRemoveDisabled(Boolean(hiddenGraphAction("Remove from graph")?.disabled));
-        setLabelsOn(hiddenGraphAction("Toggle labels")?.getAttribute("aria-pressed") === "true");
+        setLabelsOn(
+          hiddenGraphAction("Toggle labels")?.getAttribute("aria-pressed") === "true"
+        );
       });
     };
 
@@ -163,15 +168,56 @@ export default function MobileGraphToolTray() {
             onClick={() => setOpen(false)}
           />
           <div className="graph-mobile-tools-tray" role="menu" aria-label="Graph tools">
-            <ToolButton label="Navigation" Icon={PanelLeftOpen} onClick={() => run(() => document.querySelector('button[aria-label="Open menu"]')?.click())} />
-            <ToolButton label="Search" Icon={Search} onClick={() => run(() => hiddenGraphModeAction("Search graph")?.click())} />
-            <ToolButton label="Graph" Icon={Network} onClick={() => run(() => cycleControl(selectControl("Active graph")))} />
-            <ToolButton label="Dataset" Icon={Database} onClick={() => run(() => cycleControl(selectControl("Dataset filter")))} />
-            <ToolButton label="Layout" Icon={LayoutGrid} onClick={() => run(() => cycleControl(layoutControl()))} />
-            <ToolButton label="Fit" Icon={Maximize2} onClick={() => run(() => hiddenGraphAction("Fit graph")?.click())} />
-            <ToolButton label="Focus" Icon={Focus} disabled={focusDisabled} onClick={() => run(() => hiddenGraphAction("Focus selection")?.click())} />
-            <ToolButton label="Labels" Icon={Tags} pressed={labelsOn} onClick={() => run(() => hiddenGraphAction("Toggle labels")?.click())} />
-            <ToolButton label="Remove" Icon={Trash2} disabled={removeDisabled} onClick={() => run(() => hiddenGraphAction("Remove from graph")?.click())} />
+            <ToolButton
+              label="Navigation"
+              Icon={PanelLeftOpen}
+              onClick={() =>
+                run(() => document.querySelector('button[aria-label="Open menu"]')?.click())
+              }
+            />
+            <ToolButton
+              label="Search"
+              Icon={Search}
+              onClick={() => run(() => hiddenGraphModeAction("Search graph")?.click())}
+            />
+            <ToolButton
+              label="Graph"
+              Icon={Network}
+              onClick={() => run(() => cycleControl(selectControl("Active graph")))}
+            />
+            <ToolButton
+              label="Dataset"
+              Icon={Database}
+              onClick={() => run(() => cycleControl(selectControl("Dataset filter")))}
+            />
+            <ToolButton
+              label="Layout"
+              Icon={LayoutGrid}
+              onClick={() => run(() => cycleControl(layoutControl()))}
+            />
+            <ToolButton
+              label="Fit"
+              Icon={Maximize2}
+              onClick={() => run(() => hiddenGraphAction("Fit graph")?.click())}
+            />
+            <ToolButton
+              label="Focus"
+              Icon={Focus}
+              disabled={focusDisabled}
+              onClick={() => run(() => hiddenGraphAction("Focus selection")?.click())}
+            />
+            <ToolButton
+              label="Labels"
+              Icon={Tags}
+              pressed={labelsOn}
+              onClick={() => run(() => hiddenGraphAction("Toggle labels")?.click())}
+            />
+            <ToolButton
+              label="Remove"
+              Icon={Trash2}
+              disabled={removeDisabled}
+              onClick={() => run(() => hiddenGraphAction("Remove from graph")?.click())}
+            />
           </div>
         </>
       )}
