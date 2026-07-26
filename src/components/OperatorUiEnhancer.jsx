@@ -39,6 +39,12 @@ function toggleAgentEntry(entry) {
   entry.setAttribute("aria-label", `${expanded ? "Collapse" : "Expand"} ${disclosureLabel(entry)}`);
 }
 
+function prepareGraphControls() {
+  document.querySelectorAll(".graph-toolbar .button.small").forEach((button) => {
+    if (button.textContent.trim() === "Fit") button.setAttribute("aria-label", "Fit");
+  });
+}
+
 function updatePersistentSecretCopy() {
   document.querySelectorAll(".agent-editor .field > span").forEach((node) => {
     if (node.textContent.includes("set for this session")) {
@@ -63,6 +69,7 @@ function updatePersistentSecretCopy() {
 
 function prepareUi() {
   prepareAgentEntries();
+  prepareGraphControls();
   updatePersistentSecretCopy();
 }
 
