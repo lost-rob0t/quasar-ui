@@ -1,5 +1,4 @@
 import { assertDocument } from "starintel_doc";
-import { operation } from "./operations";
 
 export const ACTOR_TRANSFORM_OPERATIONS = Object.freeze([
   "create_document",
@@ -12,6 +11,17 @@ export const ACTOR_TRANSFORM_OPERATIONS = Object.freeze([
 
 const MAX_ACTOR_OPERATIONS = 2_048;
 const OPERATION_SET = new Set(ACTOR_TRANSFORM_OPERATIONS);
+const corpusCommand = Object.freeze({
+  save(document) {
+    return { type: "save-document", document };
+  },
+  remove(id) {
+    return { type: "remove-document", id };
+  },
+  batch(operations, label) {
+    return { type: "batch", label, operations };
+  }
+});
 
 function cloneValue(value) {
   if (typeof structuredClone === "function") return structuredClone(value);
@@ -120,7 +130,7 @@ export function buildActorTransform(result, currentDocuments, label = "Actor tra
         throw new Error(`Actor cannot create existing relation: ${transform.document._id}`);
       }
 
-      commands.push(operation.save(transform.document));
+      commands.push(corpusCommand.save(transform.document));
       documents.set(transform.document._id, transform.document);
       savedDocuments.set(transform.document._id, transform.document);
       if (transform.op === "create_document") counts.created += 1;
@@ -135,7 +145,7 @@ export function buildActorTransform(result, currentDocuments, label = "Actor tra
     if (transform.op === "remove_relation" && existing.dtype !== "relation") {
       throw new Error(`Actor cannot remove non-relation as a relation: ${transform.id}`);
     }
-    commands.push(operation.remove(transform.id));
+    commands.push(corpusCommand.remove(transform.id));
     documents.delete(transform.id);
     savedDocuments.delete(transform.id);
     removedIds.push(transform.id);
@@ -145,7 +155,7 @@ export function buildActorTransform(result, currentDocuments, label = "Actor tra
 
   const operationCount = normalized.operations.length;
   return {
-    command: commands.length ? operation.batch(commands, label) : null,
+    command: commands.length ? corpusCommand.batch(commands, label) : null,
     documents: [...savedDocuments.values()],
     removedIds,
     operationCount,
