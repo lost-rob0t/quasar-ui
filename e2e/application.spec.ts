@@ -92,7 +92,6 @@ test("creates a blank graph and runs a bundled actor", async ({ page }) => {
   await expect(page.locator(".graph-count")).not.toContainText("0 nodes");
 });
 
-
 test.describe("responsive application shell", () => {
   test("preserves the desktop sidebar layout", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -103,13 +102,17 @@ test.describe("responsive application shell", () => {
     await expect(page.locator(".app-shell")).toHaveCSS("grid-template-columns", "235px 1205px");
   });
 
-  test("uses thumb navigation without horizontal page overflow on mobile", async ({ page }) => {
+  test("uses gesture navigation without horizontal page overflow on mobile", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
 
     await expect(page.locator(".sidebar")).toBeHidden();
-    await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "Mobile navigation" }).getByText("Graph")).toBeVisible();
+    await expect(page.locator(".mobile-nav")).toBeHidden();
+    await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
+    await page.getByRole("button", { name: "Open navigation" }).click();
+    const mobileNavigation = page.getByRole("navigation", { name: "Mobile navigation" });
+    await expect(mobileNavigation).toBeVisible();
+    await expect(mobileNavigation.getByText("Graph")).toBeVisible();
     await expect(page.locator(".dashboard-empty-page > .page-heading")).toHaveCSS("text-align", "center");
     await expect(page.locator(".dashboard-empty .button-row")).toHaveCSS("justify-content", "center");
     const viewport = await page.evaluate(() => ({
