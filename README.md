@@ -98,9 +98,11 @@ Development and production builds use root hosting by default. Set
 VITE_BASE_PATH=/quasar-ui/ npm run build
 ```
 
-The Pages workflow sets this value from the repository name. The same normalized
-base path configures Vite assets, React Router, the web manifest, and service
-worker registration, so no backend or runtime URL rewriting is required.
+The Pages workflow builds with `VITE_BASE_PATH=/` because the configured
+`quasar.starintel.actor` custom domain serves the project at its origin root.
+The same normalized base path configures Vite assets, React Router, the web
+manifest, and service worker registration, so no backend or runtime URL
+rewriting is required.
 
 The TypeScript package entrypoints establish the intended dependency areas:
 
