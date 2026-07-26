@@ -61,7 +61,7 @@ Quasar does not add:
 
 `npm run check:boundaries` scans static, re-exported, side-effect, and literal dynamic imports. CI runs it through `npm run check`. Regression tests cover representative allowed and prohibited imports.
 
-The scanner enforces the typed package zones immediately. Legacy modules remain accessible only through package entrypoints, making each later migration reduce rather than expand the compatibility surface.
+The scanner enforces typed package zones immediately and bans renderer imports across both typed and legacy feature code. Existing JavaScript feature modules retain temporary access to legacy helpers; new typed modules may bridge them only through package entrypoints. Each later migration reduces rather than expands that compatibility surface.
 
 ## Consequences
 
