@@ -23,6 +23,7 @@ import "../mobile-graph-empty-state.css";
 import "../graph-editors.css";
 import "../graph-editors-extra.css";
 import "../agent-chat.css";
+import "../agent-permission-overlay.css";
 
 initializeTheme();
 
