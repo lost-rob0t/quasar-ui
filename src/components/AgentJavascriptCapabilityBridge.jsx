@@ -5,6 +5,15 @@ import {
   subscribeJavascriptCapability
 } from "../lib/agent-javascript-capability";
 
+function configuredLimits(args) {
+  return Object.fromEntries([
+    ["timeoutMs", args.timeoutMs],
+    ["maxOutputBytes", args.maxOutputBytes],
+    ["maxNestedCalls", args.maxNestedCalls],
+    ["maxNestedDepth", args.maxNestedDepth]
+  ].filter(([, value]) => value !== undefined));
+}
+
 export default function AgentJavascriptCapabilityBridge() {
   useEffect(() => subscribeJavascriptCapability(async ({ args, context, resolve, reject }) => {
     let unregister = () => {};
@@ -12,12 +21,7 @@ export default function AgentJavascriptCapabilityBridge() {
       const execution = executeSandboxedJavaScript({
         code: String(args.code || ""),
         input: args.input,
-        limits: {
-          timeoutMs: args.timeoutMs,
-          maxOutputBytes: args.maxOutputBytes,
-          maxNestedCalls: args.maxNestedCalls,
-          maxNestedDepth: args.maxNestedDepth
-        },
+        limits: configuredLimits(args),
         bridge: async (name, nestedArgs, nestedCall) => {
           if (typeof context.callTool !== "function") throw new Error("No capability bridge is configured for this run");
           return context.callTool(name, nestedArgs, {
