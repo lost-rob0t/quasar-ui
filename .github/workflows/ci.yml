@@ -29,7 +29,11 @@ jobs:
       - run: npm run typecheck
       - run: npm run check:boundaries
       - run: npm run check:static
-      - run: npm test
+      - name: Run tests
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee agent-test-output.txt
       - run: npm run build
       - name: Validate application artifact
         shell: bash
@@ -49,6 +53,7 @@ jobs:
         with:
           name: baseline-failure-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
+            agent-test-output.txt
             dist
             playwright-report
             test-results
