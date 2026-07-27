@@ -89,7 +89,6 @@ export function requestRuntimeToolPermission(toolName, args, context = {}) {
     conversationId: context.conversationId || getActiveConversationId() || null,
     runId: context.run?.id || context.runId || null,
     toolCallId: context.toolCallId || null,
-    permission,
     reason: `The agent wants to run ${toolName}.`,
     target: targetFor(args),
     arguments: args,
