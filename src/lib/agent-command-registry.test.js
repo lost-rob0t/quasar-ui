@@ -1,4 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("./db", () => ({
+  getState: vi.fn(),
+  putState: vi.fn(),
+  stateDb: {}
+}));
+
 import {
   activeArgumentHint,
   commandHelp,
@@ -57,7 +64,7 @@ describe("agent command registry", () => {
   it("generates signatures, help, and cursor hints from schemas", () => {
     const registry = createCommandRegistry();
     const definition = registry.get("search");
-    expect(commandSignature(definition)).toContain("<query>");
+    expect(commandSignature(definition)).toContain("--query <string>");
     expect(commandHelp(definition)).toContain("Underlying capability: web_search");
     expect(activeArgumentHint("/search query:test count:", registry)).toMatchObject({ name: "count", type: "integer" });
   });
