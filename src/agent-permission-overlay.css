@@ -1,0 +1,28 @@
+.agent-runtime-permission-slot {
+  width: 100%;
+  margin: 0 0 14px;
+}
+
+.agent-runtime-permission-card {
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 12px 30px rgb(0 0 0 / 22%);
+}
+
+.agent-runtime-permission-fallback {
+  position: fixed;
+  right: 24px;
+  bottom: 92px;
+  z-index: 90;
+  width: min(520px, calc(100vw - 32px));
+  color: var(--text, #e5e7eb);
+}
+
+@media (max-width: 720px) {
+  .agent-runtime-permission-fallback {
+    right: 12px;
+    bottom: calc(82px + env(safe-area-inset-bottom));
+    left: 12px;
+    width: auto;
+  }
+}
