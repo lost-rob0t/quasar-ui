@@ -1,4 +1,5 @@
-.agent-runtime-permission-slot {
+.agent-runtime-permission-slot,
+.agent-streaming-slot {
   width: 100%;
   margin: 0 0 14px;
 }
@@ -9,7 +10,23 @@
   box-shadow: 0 12px 30px rgb(0 0 0 / 22%);
 }
 
-.agent-runtime-permission-fallback {
+.agent-streaming-slot .agent-message-streaming {
+  border-color: rgb(34 197 94 / 55%);
+}
+
+.agent-streaming-slot .agent-message-streaming::after {
+  display: inline-block;
+  width: 6px;
+  height: 1em;
+  margin-left: 3px;
+  background: currentColor;
+  content: "";
+  vertical-align: text-bottom;
+  animation: agent-stream-cursor 0.8s steps(1) infinite;
+}
+
+.agent-runtime-permission-fallback,
+.agent-streaming-fallback {
   position: fixed;
   right: 24px;
   bottom: 92px;
@@ -18,11 +35,24 @@
   color: var(--text, #e5e7eb);
 }
 
+.agent-streaming-fallback {
+  bottom: 160px;
+}
+
+@keyframes agent-stream-cursor {
+  50% { opacity: 0; }
+}
+
 @media (max-width: 720px) {
-  .agent-runtime-permission-fallback {
+  .agent-runtime-permission-fallback,
+  .agent-streaming-fallback {
     right: 12px;
     bottom: calc(82px + env(safe-area-inset-bottom));
     left: 12px;
     width: auto;
+  }
+
+  .agent-streaming-fallback {
+    bottom: calc(150px + env(safe-area-inset-bottom));
   }
 }
