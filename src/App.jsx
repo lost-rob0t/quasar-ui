@@ -24,7 +24,9 @@ import { ImportPage, SettingsPage } from "./components/ImportSettings";
 import StatsPage from "./components/StatsPage";
 import { AgentConsole, AgentSystemProvider } from "./components/AgentSystem";
 import AgentChatBubble from "./components/AgentChatModal";
+import AgentPermissionOverlay from "./components/AgentPermissionOverlay";
 import MobileGestureMenu from "./components/MobileGestureMenu";
+import "./lib/agent-supervisor-permissions";
 
 const navigation = [
   { to: "/", label: "Dashboard", mobileLabel: "Home", Icon: Activity, end: true },
@@ -197,6 +199,7 @@ export default function App() {
         </Routes>
         <GraphLayoutControl />
         <AgentChatBubble />
+        <AgentPermissionOverlay />
       </WorkbenchShell>
     </AgentSystemProvider>
   );
