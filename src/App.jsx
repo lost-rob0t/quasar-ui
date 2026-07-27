@@ -24,6 +24,7 @@ import { ImportPage, SettingsPage } from "./components/ImportSettings";
 import StatsPage from "./components/StatsPage";
 import { AgentConsole, AgentSystemProvider } from "./components/AgentSystem";
 import AgentChatBubble from "./components/AgentChatModal";
+import AgentDocumentCapabilityBridge from "./components/AgentDocumentCapabilityBridge";
 import AgentPermissionOverlay from "./components/AgentPermissionOverlay";
 import AgentStreamingOverlay from "./components/AgentStreamingOverlay";
 import MobileGestureMenu from "./components/MobileGestureMenu";
@@ -200,6 +201,7 @@ export default function App() {
         </Routes>
         <GraphLayoutControl />
         <AgentChatBubble />
+        <AgentDocumentCapabilityBridge />
         <AgentPermissionOverlay />
         <AgentStreamingOverlay />
       </WorkbenchShell>
