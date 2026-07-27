@@ -3,8 +3,18 @@ import {
   cancelRuntimeToolPermissions,
   requestRuntimeToolPermission
 } from "./agent-permission-broker";
+import {
+  AGENT_DOCUMENT_CAPABILITIES,
+  invokeDocumentCapability
+} from "./agent-document-capabilities";
 
 const PATCHED = Symbol.for("quasar.agent-supervisor-permissions");
+const DOCUMENT_NAMES = new Set(AGENT_DOCUMENT_CAPABILITIES.map((capability) => capability.name));
+
+function allowedDocumentCapabilities(agent) {
+  const permissions = new Set(agent?.permissions || []);
+  return AGENT_DOCUMENT_CAPABILITIES.filter((capability) => permissions.has(capability.permission));
+}
 
 if (!AgentSupervisor.prototype[PATCHED]) {
   const originalRun = AgentSupervisor.prototype.run;
@@ -13,13 +23,24 @@ if (!AgentSupervisor.prototype[PATCHED]) {
 
   AgentSupervisor.prototype.run = function runWithPermissionGate(agent, inputOrRun) {
     if (!this.toolRegistry?.[PATCHED]) {
+      const list = this.toolRegistry.list.bind(this.toolRegistry);
       const execute = this.toolRegistry.execute.bind(this.toolRegistry);
+      this.toolRegistry.list = (currentAgent) => {
+        const existing = list(currentAgent);
+        const names = new Set(existing.map((tool) => tool.name));
+        return [
+          ...existing,
+          ...allowedDocumentCapabilities(currentAgent).filter((capability) => !names.has(capability.name))
+        ];
+      };
       this.toolRegistry.execute = async (name, args, context = {}) => {
-        await requestRuntimeToolPermission(name, args, {
+        const executionContext = {
           ...context,
           agent: context.agent || agent,
           run: context.run || (inputOrRun?.recordType ? inputOrRun : null)
-        });
+        };
+        await requestRuntimeToolPermission(name, args, executionContext);
+        if (DOCUMENT_NAMES.has(name)) return invokeDocumentCapability(name, args, executionContext);
         return execute(name, args, context);
       };
       Object.defineProperty(this.toolRegistry, PATCHED, { value: true });
