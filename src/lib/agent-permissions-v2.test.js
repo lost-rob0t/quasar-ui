@@ -41,13 +41,26 @@ describe("agent permission runtime", () => {
     expect(request.continuation).toEqual({ step: 2 });
   });
 
-  it("supports action, chat, session, and persistent scopes", () => {
+  it("supports chat scope", () => {
     const request = createPermissionRequest({ permission: "javascript_execute", conversationId: "chat:1" });
     const allowed = decidePermission(request, "allow-chat", { sessionId: "session:1" });
     expect(allowed.status).toBe("allowed");
     expect(evaluatePermission(request, { sessionId: "session:1" })).toMatchObject({ allowed: true, needsPrompt: false });
     const otherChat = { ...request, id: "permission:2", conversationId: "chat:2" };
     expect(evaluatePermission(otherChat, { sessionId: "session:1" }).needsPrompt).toBe(true);
+  });
+
+  it("shares memory-only session scope across entrypoints", () => {
+    const request = createPermissionRequest({ permission: "graph_read" });
+    decidePermission(request, "allow-session", { sessionId: "composer-entrypoint" });
+    expect(evaluatePermission(request, { sessionId: "tool-runtime-entrypoint" })).toMatchObject({ allowed: true, needsPrompt: false });
+  });
+
+  it("consumes action decisions once", () => {
+    const request = createPermissionRequest({ permission: "actor_run", target: "actor:test" });
+    decidePermission(request, "allow-action");
+    expect(evaluatePermission(request)).toMatchObject({ allowed: true, needsPrompt: false });
+    expect(evaluatePermission(request)).toMatchObject({ allowed: false, needsPrompt: true });
   });
 
   it("persists always allow and always deny decisions", () => {
