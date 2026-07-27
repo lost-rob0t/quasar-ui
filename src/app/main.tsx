@@ -22,6 +22,7 @@ import "../mobile-graph-tools.css";
 import "../mobile-graph-empty-state.css";
 import "../graph-editors.css";
 import "../graph-editors-extra.css";
+import "../agent-chat.css";
 
 initializeTheme();
 
