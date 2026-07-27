@@ -24,18 +24,26 @@ const TOOL_PERMISSIONS = Object.freeze({
   apply_graph_operations: "graph_write",
   validate_actor: "actor_create",
   save_actor: "actor_create",
-  javascript_execute: "javascript_execute"
+  javascript_execute: "javascript_execute",
+  document_read: "document_read",
+  document_create: "document_write",
+  document_patch: "document_write",
+  document_delete: "document_write"
 });
 
 const TOOL_RISKS = Object.freeze({
   query_database: "low",
   query_graph: "low",
   web_search: "low",
+  document_read: "low",
   fetch_url: "medium",
   scrape_website: "medium",
   run_actor: "medium",
   mcp_call: "medium",
   validate_actor: "medium",
+  document_create: "medium",
+  document_patch: "high",
+  document_delete: "high",
   javascript_execute: "high",
   build_graph: "high",
   propose_graph_operations: "high",
@@ -66,7 +74,7 @@ function savePending() {
 }
 
 function targetFor(args = {}) {
-  return args.url || args.path || args.actorId || args.serverId || args.candidateId || args.name || null;
+  return args.url || args.path || args.id || args.document?._id || args.actorId || args.serverId || args.candidateId || args.name || null;
 }
 
 export function permissionForTool(toolName) {
@@ -81,6 +89,7 @@ export function requestRuntimeToolPermission(toolName, args, context = {}) {
     conversationId: context.conversationId || getActiveConversationId() || null,
     runId: context.run?.id || context.runId || null,
     toolCallId: context.toolCallId || null,
+    permission,
     reason: `The agent wants to run ${toolName}.`,
     target: targetFor(args),
     arguments: args,
