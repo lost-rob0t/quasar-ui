@@ -56,28 +56,28 @@ test("creates, reads, patches, deletes, and restores a document through agent ca
     evidence: [],
     data: { name: "Agent E2E" }
   };
-  const invoke = (name: string, args: unknown) => page.evaluate(({ capabilityName, capabilityArgs }) => new Promise((resolve, reject) => {
+  const invoke = async <T,>(name: string, args: unknown): Promise<T> => page.evaluate(({ capabilityName, capabilityArgs }) => new Promise((resolve, reject) => {
     window.dispatchEvent(new CustomEvent("quasar:agent-document-capability", {
       detail: { name: capabilityName, args: capabilityArgs, context: {}, resolve, reject }
     }));
-  }), { capabilityName: name, capabilityArgs: args });
+  }), { capabilityName: name, capabilityArgs: args }) as Promise<T>;
 
-  const created = await invoke("document_create", { document });
+  const created = await invoke<{ created: boolean; id: string }>("document_create", { document });
   expect(created).toMatchObject({ created: true, id: document._id });
-  const read = await invoke("document_read", { ids: [document._id] });
+  const read = await invoke<{ count: number }>("document_read", { ids: [document._id] });
   expect(read).toMatchObject({ count: 1 });
 
-  const patched = await invoke("document_patch", { id: document._id, patch: { title: "Patched by agent", data: { name: "Patched by agent" } } });
+  const patched = await invoke<{ patched: boolean; id: string }>("document_patch", { id: document._id, patch: { title: "Patched by agent", data: { name: "Patched by agent" } } });
   expect(patched).toMatchObject({ patched: true, id: document._id });
-  const afterPatch = await invoke("document_read", { ids: [document._id] });
+  const afterPatch = await invoke<{ documents: Array<{ title: string }> }>("document_read", { ids: [document._id] });
   expect(afterPatch.documents[0].title).toBe("Patched by agent");
 
-  const deleted = await invoke("document_delete", { id: document._id });
+  const deleted = await invoke<{ deleted: boolean; id: string }>("document_delete", { id: document._id });
   expect(deleted).toMatchObject({ deleted: true, id: document._id });
-  await expect.poll(async () => (await invoke("document_read", { ids: [document._id] })).count).toBe(0);
+  await expect.poll(async () => (await invoke<{ count: number }>("document_read", { ids: [document._id] })).count).toBe(0);
 
   await page.getByRole("button", { name: "Undo" }).click();
-  await expect.poll(async () => (await invoke("document_read", { ids: [document._id] })).count).toBe(1);
+  await expect.poll(async () => (await invoke<{ count: number }>("document_read", { ids: [document._id] })).count).toBe(1);
 });
 
 test("keeps the modal chat inside the mobile viewport", async ({ page }) => {
