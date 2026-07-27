@@ -11,6 +11,7 @@ test("opens the persistent agent modal and derives command help from capabilitie
   const composer = modal.getByRole("textbox", { name: "Agent prompt" });
   await composer.fill("/");
   await expect(modal.getByRole("listbox", { name: "Agent commands" })).toBeVisible();
+  await composer.fill("/sea");
   await expect(modal.getByRole("option", { name: /\/search/ })).toBeVisible();
 
   await composer.fill("/fetch");
