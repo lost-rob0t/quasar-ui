@@ -22,7 +22,8 @@ import { DocumentPage, DocumentsPage } from "./components/Documents";
 import DocumentEditor from "./components/DocumentEditor";
 import { ImportPage, SettingsPage } from "./components/ImportSettings";
 import StatsPage from "./components/StatsPage";
-import { AgentBubble, AgentConsole, AgentSystemProvider } from "./components/AgentSystem";
+import { AgentConsole, AgentSystemProvider } from "./components/AgentSystem";
+import AgentChatBubble from "./components/AgentChatModal";
 import MobileGestureMenu from "./components/MobileGestureMenu";
 
 const navigation = [
@@ -195,7 +196,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
         <GraphLayoutControl />
-        <AgentBubble />
+        <AgentChatBubble />
       </WorkbenchShell>
     </AgentSystemProvider>
   );
