@@ -117,19 +117,22 @@ export function sanitizeArguments(value, seen = new WeakSet()) {
   ]));
 }
 
-function matches(decision, request, sessionId) {
+function matches(decision, request) {
   if (decision.permission !== request.permission) return false;
   if (decision.targetKey !== permissionTarget(request.permission, request.target)) return false;
   if (decision.scope === "chat" && decision.conversationId !== request.conversationId) return false;
-  if (decision.scope === "session" && decision.sessionId !== sessionId) return false;
   if (decision.expiresAt && Date.parse(decision.expiresAt) <= Date.now()) return false;
   return true;
 }
 
 export function evaluatePermission(request, context = {}) {
-  const sessionId = context.sessionId || "default";
-  const all = [...SESSION_DECISIONS.values(), ...persistedDecisions()];
-  const decision = all.find((item) => matches(item, request, sessionId));
+  const sessionMatch = [...SESSION_DECISIONS.entries()].find(([, decision]) => matches(decision, request));
+  if (sessionMatch) {
+    const [decisionId, decision] = sessionMatch;
+    if (decision.scope === "action") SESSION_DECISIONS.delete(decisionId);
+    return { allowed: decision.effect === "allow", decision, needsPrompt: false };
+  }
+  const decision = persistedDecisions().find((item) => matches(item, request));
   if (decision) return { allowed: decision.effect === "allow", decision, needsPrompt: false };
   const declared = new Set(normalizeAgentPermissions(context.agentPermissions || []));
   if (!declared.has(request.permission)) return { allowed: false, decision: null, needsPrompt: true, reason: "Permission is not pre-authorized" };
