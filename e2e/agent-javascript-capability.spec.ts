@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
 
+type SandboxResult = {
+  status: string;
+  value: unknown;
+  nestedCalls: Array<{ name: string; status: string }>;
+  terminationReason: string | null;
+};
+
 test("executes model-selected JavaScript without DOM, storage, or network access", async ({ page }) => {
   await page.goto("/");
   const result = await page.evaluate(() => new Promise((resolve, reject) => {
@@ -20,7 +27,7 @@ test("executes model-selected JavaScript without DOM, storage, or network access
         reject
       }
     }));
-  }));
+  })) as SandboxResult;
 
   expect(result).toMatchObject({
     status: "completed",
@@ -49,7 +56,7 @@ test("routes nested JavaScript calls through the typed capability bridge", async
         reject
       }
     }));
-  }));
+  })) as SandboxResult;
 
   expect(result).toMatchObject({
     status: "completed",
@@ -70,7 +77,7 @@ test("terminates JavaScript that exceeds its wall-clock limit", async ({ page })
         reject
       }
     }));
-  }));
+  })) as SandboxResult;
 
   expect(result).toMatchObject({ status: "terminated", terminationReason: "timeout" });
 });
