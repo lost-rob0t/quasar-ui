@@ -24,6 +24,22 @@ test("opens the persistent agent modal and derives command help from capabilitie
   await expect(page.getByRole("textbox", { name: "Agent prompt" })).toHaveValue("draft survives refresh");
 });
 
+test("renders and restores a partial provider stream", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Open agent chat" }).click();
+
+  await page.evaluate(() => {
+    const base = { streamId: "stream:e2e", provider: "openai", model: "test", at: new Date().toISOString() };
+    window.dispatchEvent(new CustomEvent("quasar:agent-provider-stream", { detail: { ...base, type: "start" } }));
+    window.dispatchEvent(new CustomEvent("quasar:agent-provider-stream", { detail: { ...base, type: "delta", text: "partial response" } }));
+  });
+
+  await expect(page.locator('[data-provider-stream="stream:e2e"]')).toContainText("partial response");
+  await page.reload();
+  await page.getByRole("button", { name: "Open agent chat" }).click();
+  await expect(page.locator('[data-provider-stream="stream:e2e"]')).toContainText("partial response");
+});
+
 test("keeps the modal chat inside the mobile viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/graph");
