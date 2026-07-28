@@ -15,6 +15,7 @@ import {
   touchDocument
 } from "starintel_doc";
 import { createGraphAdapter } from "../graph/GraphAdapter";
+import { isGraphUserNavigationActive } from "../graph/user-navigation-guard";
 import { actorApplicability, isBuiltinActor } from "../lib/actors";
 import { connectedDocumentIds } from "../lib/document-delete";
 import { buildGraph, filterGraph, findPaths, importedGraphNodeIds, partitionDocumentsByReview } from "../lib/graph";
@@ -154,7 +155,10 @@ function GraphCanvas({
           const bounds = container.getBoundingClientRect();
           const rendered = activeNode.renderedPosition();
           const clamped = clampRenderedPosition(rendered, bounds.width, bounds.height);
-          if (clamped.x !== rendered.x || clamped.y !== rendered.y) {
+          if (
+            !isGraphUserNavigationActive(cy)
+            && (clamped.x !== rendered.x || clamped.y !== rendered.y)
+          ) {
             cy.panBy({ x: clamped.x - rendered.x, y: clamped.y - rendered.y });
           }
         }

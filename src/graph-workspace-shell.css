@@ -290,6 +290,7 @@
   body:has(.graph-page) .graph-workbench {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 322px;
+    grid-template-areas: "canvas inspector";
     border: 0;
     border-radius: 0;
     background: #050a11;
@@ -297,6 +298,9 @@
 
   body:has(.graph-page) .graph-stage {
     position: relative;
+    grid-area: canvas;
+    min-width: 0;
+    width: auto;
     overflow: hidden;
     border-right: 1px solid color-mix(in srgb, var(--line) 62%, transparent);
     background:
@@ -311,6 +315,9 @@
     position: relative;
     z-index: 8;
     display: block !important;
+    grid-area: inspector;
+    min-width: 0;
+    width: 100%;
     height: calc(100% - 2px);
     padding: 0;
     overflow: auto;

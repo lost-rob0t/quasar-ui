@@ -70,27 +70,45 @@ test.describe("responsive application shell", () => {
     await expect(page.locator(".app-shell")).toHaveCSS("grid-template-columns", "235px 1205px");
   });
 
-  test("uses the same full-screen graph shell on desktop", async ({ page }) => {
+  test("uses the investigation workspace without overlapping the graph on desktop", async ({
+    page
+  }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/graph");
 
-    await expect(page.locator(".sidebar")).toBeHidden();
-    await expect(page.locator(".topbar")).toBeHidden();
+    await expect(page.locator(".sidebar")).toBeVisible();
+    await expect(page.locator(".topbar")).toBeVisible();
     await expect(page.locator(".graph-toolbar")).toBeHidden();
     await expect(page.locator(".graph-list-panel")).toBeHidden();
-    await expect(page.locator(".graph-inspector")).toBeHidden();
-    await expect(page.getByRole("button", { name: "Open menu", exact: true })).toBeVisible();
+    await expect(page.locator(".graph-inspector")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open menu", exact: true })).toBeHidden();
+    await expect(page.getByRole("tablist", { name: "Open graphs" })).toBeVisible();
+    await expect(page.getByLabel("Graph statistics")).toBeVisible();
+    await expect(page.getByLabel("Graph workspace dock")).toBeVisible();
     await expect(page.getByRole("button", { name: "Cycle active graph" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Select dataset" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Cycle layout" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Graph tools" })).toHaveCount(0);
 
     const stage = await page.locator(".graph-stage").boundingBox();
+    const inspector = await page.locator(".graph-inspector").boundingBox();
+    const dock = await page.locator(".graph-agent-dock").boundingBox();
     expect(stage).not.toBeNull();
-    expect(stage?.x).toBe(0);
-    expect(stage?.y).toBe(0);
-    expect(stage?.width).toBe(1440);
-    expect(stage?.height).toBe(900);
+    expect(inspector).not.toBeNull();
+    expect(dock).not.toBeNull();
+    if (!stage || !inspector || !dock) throw new Error("Desktop workspace panels must be measurable");
+    expect(stage.x).toBeGreaterThan(0);
+    expect(stage.y).toBeGreaterThan(0);
+    expect(stage.width).toBeGreaterThan(0);
+    expect(stage.height).toBeGreaterThan(0);
+    expect(stage.x + stage.width).toBeLessThanOrEqual(inspector.x);
+    expect(stage.y + stage.height).toBeLessThanOrEqual(dock.y);
+
+    await page.locator(".graph-stage").click({
+      button: "right",
+      position: { x: 240, y: Math.min(220, stage.height - 20) }
+    });
+    await expect(page.getByRole("menu", { name: "canvas actions" })).toBeVisible();
   });
 
   test("uses gesture navigation without horizontal page overflow on mobile", async ({ page }) => {
