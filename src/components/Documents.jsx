@@ -22,13 +22,91 @@ function safeExternalUrl(value) {
   }
 }
 
+function datasetRows(documents) {
+  const rows = new Map();
+  documents.forEach((document) => {
+    const name = String(document.dataset || "").trim();
+    if (!name) return;
+    const current = rows.get(name) || {
+      name,
+      documents: 0,
+      types: new Set(),
+      updatedAt: 0
+    };
+    current.documents += 1;
+    if (document.dtype) current.types.add(document.dtype);
+    current.updatedAt = Math.max(current.updatedAt, Date.parse(document.date_updated) || 0);
+    rows.set(name, current);
+  });
+  return [...rows.values()]
+    .map((row) => ({ ...row, types: [...row.types].sort() }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function DatasetsPage({ documents, query, setQuery }) {
+  const rows = useMemo(() => datasetRows(documents), [documents]);
+  const visible = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return rows;
+    return rows.filter((row) =>
+      `${row.name} ${row.types.join(" ")}`.toLowerCase().includes(normalized)
+    );
+  }, [query, rows]);
+
+  return (
+    <section>
+      <div className="page-heading">
+        <div>
+          <span className="eyebrow">Corpus</span>
+          <h1>Datasets</h1>
+          <p>Browse the datasets represented in the local StarIntel corpus.</p>
+        </div>
+        <Link className="button primary" to="/documents/new"><Plus size={16} /> Add document</Link>
+      </div>
+
+      <div className="filter-bar">
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          aria-label="Search datasets"
+          placeholder="Search datasets"
+        />
+        <span className="result-count">{visible.length} / {rows.length}</span>
+      </div>
+
+      <div className="table-panel">
+        <table>
+          <thead><tr><th>Dataset</th><th>Documents</th><th>Object types</th><th>Updated</th><th>Actions</th></tr></thead>
+          <tbody>
+            {visible.map((row) => (
+              <tr key={row.name}>
+                <td><strong>{row.name}</strong></td>
+                <td>{row.documents}</td>
+                <td>{row.types.join(", ") || "—"}</td>
+                <td>{row.updatedAt ? new Date(row.updatedAt).toLocaleString() : "—"}</td>
+                <td>
+                  <Link className="button small" to={`/documents?dataset=${encodeURIComponent(row.name)}`}>
+                    Open documents
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!visible.length && <div className="empty-state compact">No matching datasets.</div>}
+      </div>
+    </section>
+  );
+}
+
 export function DocumentsPage() {
   const { documents, execute, setNotice } = useQuasar();
   const [params, setParams] = useSearchParams();
   const query = params.get("q") || "";
   const dtype = params.get("dtype") || "";
   const dataset = params.get("dataset") || "";
-  const datasets = useMemo(() => [...new Set(documents.map((document) => document.dataset))].sort(), [documents]);
+  const group = params.get("group") || "";
+  const datasets = useMemo(() => [...new Set(documents.map((document) => document.dataset).filter(Boolean))].sort(), [documents]);
   const visible = useMemo(() => documents.filter((document) =>
     (!dtype || document.dtype === dtype)
     && (!dataset || document.dataset === dataset)
@@ -52,6 +130,10 @@ export function DocumentsPage() {
     } catch (error) {
       setNotice({ kind: "error", message: error.message });
     }
+  }
+
+  if (group === "dataset") {
+    return <DatasetsPage documents={documents} query={query} setQuery={(value) => set("q", value)} />;
   }
 
   return (
