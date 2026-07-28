@@ -22,15 +22,17 @@ describe("automaticNodePosition", () => {
     }
   });
 
-  it("uses native left drag for viewport panning", () => {
+  it("uses native left drag and native single-click selection", () => {
     const cy = createGraphAdapter({
       headless: true,
       styleEnabled: false,
-      elements: []
+      elements: [],
+      selectionType: "additive"
     });
 
     expect(cy.userPanningEnabled()).toBe(true);
     expect(cy.boxSelectionEnabled()).toBe(false);
+    expect(cy.selectionType()).toBe("single");
     cy.destroy();
   });
 });
