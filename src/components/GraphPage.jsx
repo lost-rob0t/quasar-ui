@@ -25,7 +25,7 @@ import { operation } from "../lib/operations";
 import { cloneResearchNode, researchNodeOutputIds, researchNodeScope } from "../lib/research-node-graph";
 import { isResearchNode } from "../lib/research-nodes";
 import { useQuasar } from "../store";
-import { CompactNodeEditor, CompactRelationEditor } from "./GraphEditors";
+import { CompactNodeEditor, CompactRelationEditor, CompactResearchNodeEditor } from "./GraphEditors";
 
 const QUICK_NODE_TYPES = [
   { dtype: "person", label: "Person", Icon: UserRound },
@@ -35,7 +35,8 @@ const QUICK_NODE_TYPES = [
   { dtype: "entity", label: "Entity", Icon: CircleDot },
   { dtype: "document", label: "Document", Icon: FileText },
   { dtype: "source", label: "Source", Icon: BookOpen },
-  { dtype: "concept", label: "Concept", Icon: Lightbulb }
+  { dtype: "concept", label: "Concept", Icon: Lightbulb },
+  { dtype: "research-node", label: "Research node", Icon: Network }
 ];
 
 function fitElements(cy, elements, padding, duration) {
@@ -443,6 +444,7 @@ export default function GraphPage() {
   const [relationEdit, setRelationEdit] = useState(null);
   const [nodeDraft, setNodeDraft] = useState(null);
   const [quickEdit, setQuickEdit] = useState(null);
+  const [researchDraft, setResearchDraft] = useState(null);
   const [targetDocument, setTargetDocument] = useState(null);
   const [showGraphCreate, setShowGraphCreate] = useState(false);
   const [showMembershipAdd, setShowMembershipAdd] = useState(false);
@@ -490,6 +492,7 @@ export default function GraphPage() {
     setRelationEdit(null);
     setNodeDraft(null);
     setQuickEdit(null);
+    setResearchDraft(null);
     setTargetDocument(null);
     setMenuQuery("");
     setEmptyStateDismissed(false);
@@ -617,11 +620,14 @@ export default function GraphPage() {
 
   function openQuickAdd(context = null, objectType = "entity") {
     setCanvasMenu(null);
-    setNodeDraft({
+    const draft = {
       objectType,
       dataset: selected?.dataset || dataset || "default",
+      inputIds: selectedIds,
       position: context?.position ? context : null
-    });
+    };
+    if (objectType === "research-node") setResearchDraft(draft);
+    else setNodeDraft(draft);
   }
 
   function openCanvasMenu(context) {
@@ -962,7 +968,8 @@ export default function GraphPage() {
 
               {canvasMenu.kind === "node" && contextNode && (
                 <>
-                  {menuMatches("Edit") && <button role="menuitem" onClick={() => { setQuickEdit({ document: contextNode, position: canvasMenu }); setCanvasMenu(null); }}><Pencil size={15} /> Edit</button>}
+                  {menuMatches("Edit") && <button role="menuitem" onClick={() => { if (isResearchNode(contextNode)) setResearchDraft({ document: contextNode, position: canvasMenu }); else setQuickEdit({ document: contextNode, position: canvasMenu }); setCanvasMenu(null); }}><Pencil size={15} /> Edit</button>}
+                  {menuMatches("Create research node from selection") && <button role="menuitem" onClick={() => { setResearchDraft({ dataset: contextNode.dataset || "default", inputIds: selectedIds.length ? selectedIds : [contextNode._id], position: canvasMenu }); setCanvasMenu(null); }}><Network size={15} /> Create research node from selection</button>}
                   {menuMatches("Add relation") && <button role="menuitem" onClick={() => beginRelationFromNode(contextNode._id)}><Link2 size={15} /> Add relation</button>}
                   {menuMatches("Open full editor") && <Link role="menuitem" to={`/documents/${encodeURIComponent(contextNode._id)}/edit?returnTo=graph`}><ExternalLink size={15} /> Open full editor</Link>}
                   {menuMatches("Focus") && <button role="menuitem" onClick={() => { setCanvasMenu(null); focusSelection([contextNode._id]); }}><Focus size={15} /> Focus</button>}
@@ -1017,6 +1024,7 @@ export default function GraphPage() {
 
           {nodeDraft && <CompactNodeEditor objectType={nodeDraft.objectType} dataset={nodeDraft.dataset} position={nodeDraft.position} onClose={() => setNodeDraft(null)} onSaved={() => setReviewStatus("all")} />}
           {quickEdit && <CompactNodeEditor document={quickEdit.document} position={quickEdit.position} onClose={() => setQuickEdit(null)} />}
+          {researchDraft && <CompactResearchNodeEditor document={researchDraft.document || null} dataset={researchDraft.dataset || "default"} inputIds={researchDraft.inputIds || []} position={researchDraft.position} onClose={() => setResearchDraft(null)} onSaved={() => setReviewStatus("all")} />}
           {relationDraft && <CompactRelationEditor key={relationDraft.ids.join(":")} ids={relationDraft.ids} documents={scopedDocuments} position={relationDraft} onClose={() => setRelationDraft(null)} />}
           {relationEdit && <CompactRelationEditor relationDocument={relationEdit.document} documents={documents} position={relationEdit.position} onClose={() => setRelationEdit(null)} />}
         </div>
@@ -1043,7 +1051,7 @@ export default function GraphPage() {
                 )}
                 <div className="inspector-actions">
                   <Link className="button small" to={`/documents/${encodeURIComponent(selected._id)}`}><ExternalLink size={14} /> Open</Link>
-                  <button className="button small" onClick={() => setQuickEdit({ document: selected, position: null })}><Pencil size={14} /> Edit</button>
+                  <button className="button small" onClick={() => isResearchNode(selected) ? setResearchDraft({ document: selected, position: null }) : setQuickEdit({ document: selected, position: null })}><Pencil size={14} /> Edit</button>
                   {selectedResearchScope && <button className="button small" disabled={!selectedResearchScope.outputs.length} onClick={() => inspectResearchOutputs(selected)}><Focus size={14} /> Outputs</button>}
                 </div>
               </>
