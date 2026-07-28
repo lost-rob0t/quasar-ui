@@ -8,6 +8,7 @@ import GraphObjectTypePickerBridge from "../components/GraphObjectTypePickerBrid
 import MelissaActorBridge from "../components/MelissaActorBridge.jsx";
 import MobileGraphToolTray from "../components/MobileGraphToolTray.jsx";
 import OperatorUiEnhancer from "../components/OperatorUiEnhancer.jsx";
+import PwaInstallBridge from "../components/PwaInstallBridge.jsx";
 import ReviewActorBridge from "../components/ReviewActorBridge.jsx";
 import RunAllTransformationsBridge from "../components/RunAllTransformationsBridge.jsx";
 import { QuasarProvider } from "../store.jsx";
@@ -21,6 +22,7 @@ import "../mobile.css";
 import "../mobile-editor.css";
 import "../gesture-menu.css";
 import "../operator-ui.css";
+import "../dataset-menu.css";
 import "../graph-fullscreen.css";
 import "../mobile-graph-tools.css";
 import "../mobile-graph-empty-state.css";
@@ -44,6 +46,7 @@ createRoot(rootElement).render(
       <QuasarProvider>
         <App />
         <OperatorUiEnhancer />
+        <PwaInstallBridge />
         <MelissaActorBridge />
         <ReviewActorBridge />
         <ActorConfigurationBridge />
