@@ -733,9 +733,9 @@ export default function AgentChatBubble() {
   }
 
   async function attachFiles(event) {
-    const files = event.target.files;
+    const files = Array.from(event.target.files || []);
     event.target.value = "";
-    if (!files?.length || !activeConversation) return;
+    if (!files.length || !activeConversation) return;
     setAttachmentLoading(true);
     setAttachmentError("");
     try {
