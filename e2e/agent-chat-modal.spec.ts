@@ -236,7 +236,7 @@ test("orchestrates and restores conversation tasks", async ({ page }) => {
   await expect(tasks.getByText("Collect sources")).toBeVisible();
   await tasks.getByRole("button", { name: "start" }).click();
   await expect(tasks.getByText("in-progress")).toBeVisible();
-  await page.waitForTimeout(100);
+  await expect(page.locator("html")).toHaveAttribute("data-agent-chat-persisted-tasks", /:in-progress/);
 
   await page.reload();
   await page.getByRole("button", { name: "Open agent chat" }).click();
