@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "../App.jsx";
 import GraphContextRadialBridge from "../components/GraphContextRadialBridge.jsx";
 import GraphObjectTypePickerBridge from "../components/GraphObjectTypePickerBridge.jsx";
+import MelissaActorBridge from "../components/MelissaActorBridge.jsx";
 import MobileGraphToolTray from "../components/MobileGraphToolTray.jsx";
 import OperatorUiEnhancer from "../components/OperatorUiEnhancer.jsx";
 import { QuasarProvider } from "../store.jsx";
@@ -23,6 +24,7 @@ import "../mobile-graph-empty-state.css";
 import "../graph-editors.css";
 import "../graph-editors-extra.css";
 import "../graph-workspace-shell.css";
+import "../melissa-actors.css";
 
 initializeTheme();
 
@@ -38,6 +40,7 @@ createRoot(rootElement).render(
       <QuasarProvider>
         <App />
         <OperatorUiEnhancer />
+        <MelissaActorBridge />
         <MobileGraphToolTray />
         <GraphContextRadialBridge />
         <GraphObjectTypePickerBridge />
