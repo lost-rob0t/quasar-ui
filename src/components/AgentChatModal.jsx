@@ -39,6 +39,7 @@ import {
   createConversation,
   deriveConversationFromRun,
   getActiveConversationId,
+  hydrateConversationState,
   loadConversationState,
   mapRunState,
   removeConversation,
@@ -341,6 +342,7 @@ export default function AgentChatBubble() {
   const [open, setOpen] = useState(false);
   const [ui, setUi] = useState(loadUi);
   const [conversationState, setConversationState] = useState(loadConversationState);
+  const [conversationReady, setConversationReady] = useState(false);
   const [activeConversationId, setActiveConversationIdState] = useState(getActiveConversationId);
   const [composer, setComposer] = useState("");
   const [recentCommands, setRecentCommands] = useState(loadRecentCommands);
@@ -355,6 +357,19 @@ export default function AgentChatBubble() {
   const dragging = useRef(null);
   const resizing = useRef(null);
 
+  useEffect(() => {
+    let active = true;
+    hydrateConversationState().then((state) => {
+      if (!active) return;
+      setConversationState(state);
+      setActiveConversationIdState(state.activeConversationId || state.conversations[0]?.id || "");
+      setConversationReady(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const registry = useMemo(() => createCommandRegistry({
     actors: quasar.actors || [],
     mcpServers: agentSystem.mcpServers || [],
@@ -362,13 +377,13 @@ export default function AgentChatBubble() {
   }), [quasar.actors, agentSystem.mcpServers, recentCommands]);
 
   useEffect(() => {
-    if (conversationState.conversations.length) return;
+    if (!conversationReady || conversationState.conversations.length) return;
     const conversation = createConversation({ agentId: agentSystem.activeAgent?.id, modelId: agentSystem.activeAgent?.modelId });
     const next = upsertConversation(conversationState, conversation);
     setConversationState(next);
     setActiveConversationIdState(conversation.id);
     setActiveConversationId(conversation.id);
-  }, [agentSystem.activeAgent, conversationState]);
+  }, [agentSystem.activeAgent, conversationReady, conversationState]);
 
   const activeConversation = conversationById(conversationState, activeConversationId)
     || conversationState.conversations[0]

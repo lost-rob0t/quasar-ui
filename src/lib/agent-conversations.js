@@ -1,12 +1,14 @@
-const STORAGE_KEY = "quasar:agent-conversations:v1";
-const ACTIVE_KEY = "quasar:agent-active-conversation:v1";
-const SESSION_VERSION = 1;
-const SECRET_KEYS = /(?:token|secret|password|authorization|api[-_]?key|cookie)/i;
+import { getState, putState } from "./db";
 
-function storage() {
-  if (typeof localStorage === "undefined") return null;
-  return localStorage;
-}
+const CHAT_STATE_ID = "agent-chat-state:v2";
+const LEGACY_CONVERSATION_KEY = "quasar:agent-conversations:v1";
+const LEGACY_ACTIVE_KEY = "quasar:agent-active-conversation:v1";
+const LEGACY_STREAM_KEY = "quasar:agent-streams:v1";
+const SESSION_VERSION = 2;
+const SECRET_KEYS = /(?:token|secret|password|authorization|api[-_]?key|cookie)/i;
+let cachedState = emptyState();
+let hydrationPromise = null;
+let writeQueue = Promise.resolve();
 
 function now() {
   return new Date().toISOString();
@@ -34,28 +36,94 @@ export function redactConversationValue(value, seen = new WeakSet()) {
 }
 
 function emptyState() {
-  return { version: SESSION_VERSION, conversations: [] };
+  return {
+    version: SESSION_VERSION,
+    activeConversationId: "",
+    conversations: [],
+    streams: []
+  };
 }
 
 export function loadConversationState() {
-  const target = storage();
-  if (!target) return emptyState();
+  return clone(cachedState);
+}
+
+function readLegacyState() {
+  if (typeof localStorage === "undefined") return null;
   try {
-    const parsed = JSON.parse(target.getItem(STORAGE_KEY) || "null");
-    if (!parsed || parsed.version !== SESSION_VERSION || !Array.isArray(parsed.conversations)) return emptyState();
-    return parsed;
+    const conversations = JSON.parse(localStorage.getItem(LEGACY_CONVERSATION_KEY) || "null");
+    const streams = JSON.parse(localStorage.getItem(LEGACY_STREAM_KEY) || "[]");
+    if (!conversations || !Array.isArray(conversations.conversations)) return null;
+    return {
+      version: SESSION_VERSION,
+      activeConversationId: localStorage.getItem(LEGACY_ACTIVE_KEY) || "",
+      conversations: conversations.conversations,
+      streams: Array.isArray(streams) ? streams : []
+    };
   } catch {
-    return emptyState();
+    return null;
   }
 }
 
-export function saveConversationState(state) {
+function normalizedState(state) {
   const next = {
     version: SESSION_VERSION,
-    conversations: (state.conversations || []).map((conversation) => redactConversationValue(conversation))
+    activeConversationId: String(state?.activeConversationId || ""),
+    conversations: (state?.conversations || []).map((conversation) => redactConversationValue(conversation)),
+    streams: (state?.streams || []).map((stream) => redactConversationValue(stream))
   };
-  storage()?.setItem(STORAGE_KEY, JSON.stringify(next));
   return next;
+}
+
+function queueStateWrite(state) {
+  const next = normalizedState(state);
+  cachedState = next;
+  writeQueue = writeQueue
+    .catch(() => undefined)
+    .then(() => putState(CHAT_STATE_ID, next));
+  return next;
+}
+
+export async function hydrateConversationState() {
+  if (!hydrationPromise) {
+    hydrationPromise = (async () => {
+      const stored = await getState(CHAT_STATE_ID, null);
+      if (stored?.version === SESSION_VERSION && Array.isArray(stored.conversations)) {
+        cachedState = normalizedState(stored);
+        return loadConversationState();
+      }
+      const migrated = readLegacyState();
+      cachedState = normalizedState(migrated || emptyState());
+      await putState(CHAT_STATE_ID, cachedState);
+      if (migrated && typeof localStorage !== "undefined") {
+        localStorage.removeItem(LEGACY_CONVERSATION_KEY);
+        localStorage.removeItem(LEGACY_ACTIVE_KEY);
+        localStorage.removeItem(LEGACY_STREAM_KEY);
+      }
+      return loadConversationState();
+    })().catch((error) => {
+      hydrationPromise = null;
+      throw error;
+    });
+  }
+  return hydrationPromise;
+}
+
+export function saveConversationState(state) {
+  return queueStateWrite({
+    ...cachedState,
+    conversations: state?.conversations ?? cachedState.conversations
+  });
+}
+
+export function flushConversationState() {
+  return writeQueue;
+}
+
+export function resetConversationStateCache() {
+  cachedState = emptyState();
+  hydrationPromise = null;
+  writeQueue = Promise.resolve();
 }
 
 export function createConversation(input = {}) {
@@ -147,12 +215,24 @@ export function setConversationDraft(conversation, draft) {
 }
 
 export function setActiveConversationId(conversationId) {
-  if (conversationId) storage()?.setItem(ACTIVE_KEY, conversationId);
-  else storage()?.removeItem(ACTIVE_KEY);
+  queueStateWrite({
+    ...cachedState,
+    activeConversationId: String(conversationId || "")
+  });
 }
 
 export function getActiveConversationId() {
-  return storage()?.getItem(ACTIVE_KEY) || "";
+  return cachedState.activeConversationId || "";
+}
+
+export function loadConversationStreams() {
+  return clone(cachedState.streams || []);
+}
+
+export function saveConversationStreams(streams) {
+  const next = (streams || []).map((stream) => redactConversationValue(stream));
+  queueStateWrite({ ...cachedState, streams: next });
+  return next;
 }
 
 export function conversationById(state, conversationId) {

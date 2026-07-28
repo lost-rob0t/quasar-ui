@@ -1,27 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { getActiveConversationId } from "../lib/agent-conversations";
+import {
+  getActiveConversationId,
+  hydrateConversationState,
+  loadConversationStreams,
+  saveConversationStreams
+} from "../lib/agent-conversations";
 import { PROVIDER_STREAM_EVENT } from "../lib/provider-adapters";
 
-const STREAM_KEY = "quasar:agent-streams:v1";
-
-function loadStreams() {
-  try {
-    const value = JSON.parse(localStorage.getItem(STREAM_KEY) || "[]");
-    return Array.isArray(value) ? value : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveStreams(streams) {
-  localStorage.setItem(STREAM_KEY, JSON.stringify(streams));
-  return streams;
-}
-
 export default function AgentStreamingOverlay() {
-  const [streams, setStreams] = useState(loadStreams);
+  const [streams, setStreams] = useState(loadConversationStreams);
   const [timeline, setTimeline] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    hydrateConversationState().then(() => {
+      if (active) setStreams(loadConversationStreams());
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     const listener = (event) => {
@@ -44,7 +43,7 @@ export default function AgentStreamingOverlay() {
           updatedAt: payload.at
         };
         const result = [next, ...current.filter((stream) => stream.id !== next.id)].slice(0, 8);
-        saveStreams(result.filter((stream) => stream.status === "streaming" || stream.status === "failed"));
+        saveConversationStreams(result.filter((stream) => stream.status === "streaming" || stream.status === "failed"));
         return result;
       });
       if (payload.type === "start" && !document.querySelector(".agent-chat-modal")) document.querySelector(".agent-chat-bubble")?.click();

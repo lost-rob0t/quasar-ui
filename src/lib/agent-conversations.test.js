@@ -1,4 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("./db", () => ({
+  getState: vi.fn(),
+  putState: vi.fn()
+}));
+import { getState, putState } from "./db";
 import {
   appendConversationMessage,
   appendConversationTurn,
@@ -6,10 +12,15 @@ import {
   createConversation,
   deriveConversationFromRun,
   getActiveConversationId,
+  hydrateConversationState,
   loadConversationState,
+  loadConversationStreams,
   mapRunState,
   redactConversationValue,
+  resetConversationStateCache,
   saveConversationState,
+  saveConversationStreams,
+  flushConversationState,
   setActiveConversationId,
   setConversationDraft,
   updateConversationMessage,
@@ -29,16 +40,25 @@ function localStorageMock() {
 describe("agent conversations", () => {
   beforeEach(() => {
     vi.stubGlobal("localStorage", localStorageMock());
+    resetConversationStateCache();
+    getState.mockImplementation(async (_id, fallback) => fallback ?? null);
+    putState.mockImplementation(async (id, value) => ({ ...value, _id: id, _rev: "1-test" }));
   });
 
-  it("persists conversations, turns, messages, and drafts", () => {
+  it("persists conversations, turns, messages, and drafts in the versioned state database", async () => {
+    await hydrateConversationState();
     let conversation = createConversation({ id: "conversation:test" });
     conversation = appendConversationMessage(conversation, { id: "message:user", role: "user", content: "Inspect this graph" });
     conversation = appendConversationTurn(conversation, { id: "turn:1", messageId: "message:user" });
     conversation = setConversationDraft(conversation, "next prompt");
     const state = upsertConversation({ version: 1, conversations: [] }, conversation);
     expect(conversationById(state, "conversation:test")?.draft).toBe("next prompt");
+    await flushConversationState();
     expect(loadConversationState().conversations[0].messages[0].content).toBe("Inspect this graph");
+    expect(putState).toHaveBeenLastCalledWith("agent-chat-state:v2", expect.objectContaining({
+      version: 2,
+      conversations: [expect.objectContaining({ id: "conversation:test" })]
+    }));
   });
 
   it("updates a streamed or retried message in place", () => {
@@ -48,16 +68,41 @@ describe("agent conversations", () => {
     expect(conversation.messages[0]).toMatchObject({ content: "complete", status: "completed" });
   });
 
-  it("redacts secret-shaped fields before persistence", () => {
+  it("redacts secret-shaped fields before persistence", async () => {
+    await hydrateConversationState();
     const redacted = redactConversationValue({ input: { apiKey: "secret", query: "safe" }, authorization: "bearer" });
     expect(redacted).toEqual({ input: { apiKey: "[REDACTED]", query: "safe" }, authorization: "[REDACTED]" });
     saveConversationState({ version: 1, conversations: [{ id: "c", messages: [], token: "bad" }] });
-    expect(localStorage.setItem.mock.calls[0][1]).not.toContain("bad");
+    await flushConversationState();
+    expect(JSON.stringify(putState.mock.calls.at(-1)[1])).not.toContain("bad");
   });
 
-  it("restores the active conversation ID", () => {
+  it("restores the active conversation ID and partial streams from PouchDB", async () => {
+    await hydrateConversationState();
     setActiveConversationId("conversation:active");
+    saveConversationStreams([{ id: "stream:1", text: "partial", status: "streaming" }]);
+    await flushConversationState();
     expect(getActiveConversationId()).toBe("conversation:active");
+    expect(loadConversationStreams()).toEqual([expect.objectContaining({ id: "stream:1", text: "partial" })]);
+  });
+
+  it("migrates legacy local browser state once", async () => {
+    localStorage.setItem("quasar:agent-conversations:v1", JSON.stringify({
+      version: 1,
+      conversations: [{ id: "conversation:legacy", messages: [], turns: [], taskList: [] }]
+    }));
+    localStorage.setItem("quasar:agent-active-conversation:v1", "conversation:legacy");
+    localStorage.setItem("quasar:agent-streams:v1", JSON.stringify([{ id: "stream:legacy", text: "partial" }]));
+
+    const state = await hydrateConversationState();
+
+    expect(state).toMatchObject({
+      version: 2,
+      activeConversationId: "conversation:legacy",
+      conversations: [expect.objectContaining({ id: "conversation:legacy" })],
+      streams: [expect.objectContaining({ id: "stream:legacy" })]
+    });
+    expect(localStorage.removeItem).toHaveBeenCalledTimes(3);
   });
 
   it("derives auditable assistant and tool cards from persisted run history", () => {
