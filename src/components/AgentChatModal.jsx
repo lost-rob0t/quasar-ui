@@ -145,11 +145,12 @@ function CopyButton({ value, label = "Copy" }) {
 function ToolCard({ message, onRetry }) {
   const [open, setOpen] = useState(false);
   return (
-    <article className={`agent-tool-card agent-tool-${message.status || "completed"}`}>
+    <article className={`agent-tool-card agent-tool-${message.status || "completed"} ${message.parentToolCallId ? "agent-tool-child" : ""}`}>
       <button className="agent-tool-summary" type="button" onClick={() => setOpen((value) => !value)}>
         {open ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
         <TerminalSquare size={15} />
         <strong>{message.toolName || "tool"}</strong>
+        {message.parentToolCallId && <span>nested · depth {message.nestedDepth || 1}</span>}
         <span>{message.status || "completed"}</span>
         <time>{formatTime(message.completedAt || message.createdAt)}</time>
       </button>
@@ -524,6 +525,30 @@ export default function AgentChatBubble() {
             code: command.input.code,
             input,
             limits: { timeoutMs: command.input.timeout || 5000 },
+            onToolCall: (call) => {
+              const messageId = `message:${call.id}`;
+              mutateConversation((conversation) => {
+                const message = {
+                  id: messageId,
+                  role: "tool",
+                  kind: "tool",
+                  content: `${call.name} ${call.status}`,
+                  toolName: call.name,
+                  input: call.input,
+                  output: call.output,
+                  error: call.error,
+                  status: call.status,
+                  parentToolCallId: toolMessageId,
+                  sandboxCallId: call.id,
+                  nestedDepth: call.depth,
+                  createdAt: call.startedAt,
+                  completedAt: call.completedAt
+                };
+                return conversation.messages.some((candidate) => candidate.id === messageId)
+                  ? updateConversationMessage(conversation, messageId, message)
+                  : appendConversationMessage(conversation, message);
+              });
+            },
             bridge: async (name, args) => {
               const nestedDefinition = registry.get(name) || registry.definitions.find((item) => item.capability === name);
               if (!nestedDefinition) throw new Error(`Unknown capability: ${name}`);

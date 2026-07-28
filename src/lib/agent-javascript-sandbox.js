@@ -173,10 +173,12 @@ export function executeSandboxedJavaScript(options) {
           if (!options.bridge) throw new Error("No capability bridge is configured");
           const value = assertSerializable(await options.bridge(message.name, message.args, call), { maxBytes: limits.maxOutputBytes });
           Object.assign(call, { status: "completed", output: value, completedAt: new Date().toISOString() });
+          options.onToolCall?.({ ...call });
           worker.postMessage({ type: "tool-result", id: message.id, value });
         } catch (error) {
           const safeError = { name: error?.name || "Error", message: error?.message || String(error), code: error?.code || "capability_error" };
           Object.assign(call, { status: "failed", error: safeError, completedAt: new Date().toISOString() });
+          options.onToolCall?.({ ...call });
           worker.postMessage({ type: "tool-result", id: message.id, error: safeError });
         }
         return;

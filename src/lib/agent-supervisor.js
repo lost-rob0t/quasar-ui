@@ -308,6 +308,7 @@ export class AgentSupervisor {
         const result = await this.toolRegistry.execute(call.name, args, {
           agent,
           run,
+          toolCallId: toolRecord.id,
           selectionIds: run.selectionIds,
           targetIds: run.targetIds,
           dataset: run.dataset,

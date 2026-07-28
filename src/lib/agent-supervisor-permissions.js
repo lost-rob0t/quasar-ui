@@ -8,6 +8,11 @@ import {
   invokeDocumentCapability
 } from "./agent-document-capabilities";
 import {
+  AGENT_RECORD_TYPES,
+  saveAgentRecord
+} from "./agent-records";
+import { sanitizeArguments } from "./agent-permissions-v2";
+import {
   AGENT_JAVASCRIPT_CAPABILITY,
   cancelJavascriptExecutions,
   invokeJavascriptCapability
@@ -15,6 +20,28 @@ import {
 
 const PATCHED = Symbol.for("quasar.agent-supervisor-permissions");
 const DOCUMENT_NAMES = new Set(AGENT_DOCUMENT_CAPABILITIES.map((capability) => capability.name));
+
+function nestedToolId() {
+  return `nested-tool:${crypto.randomUUID()}`;
+}
+
+function summarize(value, limit = 4_000) {
+  let text;
+  try {
+    text = typeof value === "string" ? value : JSON.stringify(value);
+  } catch {
+    text = String(value);
+  }
+  return text.length <= limit ? text : `${text.slice(0, limit)}…`;
+}
+
+function errorRecord(error) {
+  return {
+    name: error?.name || "Error",
+    code: error?.code || "capability_error",
+    message: error?.message || String(error)
+  };
+}
 
 function allowedDocumentCapabilities(agent) {
   const permissions = new Set(agent?.permissions || []);
@@ -50,14 +77,45 @@ if (!AgentSupervisor.prototype[PATCHED]) {
         if (name === AGENT_JAVASCRIPT_CAPABILITY.name) {
           return invokeJavascriptCapability(args, {
             ...executionContext,
-            callTool: (nestedName, nestedArgs, metadata = {}) => {
+            callTool: async (nestedName, nestedArgs, metadata = {}) => {
               if (nestedName === AGENT_JAVASCRIPT_CAPABILITY.name) throw new Error("Nested JavaScript execution is not allowed");
-              return this.toolRegistry.execute(nestedName, nestedArgs, {
-                ...executionContext,
+              const child = await saveAgentRecord({
+                id: nestedToolId(),
+                recordType: AGENT_RECORD_TYPES.toolCall,
+                runId: executionContext.run?.id || executionContext.runId || null,
+                agentId: executionContext.agent?.id || null,
+                toolName: nestedName,
+                arguments: sanitizeArguments(nestedArgs),
                 parentToolCallId: metadata.parentToolCallId || executionContext.toolCallId || null,
                 sandboxCallId: metadata.sandboxCallId || null,
-                nestedDepth: metadata.depth || 1
-              });
+                nestedDepth: metadata.depth || 1,
+                status: "running",
+                startedAt: new Date().toISOString()
+              }, AGENT_RECORD_TYPES.toolCall);
+              try {
+                const result = await this.toolRegistry.execute(nestedName, nestedArgs, {
+                  ...executionContext,
+                  toolCallId: child.id,
+                  parentToolCallId: child.parentToolCallId,
+                  sandboxCallId: child.sandboxCallId,
+                  nestedDepth: child.nestedDepth
+                });
+                await saveAgentRecord({
+                  ...child,
+                  status: "completed",
+                  resultSummary: summarize(result),
+                  endedAt: new Date().toISOString()
+                }, AGENT_RECORD_TYPES.toolCall);
+                return result;
+              } catch (error) {
+                await saveAgentRecord({
+                  ...child,
+                  status: "failed",
+                  error: errorRecord(error),
+                  endedAt: new Date().toISOString()
+                }, AGENT_RECORD_TYPES.toolCall);
+                throw error;
+              }
             }
           });
         }

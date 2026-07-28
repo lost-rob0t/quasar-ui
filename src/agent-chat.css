@@ -96,6 +96,7 @@
 
 .agent-tool-card,
 .agent-permission-card { margin: 0 0 12px; border: 1px solid var(--border, #334155); border-radius: 10px; background: rgb(15 23 42 / 88%); }
+.agent-tool-child { width: calc(100% - 22px); margin-left: 22px; border-left: 3px solid #60a5fa; }
 .agent-tool-running { border-color: rgb(34 197 94 / 50%); }
 .agent-tool-failed { border-color: rgb(239 68 68 / 60%); }
 .agent-tool-summary { display: flex; width: 100%; align-items: center; gap: 7px; padding: 9px 11px; border: 0; color: inherit; background: transparent; text-align: left; }

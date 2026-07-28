@@ -50,19 +50,24 @@ test("executes model-selected JavaScript without DOM, storage, or network access
 test("routes nested JavaScript calls through the typed capability bridge", async ({ page }) => {
   await page.goto("/");
   await waitForJavascriptBridge(page);
-  const result = await page.evaluate(() => new Promise((resolve, reject) => {
-    window.dispatchEvent(new CustomEvent("quasar:agent-javascript-capability", {
-      detail: {
-        args: { code: `result(await tools.call("graph_read", { dataset: "main" }));` },
-        context: {
-          runId: "run:nested-e2e",
-          callTool: async (name: string, args: unknown) => ({ capability: name, input: args })
-        },
-        resolve,
-        reject
-      }
-    }));
-  })) as SandboxResult;
+  const execution = await page.evaluate(() => {
+    const events: Array<{ name: string; status: string; depth: number }> = [];
+    return new Promise<{ result: SandboxResult; events: Array<{ name: string; status: string; depth: number }> }>((resolve, reject) => {
+      window.dispatchEvent(new CustomEvent("quasar:agent-javascript-capability", {
+        detail: {
+          args: { code: `result(await tools.call("graph_read", { dataset: "main" }));` },
+          context: {
+            runId: "run:nested-e2e",
+            onToolCall: (call: { name: string; status: string; depth: number }) => events.push({ ...call }),
+            callTool: async (name: string, args: unknown) => ({ capability: name, input: args })
+          },
+          resolve: (result: SandboxResult) => resolve({ result, events }),
+          reject
+        }
+      }));
+    });
+  });
+  const { result, events } = execution;
 
   expect(result).toMatchObject({
     status: "completed",
@@ -70,6 +75,10 @@ test("routes nested JavaScript calls through the typed capability bridge", async
   });
   expect(result.nestedCalls).toHaveLength(1);
   expect(result.nestedCalls[0]).toMatchObject({ name: "graph_read", status: "completed" });
+  expect(events).toEqual([
+    expect.objectContaining({ name: "graph_read", status: "running", depth: 1 }),
+    expect.objectContaining({ name: "graph_read", status: "completed", depth: 1 })
+  ]);
 });
 
 test("terminates JavaScript that exceeds its wall-clock limit", async ({ page }) => {
