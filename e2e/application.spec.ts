@@ -36,6 +36,7 @@ test("creates a graph node through the compact editor and preserves its full-edi
   await expect(page.getByLabel("Dataset filter", { exact: true })).toBeHidden();
   await expect(page.getByLabel("Graph layout", { exact: true })).toBeHidden();
 
+  await page.getByRole("button", { name: "Enter blank canvas" }).click();
   await page.locator(".graph-stage").click({ button: "right", position: { x: 240, y: 220 } });
   await expect(page.getByRole("menu", { name: "canvas actions" })).toBeVisible();
   await page.getByRole("button", { name: "Create person here" }).click();
@@ -108,6 +109,7 @@ test.describe("responsive application shell", () => {
     expect(stage.x + stage.width).toBeLessThanOrEqual(inspector.x);
     expect(stage.y + stage.height).toBeLessThanOrEqual(dock.y);
 
+    await page.getByRole("button", { name: "Enter blank canvas" }).click();
     await page.locator(".graph-stage").click({
       button: "right",
       position: { x: 240, y: Math.min(220, stage.height - 20) }
