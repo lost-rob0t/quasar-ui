@@ -3,7 +3,7 @@ import { installMelissaFetchInterceptor } from "../lib/melissa-browser-config";
 import {
   MELISSA_ACTOR_PACK_VERSION,
   mergeMelissaActors
-} from "../lib/melissa-actor-pack";
+} from "../lib/melissa-actor-pack-normalized";
 import { useQuasar } from "../store";
 
 export default function MelissaActorBridge() {
