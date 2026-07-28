@@ -1,4 +1,5 @@
 const PROVIDER_TYPES = new Set(["openrouter", "openai", "anthropic", "openai-compatible", "local"]);
+const STREAM_EVENT = "quasar:agent-provider-stream";
 
 export class ProviderError extends Error {
   constructor(message, details = {}) {
@@ -78,6 +79,204 @@ function usageFromOpenAi(data) {
   };
 }
 
+function normalizedOpenAiResponse(data) {
+  const message = data.choices?.[0]?.message;
+  if (!message) throw new ProviderError("Provider response has no message", { code: "invalid_response", retryable: true });
+  return {
+    id: data.id || crypto.randomUUID(),
+    text: message.content || "",
+    toolCalls: (message.tool_calls || []).map((call) => ({
+      id: call.id,
+      name: call.function?.name,
+      arguments: call.function?.arguments || "{}"
+    })),
+    finishReason: data.choices?.[0]?.finish_reason || null,
+    usage: usageFromOpenAi(data),
+    providerMessage: message,
+    raw: data
+  };
+}
+
+function normalizedAnthropicResponse(data) {
+  return {
+    id: data.id || crypto.randomUUID(),
+    text: (data.content || []).filter((part) => part.type === "text").map((part) => part.text).join("\n"),
+    toolCalls: (data.content || []).filter((part) => part.type === "tool_use").map((part) => ({
+      id: part.id,
+      name: part.name,
+      arguments: JSON.stringify(part.input || {})
+    })),
+    finishReason: data.stop_reason || null,
+    usage: {
+      inputTokens: Number(data.usage?.input_tokens || 0),
+      outputTokens: Number(data.usage?.output_tokens || 0),
+      cachedTokens: Number(data.usage?.cache_read_input_tokens || 0),
+      exact: Boolean(data.usage)
+    },
+    providerMessage: { role: "assistant", content: data.content || [] },
+    raw: data
+  };
+}
+
+function createStreamEmitter(request, provider) {
+  const streamId = request.streamId || crypto.randomUUID();
+  const emit = (type, detail = {}) => {
+    const event = { streamId, provider, type, at: new Date().toISOString(), ...detail };
+    request.onStreamEvent?.(event);
+    if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(STREAM_EVENT, { detail: event }));
+    return event;
+  };
+  emit("start", { model: request.model });
+  return { streamId, emit };
+}
+
+async function readSse(response, onEvent) {
+  if (!response.ok) throw normalizeProviderError(null, response);
+  if (!response.body) throw new ProviderError("Provider streaming response has no body", { code: "invalid_response", retryable: true });
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  const processBlock = (block) => {
+    const eventName = block.split("\n").find((line) => line.startsWith("event:"))?.slice(6).trim() || "message";
+    const data = block.split("\n").filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trimStart()).join("\n");
+    if (data) onEvent({ event: eventName, data });
+  };
+  while (true) {
+    const { value, done } = await reader.read();
+    buffer += decoder.decode(value || new Uint8Array(), { stream: !done }).replaceAll("\r\n", "\n");
+    const blocks = buffer.split("\n\n");
+    buffer = blocks.pop() || "";
+    for (const block of blocks) processBlock(block);
+    if (done) break;
+  }
+  if (buffer.trim()) processBlock(buffer);
+}
+
+async function streamOpenAiResponse(response, request, emitter) {
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("text/event-stream")) {
+    const normalized = normalizedOpenAiResponse(await readJson(response));
+    if (normalized.text) emitter.emit("delta", { text: normalized.text });
+    emitter.emit("complete", { usage: normalized.usage, finishReason: normalized.finishReason });
+    return normalized;
+  }
+  let id = emitter.streamId;
+  let text = "";
+  let finishReason = null;
+  let usage = { inputTokens: 0, outputTokens: 0, cachedTokens: 0, exact: false };
+  const calls = [];
+  await readSse(response, ({ data }) => {
+    if (data === "[DONE]") return;
+    let chunk;
+    try { chunk = JSON.parse(data); } catch { throw new ProviderError("Provider returned invalid streaming JSON", { code: "invalid_response", retryable: true }); }
+    id = chunk.id || id;
+    if (chunk.usage) usage = usageFromOpenAi(chunk);
+    const choice = chunk.choices?.[0];
+    const delta = choice?.delta || {};
+    if (typeof delta.content === "string" && delta.content) {
+      text += delta.content;
+      emitter.emit("delta", { text: delta.content });
+    }
+    for (const partial of delta.tool_calls || []) {
+      const index = Number(partial.index || 0);
+      calls[index] ||= { id: partial.id || `tool:${index}`, name: "", arguments: "" };
+      if (partial.id) calls[index].id = partial.id;
+      if (partial.function?.name) calls[index].name += partial.function.name;
+      if (partial.function?.arguments) calls[index].arguments += partial.function.arguments;
+      emitter.emit("tool-delta", { index, toolCall: { ...calls[index] } });
+    }
+    finishReason = choice?.finish_reason || finishReason;
+  });
+  const toolCalls = calls.filter(Boolean).map((call) => ({ ...call, arguments: call.arguments || "{}" }));
+  const providerMessage = {
+    role: "assistant",
+    content: text,
+    ...(toolCalls.length ? {
+      tool_calls: toolCalls.map((call) => ({
+        id: call.id,
+        type: "function",
+        function: { name: call.name, arguments: call.arguments }
+      }))
+    } : {})
+  };
+  const result = { id, text, toolCalls, finishReason, usage, providerMessage, raw: null };
+  emitter.emit("complete", { usage, finishReason });
+  return result;
+}
+
+async function streamAnthropicResponse(response, request, emitter) {
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("text/event-stream")) {
+    const normalized = normalizedAnthropicResponse(await readJson(response));
+    if (normalized.text) emitter.emit("delta", { text: normalized.text });
+    emitter.emit("complete", { usage: normalized.usage, finishReason: normalized.finishReason });
+    return normalized;
+  }
+  let id = emitter.streamId;
+  let text = "";
+  let finishReason = null;
+  const usage = { inputTokens: 0, outputTokens: 0, cachedTokens: 0, exact: false };
+  const content = [];
+  const toolJson = new Map();
+  await readSse(response, ({ event, data }) => {
+    let chunk;
+    try { chunk = JSON.parse(data); } catch { throw new ProviderError("Provider returned invalid streaming JSON", { code: "invalid_response", retryable: true }); }
+    if (event === "message_start") {
+      id = chunk.message?.id || id;
+      usage.inputTokens = Number(chunk.message?.usage?.input_tokens || 0);
+      usage.cachedTokens = Number(chunk.message?.usage?.cache_read_input_tokens || 0);
+      usage.exact = Boolean(chunk.message?.usage);
+      return;
+    }
+    if (event === "content_block_start") {
+      const index = Number(chunk.index || 0);
+      content[index] = chunk.content_block || { type: "text", text: "" };
+      if (content[index].type === "tool_use") toolJson.set(index, "");
+      return;
+    }
+    if (event === "content_block_delta") {
+      const index = Number(chunk.index || 0);
+      if (chunk.delta?.type === "text_delta") {
+        const deltaText = chunk.delta.text || "";
+        text += deltaText;
+        content[index] ||= { type: "text", text: "" };
+        content[index].text = `${content[index].text || ""}${deltaText}`;
+        emitter.emit("delta", { text: deltaText });
+      }
+      if (chunk.delta?.type === "input_json_delta") {
+        const next = `${toolJson.get(index) || ""}${chunk.delta.partial_json || ""}`;
+        toolJson.set(index, next);
+        emitter.emit("tool-delta", { index, partialJson: chunk.delta.partial_json || "" });
+      }
+      return;
+    }
+    if (event === "message_delta") {
+      finishReason = chunk.delta?.stop_reason || finishReason;
+      usage.outputTokens = Number(chunk.usage?.output_tokens || usage.outputTokens);
+      usage.exact = usage.exact || Boolean(chunk.usage);
+    }
+  });
+  for (const [index, json] of toolJson) {
+    try { content[index].input = json ? JSON.parse(json) : {}; } catch { content[index].input = {}; }
+  }
+  const toolCalls = content.filter((part) => part?.type === "tool_use").map((part) => ({
+    id: part.id,
+    name: part.name,
+    arguments: JSON.stringify(part.input || {})
+  }));
+  const result = {
+    id,
+    text,
+    toolCalls,
+    finishReason,
+    usage,
+    providerMessage: { role: "assistant", content: content.filter(Boolean) },
+    raw: null
+  };
+  emitter.emit("complete", { usage, finishReason });
+  return result;
+}
+
 function openAiAdapter(config, secret) {
   const baseUrl = normalizeBaseUrl(config.baseUrl);
   const headers = {
@@ -85,7 +284,15 @@ function openAiAdapter(config, secret) {
     ...(secret ? { Authorization: `Bearer ${secret}` } : {}),
     ...(config.headers || {})
   };
-  return {
+  const requestBody = ({ model, messages, tools = [], toolChoice = "auto", maxTokens, temperature, stream = false }) => ({
+    model,
+    messages,
+    ...(tools.length ? { tools, tool_choice: toolChoice } : {}),
+    ...(maxTokens ? { max_tokens: maxTokens } : {}),
+    ...(temperature !== undefined ? { temperature } : {}),
+    ...(stream ? { stream: true, stream_options: { include_usage: true } } : {})
+  });
+  const adapter = {
     type: config.type,
     async listModels({ signal } = {}) {
       try {
@@ -100,48 +307,30 @@ function openAiAdapter(config, secret) {
         throw normalizeProviderError(error);
       }
     },
-    async sendMessages({ model, messages, tools = [], toolChoice = "auto", maxTokens, temperature, signal }) {
+    async sendMessages(request) {
+      return adapter.streamMessages(request);
+    },
+    async streamMessages(request) {
+      const emitter = createStreamEmitter(request, config.type);
       try {
         const response = await fetch(`${baseUrl}/chat/completions`, {
           method: "POST",
-          headers,
-          signal,
-          body: JSON.stringify({
-            model,
-            messages,
-            ...(tools.length ? { tools, tool_choice: toolChoice } : {}),
-            ...(maxTokens ? { max_tokens: maxTokens } : {}),
-            ...(temperature !== undefined ? { temperature } : {})
-          })
+          headers: { ...headers, Accept: "text/event-stream" },
+          signal: request.signal,
+          body: JSON.stringify(requestBody({ ...request, stream: true }))
         });
-        const data = await readJson(response);
-        const message = data.choices?.[0]?.message;
-        if (!message) throw new ProviderError("Provider response has no message", { code: "invalid_response", retryable: true });
-        return {
-          id: data.id || crypto.randomUUID(),
-          text: message.content || "",
-          toolCalls: (message.tool_calls || []).map((call) => ({
-            id: call.id,
-            name: call.function?.name,
-            arguments: call.function?.arguments || "{}"
-          })),
-          finishReason: data.choices?.[0]?.finish_reason || null,
-          usage: usageFromOpenAi(data),
-          providerMessage: message,
-          raw: data
-        };
+        return await streamOpenAiResponse(response, request, emitter);
       } catch (error) {
-        if (error instanceof ProviderError) throw error;
-        throw normalizeProviderError(error);
+        const normalized = error instanceof ProviderError ? error : normalizeProviderError(error);
+        emitter.emit("error", { error: { name: normalized.name, code: normalized.code, message: normalized.message } });
+        throw normalized;
       }
-    },
-    streamMessages(request) {
-      return this.sendMessages(request);
     },
     cancel(controller) {
       controller?.abort();
     }
   };
+  return adapter;
 }
 
 function anthropicAdapter(config, secret) {
@@ -151,7 +340,37 @@ function anthropicAdapter(config, secret) {
     "x-api-key": secret,
     "anthropic-version": config.apiVersion || "2023-06-01"
   };
-  return {
+  const normalizeRequest = ({ model, messages, tools = [], maxTokens = 4_096, temperature, stream = false }) => {
+    const system = messages.filter((message) => message.role === "system").map((message) => message.content).join("\n\n");
+    const turns = messages
+      .filter((message) => message.role !== "system")
+      .map((message) => message.role === "tool"
+        ? {
+          role: "user",
+          content: [{
+            type: "tool_result",
+            tool_use_id: message.tool_call_id,
+            content: message.content
+          }]
+        }
+        : message);
+    return {
+      model,
+      system,
+      messages: turns,
+      max_tokens: maxTokens,
+      ...(tools.length ? {
+        tools: tools.map((tool) => ({
+          name: tool.function.name,
+          description: tool.function.description,
+          input_schema: tool.function.parameters
+        }))
+      } : {}),
+      ...(temperature !== undefined ? { temperature } : {}),
+      ...(stream ? { stream: true } : {})
+    };
+  };
+  const adapter = {
     type: "anthropic",
     async listModels({ signal } = {}) {
       try {
@@ -162,70 +381,30 @@ function anthropicAdapter(config, secret) {
         throw normalizeProviderError(error);
       }
     },
-    async sendMessages({ model, messages, tools = [], maxTokens = 4_096, temperature, signal }) {
-      const system = messages.filter((message) => message.role === "system").map((message) => message.content).join("\n\n");
-      const turns = messages
-        .filter((message) => message.role !== "system")
-        .map((message) => message.role === "tool"
-          ? {
-            role: "user",
-            content: [{
-              type: "tool_result",
-              tool_use_id: message.tool_call_id,
-              content: message.content
-            }]
-          }
-          : message);
-      try {
-        const data = await readJson(await fetch(`${baseUrl}/messages`, {
-          method: "POST",
-          headers,
-          signal,
-          body: JSON.stringify({
-            model,
-            system,
-            messages: turns,
-            max_tokens: maxTokens,
-            ...(tools.length ? {
-              tools: tools.map((tool) => ({
-                name: tool.function.name,
-                description: tool.function.description,
-                input_schema: tool.function.parameters
-              }))
-            } : {}),
-            ...(temperature !== undefined ? { temperature } : {})
-          })
-        }));
-        return {
-          id: data.id || crypto.randomUUID(),
-          text: (data.content || []).filter((part) => part.type === "text").map((part) => part.text).join("\n"),
-          toolCalls: (data.content || []).filter((part) => part.type === "tool_use").map((part) => ({
-            id: part.id,
-            name: part.name,
-            arguments: JSON.stringify(part.input || {})
-          })),
-          finishReason: data.stop_reason || null,
-          usage: {
-            inputTokens: Number(data.usage?.input_tokens || 0),
-            outputTokens: Number(data.usage?.output_tokens || 0),
-            cachedTokens: Number(data.usage?.cache_read_input_tokens || 0),
-            exact: Boolean(data.usage)
-          },
-          providerMessage: { role: "assistant", content: data.content || [] },
-          raw: data
-        };
-      } catch (error) {
-        if (error instanceof ProviderError) throw error;
-        throw normalizeProviderError(error);
-      }
+    async sendMessages(request) {
+      return adapter.streamMessages(request);
     },
-    streamMessages(request) {
-      return this.sendMessages(request);
+    async streamMessages(request) {
+      const emitter = createStreamEmitter(request, "anthropic");
+      try {
+        const response = await fetch(`${baseUrl}/messages`, {
+          method: "POST",
+          headers: { ...headers, Accept: "text/event-stream" },
+          signal: request.signal,
+          body: JSON.stringify(normalizeRequest({ ...request, stream: true }))
+        });
+        return await streamAnthropicResponse(response, request, emitter);
+      } catch (error) {
+        const normalized = error instanceof ProviderError ? error : normalizeProviderError(error);
+        emitter.emit("error", { error: { name: normalized.name, code: normalized.code, message: normalized.message } });
+        throw normalized;
+      }
     },
     cancel(controller) {
       controller?.abort();
     }
   };
+  return adapter;
 }
 
 export const DEFAULT_PROVIDER_CONFIGS = Object.freeze([
@@ -262,3 +441,5 @@ export async function testProviderConnection(config, secret, { signal } = {}) {
   const models = await adapter.listModels({ signal });
   return { connected: true, modelCount: models.length, models: models.slice(0, 100) };
 }
+
+export { STREAM_EVENT as PROVIDER_STREAM_EVENT };

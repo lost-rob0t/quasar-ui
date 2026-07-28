@@ -32,8 +32,14 @@ import { DocumentPage, DocumentsPage } from "./components/Documents";
 import DocumentEditor from "./components/DocumentEditor";
 import { ImportPage, SettingsPage } from "./components/ImportSettings";
 import StatsPage from "./components/StatsPage";
-import { AgentBubble, AgentConsole, AgentSystemProvider } from "./components/AgentSystem";
+import { AgentConsole, AgentSystemProvider } from "./components/AgentSystem";
+import AgentChatBubble from "./components/AgentChatModal";
+import AgentDocumentCapabilityBridge from "./components/AgentDocumentCapabilityBridge";
+import AgentJavascriptCapabilityBridge from "./components/AgentJavascriptCapabilityBridge";
+import AgentPermissionOverlay from "./components/AgentPermissionOverlay";
+import AgentStreamingOverlay from "./components/AgentStreamingOverlay";
 import MobileGestureMenu from "./components/MobileGestureMenu";
+import "./lib/agent-supervisor-permissions";
 
 const navigation = [
   { to: "/", label: "Home", mobileLabel: "Home", Icon: House, end: true },
@@ -289,7 +295,11 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
         <GraphLayoutControl />
-        <AgentBubble />
+        <AgentChatBubble />
+        <AgentDocumentCapabilityBridge />
+        <AgentJavascriptCapabilityBridge />
+        <AgentPermissionOverlay />
+        <AgentStreamingOverlay />
       </WorkbenchShell>
     </AgentSystemProvider>
   );
