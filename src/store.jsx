@@ -103,6 +103,9 @@ export function QuasarProvider({ children }) {
       queueRef.current?.cancel?.();
       researchRunnerRef.current?.dispose?.();
       clearTimeout(workspaceTimer.current);
+      if (workspaceRef.current) {
+        saveWorkspace(workspaceRef.current).catch((error) => console.error("Failed to flush graph workspace", error));
+      }
     };
   }, []);
 
@@ -195,10 +198,12 @@ export function QuasarProvider({ children }) {
     return normalized;
   }, [settings]);
 
-  const commitWorkspace = useCallback((normalized) => {
+  const commitWorkspace = useCallback((normalized, { render = true } = {}) => {
     workspaceRef.current = normalized;
-    setWorkspace(normalized);
-    setSelectedIds(normalized.selectedIds || []);
+    if (render) {
+      setWorkspace(normalized);
+      setSelectedIds(normalized.selectedIds || []);
+    }
     clearTimeout(workspaceTimer.current);
     workspaceTimer.current = setTimeout(() => saveWorkspace(normalized).catch((error) => {
       setNotice({ kind: "error", message: error.message });
@@ -208,6 +213,24 @@ export function QuasarProvider({ children }) {
 
   const persistWorkspace = useCallback((next) => {
     return commitWorkspace(updateActiveGraph(workspaceRef.current || {}, next));
+  }, [commitWorkspace]);
+
+  const persistGraphViewport = useCallback((viewport) => {
+    return commitWorkspace(
+      updateActiveGraph(workspaceRef.current || {}, { viewport }),
+      { render: false }
+    );
+  }, [commitWorkspace]);
+
+  const persistGraphPosition = useCallback((id, position) => {
+    const current = workspaceRef.current || {};
+    const active = getActiveGraph(current);
+    return commitWorkspace(
+      updateActiveGraph(current, {
+        positions: { ...(active.positions || {}), [id]: position }
+      }),
+      { render: false }
+    );
   }, [commitWorkspace]);
 
   const addDocumentsToActiveGraph = useCallback((ids, changes = {}) => {
@@ -492,6 +515,11 @@ export function QuasarProvider({ children }) {
   }, [actors, runActor]);
 
   const activeGraph = useMemo(() => getActiveGraph(workspace || {}), [workspace]);
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const selectedDocuments = useMemo(
+    () => documents.filter((document) => selectedIdSet.has(document._id)),
+    [documents, selectedIdSet]
+  );
 
   const value = useMemo(() => ({
     documents,
@@ -500,7 +528,7 @@ export function QuasarProvider({ children }) {
     graphs: workspace?.graphs || [],
     activeGraph,
     selectedIds,
-    selectedDocuments: documents.filter((document) => selectedIds.includes(document._id)),
+    selectedDocuments,
     loading,
     notice,
     setNotice,
@@ -518,6 +546,8 @@ export function QuasarProvider({ children }) {
     importFileSet,
     persistSettings,
     persistWorkspace,
+    persistGraphViewport,
+    persistGraphPosition,
     addDocumentsToActiveGraph,
     removeDocumentsFromActiveGraph,
     createGraph,
@@ -548,8 +578,9 @@ export function QuasarProvider({ children }) {
     queryView,
     queryViewCounts
   }), [
-    documents, settings, workspace, selectedIds, loading, notice, syncStatus, serverStatus, queueStatus, history,
+    documents, settings, workspace, selectedIds, selectedDocuments, loading, notice, syncStatus, serverStatus, queueStatus, history,
     execute, executeBatch, undo, redo, importFileSet, persistSettings, persistWorkspace,
+    persistGraphViewport, persistGraphPosition,
     addDocumentsToActiveGraph, removeDocumentsFromActiveGraph,
     createGraph, switchGraph, renameGraph, deleteGraph, clearGraph,
     activeGraph, select, startSync, stopSync, synchronize, testServer, submitTarget,
