@@ -15,8 +15,8 @@ test("uses a bounded desktop workspace with a navigation menu", async ({ page })
   await expect(page.locator("body")).toHaveClass(/graph-viewport-full/);
   const fullBounds = await stage.boundingBox();
   expect(fullBounds).not.toBeNull();
-  expect(fullBounds!.left).toBeCloseTo(0, 0);
-  expect(fullBounds!.top).toBeCloseTo(0, 0);
+  expect(fullBounds!.x).toBeCloseTo(0, 0);
+  expect(fullBounds!.y).toBeCloseTo(0, 0);
   expect(fullBounds!.width).toBeCloseTo(1440, 0);
   expect(fullBounds!.height).toBeCloseTo(900, 0);
 
