@@ -1,5 +1,3 @@
-import { getState, putState } from "./db";
-
 const CHAT_STATE_ID = "agent-chat-state:v2";
 const LEGACY_CONVERSATION_KEY = "quasar:agent-conversations:v1";
 const LEGACY_ACTIVE_KEY = "quasar:agent-active-conversation:v1";
@@ -9,6 +7,16 @@ const SECRET_KEYS = /(?:token|secret|password|authorization|api[-_]?key|cookie)/
 let cachedState = emptyState();
 let hydrationPromise = null;
 let writeQueue = Promise.resolve();
+
+async function readState(id, fallback) {
+  const { getState } = await import("./db");
+  return getState(id, fallback);
+}
+
+async function writeState(id, value) {
+  const { putState } = await import("./db");
+  return putState(id, value);
+}
 
 function now() {
   return new Date().toISOString();
@@ -80,21 +88,21 @@ function queueStateWrite(state) {
   cachedState = next;
   writeQueue = writeQueue
     .catch(() => undefined)
-    .then(() => putState(CHAT_STATE_ID, next));
+    .then(() => writeState(CHAT_STATE_ID, next));
   return next;
 }
 
 export async function hydrateConversationState() {
   if (!hydrationPromise) {
     hydrationPromise = (async () => {
-      const stored = await getState(CHAT_STATE_ID, null);
+      const stored = await readState(CHAT_STATE_ID, null);
       if (stored?.version === SESSION_VERSION && Array.isArray(stored.conversations)) {
         cachedState = normalizedState(stored);
         return loadConversationState();
       }
       const migrated = readLegacyState();
       cachedState = normalizedState(migrated || emptyState());
-      await putState(CHAT_STATE_ID, cachedState);
+      await writeState(CHAT_STATE_ID, cachedState);
       if (migrated && typeof localStorage !== "undefined") {
         localStorage.removeItem(LEGACY_CONVERSATION_KEY);
         localStorage.removeItem(LEGACY_ACTIVE_KEY);
