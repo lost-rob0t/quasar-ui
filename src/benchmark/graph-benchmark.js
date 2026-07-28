@@ -261,18 +261,39 @@ async function measureFilters(instance, graph, strategy, iterations = 10) {
   return summary(values);
 }
 
+function benchmarkLayoutTimeout(nodeCount, layoutMode) {
+  if (layoutMode === "size-aware") return nodeCount >= 25_000 ? 10_000 : 30_000;
+  if (nodeCount >= 10_000) return 4_000;
+  if (nodeCount >= 5_000) return 3_000;
+  return 5_000;
+}
+
 async function measureLayout(instance, name, nodeCount, layoutMode) {
   const options = layoutMode === "size-aware"
     ? sizeAwareLayoutOptions(name, nodeCount, { animate: false, fit: false, padding: 20 })
     : { name, animate: false, fit: false, padding: 20, randomize: name === "cose" };
+  const timeoutMs = benchmarkLayoutTimeout(nodeCount, layoutMode);
   const started = now();
+  let timedOut = false;
   await new Promise((resolve) => {
     const layout = instance.layout(options);
-    layout.one("layoutstop", resolve);
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(() => {
+      timedOut = true;
+      layout.stop();
+      finish();
+    }, timeoutMs);
+    layout.one("layoutstop", finish);
     layout.run();
   });
   await stableFrame();
-  return now() - started;
+  return { duration: now() - started, timedOut, timeoutMs };
 }
 
 async function measureIncrementalDocuments(instance, fixture, strategy, count) {
@@ -349,7 +370,7 @@ export async function runGraphBenchmarkScenario({
       labels: true
     });
   }
-  const initialLayoutDuration = includeLayout
+  const initialLayoutResult = includeLayout
     ? await measureLayout(
       cy,
       layoutMode === "size-aware" ? "organic" : "cose",
@@ -366,7 +387,10 @@ export async function runGraphBenchmarkScenario({
     projectionTime,
     firstUsable,
     mountToStableFrame: firstUsable,
-    initialLayout: initialLayoutDuration,
+    initialLayout: initialLayoutResult?.duration ?? null,
+    initialLayoutTimeout: initialLayoutResult?.timedOut
+      ? { timedOut: true, timeoutMs: initialLayoutResult.timeoutMs }
+      : { timedOut: false, timeoutMs: initialLayoutResult?.timeoutMs ?? null },
     initialLongTasks: {
       count: initialLongTasks.entries.length,
       total: initialLongTasks.entries.reduce((total, value) => total + value, 0),
@@ -448,7 +472,8 @@ export async function benchmarkBuiltInLayouts({ size = "medium", shape = "mixed"
   await stableFrame();
   const layouts = {};
   for (const name of ["block", "hierarchical", "circular", "organic", "interactive-organic", "orthogonal"]) {
-    layouts[name] = await measureLayout(cy, name, graph.nodes.length, "size-aware");
+    const result = await measureLayout(cy, name, graph.nodes.length, "size-aware");
+    layouts[name] = result.duration;
   }
   return { size, shape, nodeCount: graph.nodes.length, edgeCount: graph.edges.length, layouts };
 }
