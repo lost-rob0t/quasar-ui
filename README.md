@@ -155,7 +155,8 @@ The dependency and this documented revision must stay aligned so import diagnost
 - `.json`: one document, an array, or an object containing `documents`/`docs`
 - `.jsonl` and `.ndjson`: one document per line
 - `.csv`: common envelope columns plus `data` JSON or `data.<field>` columns
-- manifests: select the manifest and referenced files in the same bulk file picker
+- StarIntel document imports: manifest records are stored as documents; their file references are not followed
+- bundle manifest imports: enable **Treat manifests as bundle instructions** and select every referenced file in the same bulk file picker
 
 Imports are atomic by default: every candidate and duplicate ID is checked before PouchDB writes. A failed PouchDB bulk result triggers compensating rollback, and the report preserves file, record, validation-path, and write-phase details. Existing IDs are replaced only when explicitly requested or when the incoming version/date is newer.
 
