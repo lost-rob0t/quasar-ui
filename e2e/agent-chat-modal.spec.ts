@@ -245,3 +245,41 @@ test("orchestrates and restores conversation tasks", async ({ page }) => {
   await expect(restored.getByText("Collect sources")).toBeVisible();
   await expect(restored.getByText("in-progress")).toBeVisible();
 });
+
+
+test("ingests, persists, and removes browser-local text attachments", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Open agent chat" }).click();
+  const modal = page.getByRole("region", { name: "Quasar agent chat" });
+
+  await modal.getByLabel("Choose text attachments").setInputFiles({
+    name: "evidence.md",
+    mimeType: "text/markdown",
+    buffer: Buffer.from("# Evidence\nVerified source")
+  });
+  await expect(modal.getByLabel("Attached files").getByText("evidence.md")).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-agent-chat-persisted-attachments", "evidence.md");
+
+  await page.reload();
+  await page.getByRole("button", { name: "Open agent chat" }).click();
+  const restored = page.getByRole("region", { name: "Quasar agent chat" });
+  await expect(restored.getByLabel("Attached files").getByText("evidence.md")).toBeVisible();
+
+  await restored.getByRole("button", { name: "Remove evidence.md" }).click();
+  await expect(restored.getByText("evidence.md")).toHaveCount(0);
+  await expect(page.locator("html")).toHaveAttribute("data-agent-chat-persisted-attachments", "");
+});
+
+test("rejects unsupported binary attachments with an explicit error", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Open agent chat" }).click();
+  const modal = page.getByRole("region", { name: "Quasar agent chat" });
+
+  await modal.getByLabel("Choose text attachments").setInputFiles({
+    name: "evidence.png",
+    mimeType: "image/png",
+    buffer: Buffer.from("not-an-image")
+  });
+  await expect(modal.getByRole("alert")).toContainText("not a supported text attachment");
+  await expect(modal.getByLabel("Attached files")).toHaveCount(0);
+});
