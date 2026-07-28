@@ -1,10 +1,34 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { saveActorConfiguration } from "./actor-configuration";
 import {
   actorWithTransformEnvelope,
   buildActorTransform,
   normalizeActorTransformResult
 } from "./actor-transforms";
+
+class MemoryStorage {
+  constructor() { this.values = new Map(); }
+  getItem(key) { return this.values.has(key) ? this.values.get(key) : null; }
+  setItem(key, value) { this.values.set(key, String(value)); }
+  removeItem(key) { this.values.delete(key); }
+}
+
+let previousStorage;
+
+beforeEach(() => {
+  previousStorage = globalThis.localStorage;
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: new MemoryStorage()
+  });
+});
+
+afterEach(() => {
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: previousStorage
+  });
+});
 
 const stamp = "2026-07-26T01:00:00.000Z";
 const org = {
