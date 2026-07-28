@@ -17,6 +17,9 @@
 .agent-chat-bubble.state-running-tool .agent-chat-state-dot,
 .agent-chat-bubble.state-thinking .agent-chat-state-dot { background: #22c55e; animation: agent-pulse 1.1s infinite; }
 .agent-chat-bubble.state-waiting-for-permission .agent-chat-state-dot { background: #f59e0b; }
+.agent-chat-bubble.state-paused .agent-chat-state-dot { background: #f59e0b; }
+.agent-chat-bubble.state-completed .agent-chat-state-dot { background: #22c55e; }
+.agent-chat-bubble.state-cancelled .agent-chat-state-dot { background: #64748b; }
 .agent-chat-bubble.state-failed .agent-chat-state-dot,
 .agent-chat-bubble.state-budget-exhausted .agent-chat-state-dot { background: #ef4444; }
 
@@ -49,6 +52,11 @@
 .agent-chat-title .state-running-tool,
 .agent-chat-title .state-thinking { color: #4ade80; }
 .agent-chat-title .state-waiting-for-permission { color: #fbbf24; }
+.agent-chat-title .state-paused { color: #fbbf24; }
+.agent-chat-title .state-completed { color: #4ade80; }
+.agent-chat-title .state-cancelled { color: #94a3b8; }
+.agent-chat-title .state-failed,
+.agent-chat-title .state-budget-exhausted { color: #f87171; }
 .agent-conversation-picker { position: relative; min-width: 0; flex: 1; }
 .agent-conversation-trigger { display: flex; width: 100%; min-width: 0; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 8px; border: 1px solid var(--border, #334155); border-radius: 7px; color: inherit; background: rgb(2 6 23 / 45%); text-align: left; }
 .agent-conversation-trigger span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

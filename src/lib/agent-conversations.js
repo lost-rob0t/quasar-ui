@@ -163,7 +163,7 @@ export function deriveConversationFromRun(run, existing = null) {
   const conversation = existing || createConversation({ agentId: run?.agentId, modelId: run?.modelId });
   if (!run) return conversation;
   const known = new Set((conversation.messages || []).map((message) => message.sourceId).filter(Boolean));
-  let next = { ...conversation, runId: run.id, state: mapRunState(run.status) };
+  let next = { ...conversation, runId: run.id, state: mapRunState(run.status, run.phase) };
   for (const entry of run.history || []) {
     if (known.has(entry.id)) continue;
     if (entry.kind === "model") {
@@ -194,9 +194,11 @@ export function deriveConversationFromRun(run, existing = null) {
   return next;
 }
 
-export function mapRunState(status) {
+export function mapRunState(status, phase = null) {
+  if (status === "active") {
+    return ["thinking", "running-tool"].includes(phase) ? phase : "thinking";
+  }
   return ({
-    active: "running-tool",
     idle: "idle",
     paused: "paused",
     completed: "completed",

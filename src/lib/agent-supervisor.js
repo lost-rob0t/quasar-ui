@@ -50,6 +50,7 @@ function transition(run, status, reason = "") {
     ...run,
     status,
     statusReason: reason,
+    phase: status === "active" ? (run.phase || "thinking") : null,
     updatedAt: stamp(),
     ...(status === "active" && !run.startedAt ? { startedAt: stamp() } : {}),
     ...(["completed", "stopped", "budget-exhausted"].includes(status) ? { endedAt: stamp() } : {})
@@ -123,6 +124,12 @@ export class AgentSupervisor {
     return saved;
   }
 
+  notifyPhase(run, phase, statusReason) {
+    const phased = { ...run, phase, statusReason, updatedAt: stamp() };
+    this.onUpdate(phased);
+    return phased;
+  }
+
   async setStatus(runId, status, reason = "") {
     const run = await this.getRun(runId);
     if (!run) throw new Error(`Run not found: ${runId}`);
@@ -192,7 +199,9 @@ export class AgentSupervisor {
       ? inputOrRun
       : await this.createRun(agent, inputOrRun);
     run.agent = agent;
-    run = run.status === "active" ? run : transition(run, "active", "");
+    run = run.status === "active"
+      ? { ...run, phase: "thinking", statusReason: "Thinking" }
+      : transition({ ...run, phase: "thinking" }, "active", "Thinking");
     run = await this.persist(run);
     const controller = new AbortController();
     this.controllers.set(run.id, controller);
@@ -214,6 +223,7 @@ export class AgentSupervisor {
   }
 
   async iterate(agent, run, signal) {
+    run = this.notifyPhase(run, "thinking", "Thinking");
     const started = performance.now();
     const before = budgetState(run.budget, run.usage, { iterations: 1 });
     if (before.state === "hard-stop") return this.persist(transition(run, "budget-exhausted", before.reason));
@@ -284,6 +294,7 @@ export class AgentSupervisor {
         args = {};
       }
       const toolStarted = performance.now();
+      run = this.notifyPhase(run, "running-tool", `Running ${call.name}`);
       const toolRecord = {
         id: id("tool"),
         recordType: AGENT_RECORD_TYPES.toolCall,
@@ -357,7 +368,15 @@ export class AgentSupervisor {
     }
 
     usage = addUsage(usage, { runtimeMs: performance.now() - started });
-    run = { ...run, history, messages: nextMessages, usage, lastStepId: modelEntry.id };
+    run = {
+      ...run,
+      history,
+      messages: nextMessages,
+      usage,
+      lastStepId: modelEntry.id,
+      phase: "thinking",
+      statusReason: "Thinking"
+    };
     const step = await saveAgentRecord({
       id: id("step"),
       recordType: AGENT_RECORD_TYPES.step,

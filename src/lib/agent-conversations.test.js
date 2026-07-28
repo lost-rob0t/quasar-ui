@@ -7,6 +7,7 @@ import {
   deriveConversationFromRun,
   getActiveConversationId,
   loadConversationState,
+  mapRunState,
   redactConversationValue,
   saveConversationState,
   setActiveConversationId,
@@ -72,5 +73,18 @@ describe("agent conversations", () => {
     });
     expect(conversation.messages.map((message) => message.kind)).toEqual(["message", "tool"]);
     expect(conversation.state).toBe("completed");
+  });
+
+  it("maps every supervisor status and active execution phase to a stable UI state", () => {
+    expect(mapRunState()).toBe("idle");
+    expect(mapRunState("idle")).toBe("idle");
+    expect(mapRunState("active")).toBe("thinking");
+    expect(mapRunState("active", "thinking")).toBe("thinking");
+    expect(mapRunState("active", "running-tool")).toBe("running-tool");
+    expect(mapRunState("paused")).toBe("paused");
+    expect(mapRunState("failed")).toBe("failed");
+    expect(mapRunState("stopped")).toBe("cancelled");
+    expect(mapRunState("completed")).toBe("completed");
+    expect(mapRunState("budget-exhausted")).toBe("budget-exhausted");
   });
 });

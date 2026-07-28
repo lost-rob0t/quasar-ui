@@ -40,6 +40,7 @@ import {
   deriveConversationFromRun,
   getActiveConversationId,
   loadConversationState,
+  mapRunState,
   removeConversation,
   setActiveConversationId,
   setConversationDraft,
@@ -325,8 +326,7 @@ function ConversationPicker({ conversations, activeConversation, onSelect }) {
 
 function stateLabel(activeRun, pendingPermission) {
   if (pendingPermission) return "waiting-for-permission";
-  if (!activeRun) return "idle";
-  return ({ active: "running-tool", stopped: "cancelled" })[activeRun.status] || activeRun.status;
+  return mapRunState(activeRun?.status, activeRun?.phase);
 }
 
 function clamp(value, minimum, maximum) {
@@ -818,7 +818,7 @@ export default function AgentChatBubble() {
                 onPermissionDecision={onPermissionDecision}
               />
             ))}
-            {agentSystem.activeRun?.status === "active" && <div className="agent-chat-running"><span /><span /><span /> executing</div>}
+            {agentSystem.activeRun?.status === "active" && <div className="agent-chat-running"><span /><span /><span /> {currentState === "running-tool" ? agentSystem.activeRun.statusReason || "running tool" : "thinking"}</div>}
           </main>
 
           <footer className="agent-chat-composer-shell">
