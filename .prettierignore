@@ -1,12 +1,8 @@
-dist/
 node_modules/
+dist/
+coverage/
 playwright-report/
 test-results/
+benchmarks/results/
 package-lock.json
-public/
-e2e/
-src/**/*.js
-src/**/*.jsx
-src/**/*.css
-docs/**/*.md
-README.md
+*.min.js
