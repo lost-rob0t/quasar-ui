@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  Activity,
   Bot,
   ChevronLeft,
   ChevronRight,
@@ -48,6 +47,14 @@ const navigation = [
 ];
 
 const mobileNavigation = navigation.filter(({ mobileLabel }) => mobileLabel);
+
+function loadSidebarCollapsed() {
+  try {
+    return globalThis.localStorage?.getItem("quasar:sidebar-collapsed") === "1";
+  } catch {
+    return false;
+  }
+}
 
 function SyncBadge() {
   const { syncStatus, serverStatus, queueStatus } = useQuasar();
@@ -122,7 +129,7 @@ function SidebarGraphs({ graphs, activeGraph, switchGraph, createGraph }) {
       </button>
       <div className="sidebar-section-label">Graphs</div>
       <div className="sidebar-graph-list" aria-label="Workspace graphs">
-        {(graphs || []).map((graph) => (
+        {graphs.map((graph) => (
           <div key={graph.id} className={graph.id === activeGraph?.id ? "sidebar-graph-row active" : "sidebar-graph-row"}>
             <button type="button" onClick={() => switchGraph(graph.id)} title={graph.name}>{graph.name}</button>
             {graph.id === activeGraph?.id && <span aria-label="Active graph">•</span>}
@@ -147,15 +154,15 @@ function WorkbenchShell({ children }) {
     canRedo,
     undo,
     redo,
-    documents,
-    graphs,
+    documents = [],
+    graphs = [],
     activeGraph,
     switchGraph,
     createGraph
   } = useQuasar();
   const [query, setQuery] = useState("");
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem("quasar:sidebar-collapsed") === "1");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed);
   const graphRoute = location.pathname === "/graph";
 
   function submitSearch(event) {
@@ -166,7 +173,11 @@ function WorkbenchShell({ children }) {
   function toggleSidebar() {
     setSidebarCollapsed((current) => {
       const next = !current;
-      localStorage.setItem("quasar:sidebar-collapsed", next ? "1" : "0");
+      try {
+        globalThis.localStorage?.setItem("quasar:sidebar-collapsed", next ? "1" : "0");
+      } catch {
+        // Storage is optional; the shell still works without persistence.
+      }
       return next;
     });
   }
