@@ -220,3 +220,28 @@ test("keeps the modal chat inside the mobile viewport", async ({ page }) => {
   expect(layout.pageWidth).toBe(layout.viewportWidth);
   expect(layout.pageHeight).toBe(layout.viewportHeight);
 });
+
+
+test("orchestrates and restores conversation tasks", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Open agent chat" }).click();
+  const modal = page.getByRole("region", { name: "Quasar agent chat" });
+  const composer = modal.getByRole("textbox", { name: "Agent prompt" });
+
+  await composer.fill('/task-add "Collect sources"');
+  await composer.press("Enter");
+
+  const tasks = modal.getByRole("complementary", { name: "Conversation tasks" });
+  await expect(tasks).toBeVisible();
+  await expect(tasks.getByText("Collect sources")).toBeVisible();
+  await tasks.getByRole("button", { name: "start" }).click();
+  await expect(tasks.getByText("in-progress")).toBeVisible();
+  await page.waitForTimeout(100);
+
+  await page.reload();
+  await page.getByRole("button", { name: "Open agent chat" }).click();
+  await page.getByRole("button", { name: "Toggle conversation tasks" }).click();
+  const restored = page.getByRole("complementary", { name: "Conversation tasks" });
+  await expect(restored.getByText("Collect sources")).toBeVisible();
+  await expect(restored.getByText("in-progress")).toBeVisible();
+});
