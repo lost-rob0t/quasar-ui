@@ -24,7 +24,7 @@ async function expectNoHorizontalOverflow(page: Page) {
   expect(width.scroll).toBe(width.client);
 }
 
-test("selects a dataset from the desktop graph button", async ({ page }) => {
+test("searches and selects a dataset from the desktop graph button", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/graph");
   await installDatasetOptions(page);
@@ -33,15 +33,19 @@ test("selects a dataset from the desktop graph button", async ({ page }) => {
   await button.click();
 
   const dialog = page.getByRole("dialog", { name: "Select dataset" });
+  const search = dialog.getByRole("searchbox", { name: "Search datasets" });
   const listbox = page.getByRole("listbox", { name: "Datasets" });
   const allDatasets = listbox.getByRole("option", { name: "All datasets" });
   const alpha = listbox.getByRole("option", { name: "Alpha research" });
+  const bravo = listbox.getByRole("option", { name: "Bravo archive" });
   await expect(dialog).toBeVisible();
-  await expect(listbox).toBeVisible();
+  await expect(search).toBeFocused();
   await expect(allDatasets).toHaveAttribute("aria-selected", "true");
-  await expect(allDatasets).toBeFocused();
 
-  await allDatasets.press("ArrowDown");
+  await search.fill("alpha");
+  await expect(alpha).toBeVisible();
+  await expect(bravo).toBeHidden();
+  await search.press("ArrowDown");
   await expect(alpha).toBeFocused();
   await alpha.press("Enter");
   await expect(dialog).toBeHidden();
@@ -53,13 +57,15 @@ test("selects a dataset from the desktop graph button", async ({ page }) => {
   await expect(button).toHaveAttribute("title", /Alpha research/);
 
   await button.click();
-  await listbox.getByRole("option", { name: "Bravo archive" }).click();
+  await expect(search).toHaveValue("");
+  await search.fill("bravo");
+  await bravo.click();
   await expect(page.getByLabel("Dataset filter", { exact: true })).toHaveValue("bravo");
   await expect(dialog).toBeHidden();
   await expectNoHorizontalOverflow(page);
 });
 
-test("selects a dataset from the mobile graph tools tray", async ({ page }) => {
+test("searches and selects a dataset from the mobile graph tools tray", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/graph");
   await installDatasetOptions(page);
@@ -71,9 +77,12 @@ test("selects a dataset from the mobile graph tools tray", async ({ page }) => {
     .click();
 
   const dialog = page.getByRole("dialog", { name: "Select dataset" });
+  const search = dialog.getByRole("searchbox", { name: "Search datasets" });
   const listbox = page.getByRole("listbox", { name: "Datasets" });
   await expect(dialog).toBeVisible();
+  await expect(search).toBeFocused();
   await expect(page.getByRole("menu", { name: "Graph tools" })).toBeHidden();
+  await search.fill("alpha");
   await listbox.getByRole("option", { name: "Alpha research" }).click();
   await expect(page.getByLabel("Dataset filter", { exact: true })).toHaveValue("alpha");
   await expect(page.getByLabel("Dataset filter", { exact: true })).toHaveAttribute(
