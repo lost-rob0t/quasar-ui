@@ -105,7 +105,8 @@ export class GraphAdapter {
       zoomingEnabled: true,
       userZoomingEnabled: true,
       wheelSensitivity: DEFAULT_WHEEL_SENSITIVITY,
-      ...options
+      ...options,
+      selectionType: "single"
     }));
     const restoreUserNavigation = installUserNavigationGuard(cy);
     cy.one("destroy", restoreUserNavigation);
