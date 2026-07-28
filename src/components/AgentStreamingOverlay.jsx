@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   getActiveConversationId,
@@ -10,12 +10,16 @@ import { PROVIDER_STREAM_EVENT } from "../lib/provider-adapters";
 
 export default function AgentStreamingOverlay() {
   const [streams, setStreams] = useState(loadConversationStreams);
+  const streamsRef = useRef(streams);
   const [timeline, setTimeline] = useState(null);
 
   useEffect(() => {
     let active = true;
     hydrateConversationState().then(() => {
-      if (active) setStreams(loadConversationStreams());
+      if (!active) return;
+      const restored = loadConversationStreams();
+      streamsRef.current = restored;
+      setStreams(restored);
     });
     return () => {
       active = false;
@@ -25,30 +29,34 @@ export default function AgentStreamingOverlay() {
   useEffect(() => {
     const listener = (event) => {
       const payload = event.detail || {};
-      setStreams((current) => {
-        const previous = current.find((stream) => stream.id === payload.streamId) || {
-          id: payload.streamId,
-          conversationId: getActiveConversationId() || null,
-          provider: payload.provider,
-          model: payload.model || null,
-          text: "",
-          status: "streaming",
-          startedAt: payload.at
-        };
-        const next = {
-          ...previous,
-          text: payload.type === "delta" ? `${previous.text}${payload.text || ""}` : previous.text,
-          status: payload.type === "complete" ? "completed" : payload.type === "error" ? "failed" : previous.status,
-          error: payload.error || previous.error,
-          updatedAt: payload.at
-        };
-        const result = [next, ...current.filter((stream) => stream.id !== next.id)].slice(0, 8);
-        saveConversationStreams(result.filter((stream) => stream.status === "streaming" || stream.status === "failed"));
-        return result;
-      });
+      const current = streamsRef.current;
+      const previous = current.find((stream) => stream.id === payload.streamId) || {
+        id: payload.streamId,
+        conversationId: getActiveConversationId() || null,
+        provider: payload.provider,
+        model: payload.model || null,
+        text: "",
+        status: "streaming",
+        startedAt: payload.at
+      };
+      const next = {
+        ...previous,
+        text: payload.type === "delta" ? `${previous.text}${payload.text || ""}` : previous.text,
+        status: payload.type === "complete" ? "completed" : payload.type === "error" ? "failed" : previous.status,
+        error: payload.error || previous.error,
+        updatedAt: payload.at
+      };
+      const result = [next, ...current.filter((stream) => stream.id !== next.id)].slice(0, 8);
+      streamsRef.current = result;
+      setStreams(result);
+      saveConversationStreams(result.filter((stream) => stream.status === "streaming" || stream.status === "failed"));
       if (payload.type === "start" && !document.querySelector(".agent-chat-modal")) document.querySelector(".agent-chat-bubble")?.click();
       if (payload.type === "complete") {
-        setTimeout(() => setStreams((current) => current.filter((stream) => stream.id !== payload.streamId)), 800);
+        setTimeout(() => {
+          const remaining = streamsRef.current.filter((stream) => stream.id !== payload.streamId);
+          streamsRef.current = remaining;
+          setStreams(remaining);
+        }, 800);
       }
     };
     window.addEventListener(PROVIDER_STREAM_EVENT, listener);

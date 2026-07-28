@@ -685,7 +685,11 @@ export default function AgentChatBubble() {
   function updateDraft(value) {
     setComposer(value);
     if (!activeConversation) return;
-    setConversationState((state) => upsertConversation(state, setConversationDraft(conversationById(state, activeConversation.id), value)));
+    const next = upsertConversation(
+      conversationState,
+      setConversationDraft(activeConversation, value)
+    );
+    setConversationState(next);
   }
 
   function beginDrag(event) {
