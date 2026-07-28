@@ -88,6 +88,9 @@ function markPersistedState(state) {
   const active = state.conversations.find((conversation) => conversation.id === state.activeConversationId)
     || state.conversations[0];
   document.documentElement.dataset.agentChatPersistedDraftLength = String(active?.draft?.length || 0);
+  document.documentElement.dataset.agentChatPersistedTasks = (active?.taskList || [])
+    .map((task) => `${task.id}:${task.status}`)
+    .join(",");
   document.documentElement.dataset.agentChatPersistedStreams = state.streams
     .map((stream) => `${stream.id}:${String(stream.text || "").length}`)
     .join(",");
