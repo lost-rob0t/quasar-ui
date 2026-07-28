@@ -1030,6 +1030,7 @@ export default function AgentChatBubble() {
                 accept="text/*,.md,.markdown,.json,.jsonl,.ndjson,.csv,.tsv,.yaml,.yml,.xml,.html,.css,.js,.jsx,.ts,.tsx,.py,.rb,.go,.rs,.java,.c,.h,.cpp,.hpp,.cl,.lisp,.el,.pl,.prolog,.sql,.sh,.nix,.toml,.ini,.conf,.log"
                 onChange={attachFiles}
                 aria-label="Choose text attachments"
+                disabled={!activeConversation || attachmentLoading}
               />
               <textarea
                 ref={textareaRef}
@@ -1042,7 +1043,7 @@ export default function AgentChatBubble() {
               />
               <div className="agent-chat-composer-actions">
                 <button type="button" className="agent-chat-icon-button" title="Show active context" onClick={() => setContextOpen((value) => !value)}><Expand size={16} /></button>
-                <button type="button" className="agent-chat-icon-button" title="Attach text files" aria-label="Attach text files" disabled={attachmentLoading} onClick={() => attachmentInputRef.current?.click()}><Paperclip size={16} /></button>
+                <button type="button" className="agent-chat-icon-button" title="Attach text files" aria-label="Attach text files" disabled={!activeConversation || attachmentLoading} onClick={() => attachmentInputRef.current?.click()}><Paperclip size={16} /></button>
                 <select aria-label="Active model" value={agentSystem.activeAgent?.id || ""} onChange={(event) => agentSystem.setActiveAgentId(event.target.value)}>
                   {agentSystem.agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name} · {agent.modelId || "no model"}</option>)}
                 </select>
