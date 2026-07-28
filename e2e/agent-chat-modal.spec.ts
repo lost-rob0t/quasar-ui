@@ -87,6 +87,34 @@ test("searches and switches between saved conversations", async ({ page }) => {
   await expect(page.getByRole("button", { name: /Bravo sources/ })).toBeVisible();
 });
 
+test("resizes the desktop chat and restores its dimensions", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Open agent chat" }).click();
+
+  const modal = page.getByRole("region", { name: "Quasar agent chat" });
+  const handle = page.getByRole("button", { name: "Resize agent chat" });
+  const before = await modal.boundingBox();
+  const handleBox = await handle.boundingBox();
+  expect(before).not.toBeNull();
+  expect(handleBox).not.toBeNull();
+
+  await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handleBox!.x - 70, handleBox!.y - 60, { steps: 5 });
+  await page.mouse.up();
+
+  const resized = await modal.boundingBox();
+  expect(resized!.width).toBeLessThan(before!.width - 50);
+  expect(resized!.height).toBeLessThan(before!.height - 40);
+
+  await page.reload();
+  await page.getByRole("button", { name: "Open agent chat" }).click();
+  const restored = await page.getByRole("region", { name: "Quasar agent chat" }).boundingBox();
+  expect(restored!.width).toBeCloseTo(resized!.width, 0);
+  expect(restored!.height).toBeCloseTo(resized!.height, 0);
+});
+
 test("renders and restores a partial provider stream", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Open agent chat" }).click();

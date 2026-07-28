@@ -311,6 +311,10 @@ function stateLabel(activeRun, pendingPermission) {
   return ({ active: "running-tool", stopped: "cancelled" })[activeRun.status] || activeRun.status;
 }
 
+function clamp(value, minimum, maximum) {
+  return Math.min(Math.max(value, minimum), maximum);
+}
+
 export default function AgentChatBubble() {
   const agentSystem = useAgentSystem();
   const quasar = useQuasar();
@@ -329,6 +333,7 @@ export default function AgentChatBubble() {
   const permissionResolvers = useRef(new Map());
   const activeExecution = useRef(null);
   const dragging = useRef(null);
+  const resizing = useRef(null);
 
   const registry = useMemo(() => createCommandRegistry({
     actors: quasar.actors || [],
@@ -619,7 +624,15 @@ export default function AgentChatBubble() {
 
   function beginDrag(event) {
     if (ui.expanded) return;
-    dragging.current = { x: event.clientX, y: event.clientY, right: ui.position.right, bottom: ui.position.bottom };
+    const modal = event.currentTarget.closest(".agent-chat-modal")?.getBoundingClientRect();
+    dragging.current = {
+      x: event.clientX,
+      y: event.clientY,
+      right: ui.position.right,
+      bottom: ui.position.bottom,
+      maxRight: Math.max(8, window.innerWidth - (modal?.width || ui.modal.width) - 8),
+      maxBottom: Math.max(8, window.innerHeight - (modal?.height || ui.modal.height) - 8)
+    };
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
@@ -628,8 +641,8 @@ export default function AgentChatBubble() {
     const next = {
       ...ui,
       position: {
-        right: Math.max(8, dragging.current.right - (event.clientX - dragging.current.x)),
-        bottom: Math.max(8, dragging.current.bottom - (event.clientY - dragging.current.y))
+        right: clamp(dragging.current.right - (event.clientX - dragging.current.x), 8, dragging.current.maxRight),
+        bottom: clamp(dragging.current.bottom - (event.clientY - dragging.current.y), 8, dragging.current.maxBottom)
       }
     };
     setUi(next);
@@ -639,6 +652,65 @@ export default function AgentChatBubble() {
     if (!dragging.current) return;
     dragging.current = null;
     setUi((value) => saveUi(value));
+  }
+
+  function beginResize(event) {
+    if (ui.expanded) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const modal = event.currentTarget.closest(".agent-chat-modal")?.getBoundingClientRect();
+    if (!modal) return;
+    resizing.current = {
+      x: event.clientX,
+      y: event.clientY,
+      left: modal.left,
+      top: modal.top,
+      width: modal.width,
+      height: modal.height
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function resize(event) {
+    if (!resizing.current) return;
+    const start = resizing.current;
+    const maximumWidth = Math.min(900, window.innerWidth - start.left - 8);
+    const maximumHeight = window.innerHeight - start.top - 8;
+    const width = clamp(start.width + (event.clientX - start.x), Math.min(420, maximumWidth), maximumWidth);
+    const height = clamp(start.height + (event.clientY - start.y), Math.min(480, maximumHeight), maximumHeight);
+    setUi((value) => ({
+      ...value,
+      position: {
+        right: Math.max(8, window.innerWidth - start.left - width),
+        bottom: Math.max(8, window.innerHeight - start.top - height)
+      },
+      modal: { width, height }
+    }));
+  }
+
+  function endResize() {
+    if (!resizing.current) return;
+    resizing.current = null;
+    setUi((value) => saveUi(value));
+  }
+
+  function resizeWithKeyboard(event) {
+    const amount = event.shiftKey ? 24 : 8;
+    const delta = {
+      ArrowLeft: [-amount, 0],
+      ArrowRight: [amount, 0],
+      ArrowUp: [0, -amount],
+      ArrowDown: [0, amount]
+    }[event.key];
+    if (!delta) return;
+    event.preventDefault();
+    setUi((value) => {
+      const maximumWidth = Math.min(900, window.innerWidth - value.position.right - 8);
+      const maximumHeight = window.innerHeight - value.position.bottom - 8;
+      const width = clamp(value.modal.width + delta[0], Math.min(420, maximumWidth), maximumWidth);
+      const height = clamp(value.modal.height + delta[1], Math.min(480, maximumHeight), maximumHeight);
+      return saveUi({ ...value, modal: { width, height } });
+    });
   }
 
   const currentState = stateLabel(agentSystem.activeRun, pendingPermission);
@@ -771,6 +843,19 @@ export default function AgentChatBubble() {
               <button type="button" onClick={deleteActiveConversation}><Trash2 size={13} /> delete chat</button>
             </div>
           </footer>
+          {!ui.expanded && (
+            <button
+              className="agent-chat-resize-handle"
+              type="button"
+              aria-label="Resize agent chat"
+              title="Drag or use arrow keys to resize"
+              onPointerDown={beginResize}
+              onPointerMove={resize}
+              onPointerUp={endResize}
+              onPointerCancel={endResize}
+              onKeyDown={resizeWithKeyboard}
+            />
+          )}
         </section>
       )}
     </>
