@@ -202,17 +202,18 @@ function CommandPalette({ items, selected, onSelect }) {
     <div className="agent-command-palette" role="listbox" aria-label="Agent commands">
       {items.slice(0, 12).map((item, index) => (
         <button
-          className={index === selected ? "selected" : ""}
+          className={`${index === selected ? "selected" : ""} ${item.availability !== "available" ? "unavailable" : ""}`.trim()}
           type="button"
           role="option"
           aria-selected={index === selected}
+          aria-disabled={item.availability !== "available"}
           key={item.id}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => onSelect(item)}
         >
           <code>/{item.command}</code>
           <span>{item.description}</span>
-          <small>{item.category} · {item.permission || "no permission"}</small>
+          <small>{item.availability !== "available" ? `${item.availability} · ` : ""}{item.category} · {item.permission || "no permission"}</small>
         </button>
       ))}
     </div>
@@ -430,6 +431,9 @@ export default function AgentChatBubble() {
     setComposer("");
     const command = parseCommandInput(raw, registry);
     try {
+      if (command?.definition?.availability !== "available") {
+        throw new Error(`/${command.definition.command} is ${command.definition.availability}: ${command.definition.availabilityReason || "This capability is not configured."}`);
+      }
       if (command?.definition?.builtIn) {
         if (command.errors.length) throw new Error(command.errors.join("; "));
         if (command.command === "new") {

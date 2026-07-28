@@ -41,6 +41,27 @@ describe("agent command registry", () => {
     });
   });
 
+  it("presents filesystem and shell commands as explicitly unavailable without trusted adapters", () => {
+    const registry = createCommandRegistry();
+
+    expect(registry.get("file-read")).toMatchObject({
+      availability: "unavailable",
+      permission: "filesystem_read",
+      capability: "filesystem_read"
+    });
+    expect(registry.get("file-write")).toMatchObject({
+      availability: "unavailable",
+      permission: "filesystem_write",
+      risk: "high"
+    });
+    expect(registry.get("shell")).toMatchObject({
+      availability: "unavailable",
+      permission: "shell_execute",
+      risk: "high"
+    });
+    expect(commandHelp(registry.get("shell"))).toContain("No trusted shell adapter is configured");
+  });
+
   it("parses typed document command arguments for the shared agent loop", () => {
     const registry = createCommandRegistry();
     const parsed = parseCommandInput(

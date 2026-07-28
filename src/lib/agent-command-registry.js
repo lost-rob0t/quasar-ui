@@ -49,6 +49,42 @@ const BUILT_INS = Object.freeze([
   }, ["code"]), { permission: "javascript_execute", risk: "high", sideEffects: ["May call separately permitted capabilities through the typed bridge"] })
 ]);
 
+const UNAVAILABLE_CAPABILITIES = Object.freeze([
+  definition("file-read", "Read a file from a configured workspace.", "filesystem", schema({
+    path: stringProperty("Workspace-relative file path", { positional: true })
+  }, ["path"]), {
+    availability: "unavailable",
+    availabilityReason: "No trusted filesystem adapter is configured in this browser build.",
+    permission: "filesystem_read",
+    risk: "medium",
+    capability: "filesystem_read",
+    builtIn: false
+  }),
+  definition("file-write", "Write a file through a configured workspace adapter.", "filesystem", schema({
+    path: stringProperty("Workspace-relative file path"),
+    content: stringProperty("Replacement UTF-8 file contents")
+  }, ["path", "content"]), {
+    availability: "unavailable",
+    availabilityReason: "No trusted filesystem adapter is configured in this browser build.",
+    permission: "filesystem_write",
+    risk: "high",
+    sideEffects: ["Would modify workspace files when an adapter is configured"],
+    capability: "filesystem_write",
+    builtIn: false
+  }),
+  definition("shell", "Run a command through a configured trusted shell adapter.", "shell", schema({
+    command: stringProperty("Shell command", { positional: true })
+  }, ["command"]), {
+    availability: "unavailable",
+    availabilityReason: "No trusted shell adapter is configured in this browser build.",
+    permission: "shell_execute",
+    risk: "high",
+    sideEffects: ["Would execute commands outside the browser when an adapter is configured"],
+    capability: "shell_execute",
+    builtIn: false
+  })
+]);
+
 function schema(properties = {}, required = []) {
   return { type: "object", properties, required, additionalProperties: false };
 }
@@ -142,7 +178,7 @@ export function createCommandRegistry({ actors = [], mcpServers = [] } = {}) {
     fixedInput: { serverId: server.id, toolName },
     builtIn: false
   })));
-  const definitions = [...BUILT_INS, ...tools, ...documentCommands, ...actorCommands, ...mcpCommands];
+  const definitions = [...BUILT_INS, ...UNAVAILABLE_CAPABILITIES, ...tools, ...documentCommands, ...actorCommands, ...mcpCommands];
   const byName = new Map();
   for (const item of definitions) {
     byName.set(item.command, item);
@@ -352,11 +388,12 @@ export function commandHelp(definition) {
     `\nArguments:\n${argumentsText}`,
     `\nPermission: ${definition.permission || "none"}`,
     `Availability: ${definition.availability}`,
+    definition.availabilityReason ? `Availability detail: ${definition.availabilityReason}` : null,
     `Risk: ${definition.risk}`,
     definition.sideEffects?.length ? `Side effects: ${definition.sideEffects.join("; ")}` : "Side effects: none",
     definition.capability ? `Underlying capability: ${definition.capability}` : "Underlying capability: built-in control",
     `Examples:\n${(definition.examples || []).map((example) => `- \`${example}\``).join("\n")}`
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 export function commandToAgentPrompt(parsed) {

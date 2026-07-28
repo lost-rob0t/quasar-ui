@@ -24,6 +24,22 @@ test("opens the persistent agent modal and derives command help from capabilitie
   await expect(page.getByRole("textbox", { name: "Agent prompt" })).toHaveValue("draft survives refresh");
 });
 
+test("presents unavailable filesystem and shell capabilities without requesting permission", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Open agent chat" }).click();
+  const modal = page.getByRole("region", { name: "Quasar agent chat" });
+  const composer = modal.getByRole("textbox", { name: "Agent prompt" });
+
+  await composer.fill("/file");
+  await expect(modal.getByRole("option", { name: /\/file-read.*unavailable/i })).toBeVisible();
+  await expect(modal.getByRole("option", { name: /\/file-write.*unavailable/i })).toBeVisible();
+
+  await composer.fill("/shell echo hello");
+  await composer.press("Enter");
+  await expect(modal.getByText("/shell is unavailable: No trusted shell adapter is configured in this browser build.")).toBeVisible();
+  await expect(modal.getByText("Permission requested: shell_execute")).toHaveCount(0);
+});
+
 test("searches and switches between saved conversations", async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem("quasar:agent-conversations:v1", JSON.stringify({
