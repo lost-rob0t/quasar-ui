@@ -1,4 +1,5 @@
 import { documentLabel } from "starintel_doc";
+import { researchNodeGraphData } from "./research-node-graph";
 
 export const DTYPE_COLORS = Object.freeze({
   person: "#38bdf8",
@@ -17,6 +18,7 @@ export const DTYPE_COLORS = Object.freeze({
   claim: "#eab308",
   analysis: "#06b6d4",
   "research-pass": "#0ea5e9",
+  "research-node": "#ec4899",
   domain: "#14b8a6",
   host: "#2dd4bf",
   network: "#0d9488",
@@ -38,6 +40,7 @@ export const DTYPE_SHAPES = Object.freeze({
   target: "hexagon",
   claim: "triangle",
   analysis: "pentagon",
+  "research-node": "round-hexagon",
   domain: "round-hexagon",
   host: "rectangle",
   network: "octagon",
@@ -121,12 +124,15 @@ function relationParts(document) {
 
 function nodeData(document, position) {
   const dtype = document.dtype || "document";
+  const label = documentLabel(document);
+  const research = researchNodeGraphData(document, label);
   return {
     group: "nodes",
     data: {
       id: document._id,
-      label: documentLabel(document),
+      label,
       dtype,
+      ...(research || {}),
       dataset: document.dataset || "unknown",
       reviewState: reviewState(document),
       document,
