@@ -35,6 +35,7 @@ export function Report({ report }) {
         <div className="key-value"><span>Skipped</span><strong>{report.skipped?.length || 0}</strong></div>
         <div className="key-value"><span>Invalid/write errors</span><strong>{report.errors?.length || 0}</strong></div>
         <div className="key-value"><span>Parse errors</span><strong>{report.parseErrors?.length || 0}</strong></div>
+        <div className="key-value"><span>Manifest mode</span><strong>{report.manifestMode === "bundle" ? "Resolve references" : "Documents only"}</strong></div>
         <div className="key-value"><span>Rolled back</span><strong>{report.rolledBack || 0}</strong></div>
         <div className="key-value"><span>Schema revision</span><strong>{report.validator?.schemaRevision || "unknown"}</strong></div>
         <div className="key-value"><span>Validator profile</span><strong>{report.validator ? `${report.validator.profile} ${report.validator.profileVersion}` : "unknown"}</strong></div>
@@ -64,6 +65,7 @@ export function ImportPage() {
   const { importFileSet, select, setNotice } = useQuasar();
   const [files, setFiles] = useState([]);
   const [replace, setReplace] = useState(false);
+  const [resolveManifestReferences, setResolveManifestReferences] = useState(false);
   const [report, setReport] = useState(null);
   const [running, setRunning] = useState(false);
 
@@ -71,7 +73,7 @@ export function ImportPage() {
     if (!nextFiles.length) return;
     setRunning(true);
     try {
-      const next = await importFileSet(nextFiles, { replace });
+      const next = await importFileSet(nextFiles, { replace, resolveManifestReferences });
       setReport(next);
       setNotice({ kind: next.errors?.length || next.parseErrors?.length ? "warning" : "success", message: `Imported ${next.saved?.length || 0} document(s)` });
       if (openGraph && !openImportedGraph({ importedIds: next.importedIds, select, navigate })) {
@@ -111,8 +113,8 @@ export function ImportPage() {
         </label>
         <label className="upload-card">
           <Files size={28} />
-          <strong>Bulk or manifest import</strong>
-          <span>Select the manifest and all referenced files together</span>
+          <strong>Bulk files</strong>
+          <span>Import StarIntel documents directly or enable bundle manifest checks below</span>
           <input type="file" multiple accept=".json,.jsonl,.ndjson,.csv,application/json" onChange={chooseBulk} />
         </label>
       </div>
@@ -125,6 +127,7 @@ export function ImportPage() {
         </div>
         <div className="form-actions import-actions">
           <label className="checkbox"><input type="checkbox" checked={replace} onChange={(event) => setReplace(event.target.checked)} /> Replace matching IDs even when the incoming version is not newer</label>
+          <label className="checkbox"><input type="checkbox" checked={resolveManifestReferences} onChange={(event) => setResolveManifestReferences(event.target.checked)} /> Treat manifests as bundle instructions and require every referenced file</label>
           <div className="button-row">
             <button className="button" disabled={!files.length || running} onClick={() => runImport()}><UploadCloud size={16} /> {running ? "Validating and saving…" : "Save locally"}</button>
             <button className="button primary" disabled={!files.length || running} onClick={() => runImport(files, { openGraph: true })}><Network size={16} /> Save and open graph</button>
