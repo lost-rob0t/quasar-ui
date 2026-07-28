@@ -252,7 +252,9 @@ test("ingests, persists, and removes browser-local text attachments", async ({ p
   await page.getByRole("button", { name: "Open agent chat" }).click();
   const modal = page.getByRole("region", { name: "Quasar agent chat" });
 
-  await modal.getByLabel("Choose text attachments").setInputFiles({
+  const attachmentInput = modal.getByLabel("Choose text attachments");
+  await expect(attachmentInput).toBeEnabled();
+  await attachmentInput.setInputFiles({
     name: "evidence.md",
     mimeType: "text/markdown",
     buffer: Buffer.from("# Evidence\nVerified source")
@@ -275,7 +277,9 @@ test("rejects unsupported binary attachments with an explicit error", async ({ p
   await page.getByRole("button", { name: "Open agent chat" }).click();
   const modal = page.getByRole("region", { name: "Quasar agent chat" });
 
-  await modal.getByLabel("Choose text attachments").setInputFiles({
+  const attachmentInput = modal.getByLabel("Choose text attachments");
+  await expect(attachmentInput).toBeEnabled();
+  await attachmentInput.setInputFiles({
     name: "evidence.png",
     mimeType: "image/png",
     buffer: Buffer.from("not-an-image")
