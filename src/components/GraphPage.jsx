@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, ArrowLeftRight, BookOpen, Building2, CalendarDays, CircleDot,
   Clipboard, Copy, Database, ExternalLink, FileText, Focus, FolderPlus,
-  Grid2X2, Lightbulb, Link2, MapPin, MoreHorizontal, Network, Pencil,
-  Play, Plus, RadioTower, Search, Send, Server, Trash2, TriangleAlert,
-  UserRound, X
+  Grid2X2, Lightbulb, Link2, MapPin, MoreHorizontal, Network, Pause, Pencil,
+  Play, Plus, RadioTower, RotateCcw, Search, Send, Server, Square, Trash2,
+  TriangleAlert, UserRound, X
 } from "lucide-react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -424,7 +424,9 @@ export default function GraphPage() {
     actors, runActor, settings, setNotice, graphs, activeGraph,
     addDocumentsToActiveGraph, removeDocumentsFromActiveGraph,
     createGraph, switchGraph, renameGraph, deleteGraph, clearGraph, execute,
-    queueStatus, startQueue, stopQueue
+    queueStatus, startQueue, stopQueue, researchRunState = {},
+    runResearchNode, pauseResearchNode, resumeResearchNode, retryResearchNode,
+    killResearchNode
   } = useQuasar();
   const apiRef = useRef(null);
   const edgeHandlesRef = useRef(null);
@@ -876,11 +878,31 @@ export default function GraphPage() {
     }
   }
 
+  async function executeResearchAction(action, document) {
+    setCanvasMenu(null);
+    const actions = {
+      run: runResearchNode,
+      pause: pauseResearchNode,
+      resume: resumeResearchNode,
+      retry: retryResearchNode,
+      kill: killResearchNode
+    };
+    try {
+      await actions[action](document);
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
+  }
+
   const menuMatches = (label) => !menuQuery.trim() || label.toLowerCase().includes(menuQuery.trim().toLowerCase());
   const contextNode = canvasMenu?.kind === "node" ? documents.find((document) => document._id === canvasMenu.id) : null;
   const contextRelation = canvasMenu?.kind === "edge" ? documents.find((document) => document._id === canvasMenu.id) : null;
   const contextResearchScope = contextNode && isResearchNode(contextNode) ? researchNodeScope(contextNode) : null;
   const selectedResearchScope = selected && isResearchNode(selected) ? researchNodeScope(selected) : null;
+  const contextResearchStatus = contextNode?.data?.status || "draft";
+  const contextResearchActive = ["queued", "running"].includes(researchRunState[contextNode?._id]?.state);
+  const selectedResearchStatus = selected?.data?.status || "draft";
+  const selectedResearchActive = ["queued", "running"].includes(researchRunState[selected?._id]?.state);
   const [contextSourceId, contextTargetId] = relationEndpoints(contextRelation);
 
   return (
@@ -977,6 +999,11 @@ export default function GraphPage() {
                   {actorEntries.filter(({ actor }) => menuMatches(`Run actor ${actor.label}`)).map(({ actor, availability }) => (
                     <button role="menuitem" key={actor.id} disabled={!availability.applicable || Boolean(runningActorId)} onClick={() => { setCanvasMenu(null); executeActor(actor); }}><Play size={15} /> Run actor: {actor.label}</button>
                   ))}
+                  {contextResearchScope && !contextResearchActive && ["draft", "queued", "running", "completed", "killed"].includes(contextResearchStatus) && menuMatches("Run research node") && <button role="menuitem" onClick={() => executeResearchAction("run", contextNode)}><Play size={15} /> {["queued", "running"].includes(contextResearchStatus) ? "Continue" : "Run"} research node</button>}
+                  {contextResearchScope && contextResearchActive && menuMatches("Pause research node") && <button role="menuitem" onClick={() => executeResearchAction("pause", contextNode)}><Pause size={15} /> Pause research node</button>}
+                  {contextResearchScope && contextResearchStatus === "paused" && menuMatches("Resume research node") && <button role="menuitem" onClick={() => executeResearchAction("resume", contextNode)}><Play size={15} /> Resume research node</button>}
+                  {contextResearchScope && ["failed", "blocked"].includes(contextResearchStatus) && menuMatches("Retry research node") && <button role="menuitem" onClick={() => executeResearchAction("retry", contextNode)}><RotateCcw size={15} /> Retry research node</button>}
+                  {contextResearchScope && ["queued", "running", "paused", "blocked", "failed"].includes(contextResearchStatus) && menuMatches("Kill research node") && <button role="menuitem" className="danger" onClick={() => executeResearchAction("kill", contextNode)}><Square size={15} /> Kill research node</button>}
                   {contextResearchScope && menuMatches("Inspect outputs") && <button role="menuitem" disabled={!contextResearchScope.outputs.length} onClick={() => inspectResearchOutputs(contextNode)}><Focus size={15} /> Inspect outputs ({contextResearchScope.outputs.length})</button>}
                   {contextResearchScope && menuMatches("Clone research node") && <button role="menuitem" onClick={() => cloneContextResearchNode(contextNode)}><Copy size={15} /> Clone research node</button>}
                   {menuMatches("Submit as target") && <button role="menuitem" onClick={() => { setCanvasMenu(null); setTargetDocument(contextNode); }}><Send size={15} /> Submit as target</button>}
@@ -1052,6 +1079,11 @@ export default function GraphPage() {
                 <div className="inspector-actions">
                   <Link className="button small" to={`/documents/${encodeURIComponent(selected._id)}`}><ExternalLink size={14} /> Open</Link>
                   <button className="button small" onClick={() => isResearchNode(selected) ? setResearchDraft({ document: selected, position: null }) : setQuickEdit({ document: selected, position: null })}><Pencil size={14} /> Edit</button>
+                  {selectedResearchScope && !selectedResearchActive && ["draft", "queued", "running", "completed", "killed"].includes(selectedResearchStatus) && <button className="button small" onClick={() => executeResearchAction("run", selected)}><Play size={14} /> {["queued", "running"].includes(selectedResearchStatus) ? "Continue" : "Run"}</button>}
+                  {selectedResearchScope && selectedResearchActive && <button className="button small" onClick={() => executeResearchAction("pause", selected)}><Pause size={14} /> Pause</button>}
+                  {selectedResearchScope && selectedResearchStatus === "paused" && <button className="button small" onClick={() => executeResearchAction("resume", selected)}><Play size={14} /> Resume</button>}
+                  {selectedResearchScope && ["failed", "blocked"].includes(selectedResearchStatus) && <button className="button small" onClick={() => executeResearchAction("retry", selected)}><RotateCcw size={14} /> Retry</button>}
+                  {selectedResearchScope && ["queued", "running", "paused", "blocked", "failed"].includes(selectedResearchStatus) && <button className="button small danger" onClick={() => executeResearchAction("kill", selected)}><Square size={14} /> Kill</button>}
                   {selectedResearchScope && <button className="button small" disabled={!selectedResearchScope.outputs.length} onClick={() => inspectResearchOutputs(selected)}><Focus size={14} /> Outputs</button>}
                 </div>
               </>

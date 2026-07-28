@@ -43,7 +43,8 @@ describe("research nodes", () => {
       researchNodeId: "starintel:research-node:columbus-flock",
       inputIds: ["starintel:target:columbus-flock"],
       targetIds: ["starintel:target:columbus-flock"],
-      actorIds: ["quasar.actor.web-search", "quasar.actor.url-content"]
+      actorIds: ["quasar.actor.web-search", "quasar.actor.url-content"],
+      dependencyIds: []
     });
   });
 

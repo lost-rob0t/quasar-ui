@@ -290,6 +290,7 @@ export function transitionResearchNode(document, nextState, options = {}) {
   data.counters = normalizeCounters(options.counters || {}, data.counters);
   data.last_error = options.error === undefined ? data.last_error : String(options.error || "").trim();
   data.paused_reason = options.pausedReason === undefined ? data.paused_reason : String(options.pausedReason || "").trim();
+  if (["queued", "running"].includes(to)) data.completed_at = null;
   if (to === "running" && !data.started_at) data.started_at = at;
   if (["completed", "failed", "killed"].includes(to)) data.completed_at = at;
   data.history = normalizeHistory([
@@ -326,6 +327,7 @@ export function researchNodeExecutionPlan(document) {
     targetIds: [...data.target_ids],
     actorIds: [...data.actor_ids],
     actorSelectionRules: cloneValue(data.actor_selection_rules),
+    dependencyIds: [...data.dependency_ids],
     limits: cloneValue(data.limits),
     stop: cloneValue(data.stop)
   };

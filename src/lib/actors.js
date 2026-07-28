@@ -586,7 +586,7 @@ export function targetInputExpansionActor(context) {
   };
 }
 
-export async function cityLegistarCalendarActor(context) {
+export async function cityLegistarCalendarActor(context, api) {
   const source = Array.isArray(context.selection) ? context.selection[0] : null;
   if (!source) return { documents: [], message: "Select a city, location, organization, entity, or target." };
 
@@ -655,13 +655,15 @@ export async function cityLegistarCalendarActor(context) {
   const from = new Date(data.from || now - 30 * DAY);
   const to = new Date(data.to || now + 180 * DAY);
   const limit = Math.max(1, Math.min(Number(data.limit) || 100, 200));
-  const api = `https://webapi.legistar.com/v1/${encodeURIComponent(client)}`;
+  const apiBase = `https://webapi.legistar.com/v1/${encodeURIComponent(client)}`;
   const site = `https://${client}.legistar.com`;
-  const response = await fetch(`${api}/events?$top=${limit}`, {
-    headers: { accept: "application/json" }
+  const response = await api.network.fetch({
+    url: `${apiBase}/events?$top=${limit}`,
+    responseType: "json",
+    options: { headers: { accept: "application/json" } }
   });
   if (!response.ok) throw new Error(`Legistar ${client} returned HTTP ${response.status}`);
-  const payload = await response.json();
+  const payload = response.body;
   const events = Array.isArray(payload) ? payload : Array.isArray(payload?.value) ? payload.value : [];
   const existing = new Set((context.documents || []).map((document) => document._id));
   const documents = [];
@@ -848,6 +850,7 @@ export const BUILTIN_ACTORS = Object.freeze([
     version: 1,
     accepts: ["target", "location", "org", "entity"],
     triggers: [],
+    capabilities: ["network.fetch"],
     minSelection: 1,
     maxSelection: 1,
     source: cityLegistarCalendarActor.toString()
@@ -897,6 +900,13 @@ export function normalizeActorManifest(manifest) {
     triggers: Array.isArray(manifest.triggers)
       ? [...new Set(manifest.triggers.map((trigger) => String(trigger || "").trim()).filter(Boolean))]
       : [],
+    runtime: String(manifest.runtime || BROWSER_ACTOR_RUNTIME).trim(),
+    capabilities: Array.isArray(manifest.capabilities)
+      ? [...new Set(manifest.capabilities.map((capability) => String(capability || "").trim()).filter(Boolean))]
+      : [],
+    limits: manifest.limits && typeof manifest.limits === "object" && !Array.isArray(manifest.limits)
+      ? { ...manifest.limits }
+      : {},
     minSelection,
     maxSelection,
     source: String(manifest.source || "").trim()
@@ -945,66 +955,111 @@ export function isBuiltinActor(actor) {
   return BUILTIN_ACTORS.some((candidate) => candidate.id === actor?.id && candidate.source === actor?.source);
 }
 
-export function runBrowserActor(manifest, context, { timeout = DEFAULT_ACTOR_TIMEOUT_MS } = {}) {
+async function networkFetchService(payload, { signal }) {
+  const url = new URL(String(payload?.url || payload || ""));
+  if (!["http:", "https:"].includes(url.protocol)) {
+    throw new Error(`Actor network.fetch rejects ${url.protocol || "unknown"} URLs`);
+  }
+  const options = payload?.options && typeof payload.options === "object" ? payload.options : {};
+  const response = await fetch(url.href, {
+    method: String(options.method || "GET").toUpperCase(),
+    headers: options.headers || {},
+    body: options.body,
+    credentials: "omit",
+    redirect: "follow",
+    signal
+  });
+  const responseType = payload?.responseType === "json" ? "json" : "text";
+  const body = responseType === "json" ? await response.json() : await response.text();
+  return {
+    ok: response.ok,
+    status: response.status,
+    statusText: response.statusText,
+    url: response.url,
+    headers: Object.fromEntries(response.headers.entries()),
+    body
+  };
+}
+
+function documentGetService(payload, { context }) {
+  return (context.documents || []).find((document) => document._id === payload?.id) || null;
+}
+
+function documentQueryService(payload = {}, { context }) {
+  const ids = new Set(Array.isArray(payload.ids) ? payload.ids : []);
+  const limit = Math.max(1, Math.min(Number(payload.limit) || 100, 1_000));
+  return (context.documents || [])
+    .filter((document) => !ids.size || ids.has(document._id))
+    .filter((document) => !payload.dataset || document.dataset === payload.dataset)
+    .filter((document) => !payload.dtype || document.dtype === payload.dtype)
+    .slice(0, limit);
+}
+
+function browserOpenService(payload) {
+  const url = new URL(String(payload?.url || ""));
+  if (!["http:", "https:"].includes(url.protocol)) {
+    throw new Error(`Actor browser.open rejects ${url.protocol || "unknown"} URLs`);
+  }
+  const opened = globalThis.open?.(url.href, "_blank", "noopener,noreferrer");
+  return { opened: Boolean(opened), url: url.href };
+}
+
+function eventEmitService(payload) {
+  const name = String(payload?.name || payload?.type || "").trim();
+  if (!name) throw new Error("Actor event name is required");
+  globalThis.dispatchEvent?.(new CustomEvent(`quasar:actor:${name}`, { detail: payload?.data }));
+  return { emitted: true, name };
+}
+
+export async function runBrowserActor(manifest, context, {
+  timeout = DEFAULT_ACTOR_TIMEOUT_MS,
+  signal,
+  onEvent
+} = {}) {
   const actor = normalizeActorManifest(manifest);
   if (!Number.isInteger(timeout) || timeout < 1 || timeout > MAX_ACTOR_TIMEOUT_MS) {
     throw new TypeError(`Actor timeout must be an integer from 1 to ${MAX_ACTOR_TIMEOUT_MS}`);
   }
-  const bootstrap = `
-    "use strict";
-    const actor = (${actor.source});
-    self.onmessage = async (event) => {
-      try {
-        const result = await actor(event.data);
-        self.postMessage({ ok: true, result: result || { documents: [] } });
-      } catch (error) {
-        self.postMessage({ ok: false, error: { name: error?.name || "Error", message: error?.message || String(error), stack: error?.stack || "" } });
-      }
-    };
-  `;
-  const url = URL.createObjectURL(new Blob([bootstrap], { type: "text/javascript" }));
-  const worker = new Worker(url, { name: actor.id });
-
-  return new Promise((resolve, reject) => {
-    const cleanup = () => {
-      worker.terminate();
-      URL.revokeObjectURL(url);
-    };
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error(`Actor timed out after ${timeout}ms`));
-    }, timeout);
-
-    worker.onmessage = (event) => {
-      clearTimeout(timer);
-      cleanup();
-      if (event.data?.ok) {
-        const result = event.data.result || { documents: [] };
-        if (!Array.isArray(result.documents)) {
-          reject(new TypeError("Actor result documents must be an array"));
-          return;
-        }
-        if (result.documents.length > MAX_ACTOR_DOCUMENTS) {
-          reject(new RangeError(`Actor returned more than ${MAX_ACTOR_DOCUMENTS} documents`));
-          return;
-        }
-        resolve(result);
-      } else {
-        const error = new Error(event.data?.error?.message || "Actor failed");
-        error.name = event.data?.error?.name || "ActorError";
-        error.stack = event.data?.error?.stack || error.stack;
-        reject(error);
-      }
-    };
-    worker.onerror = (event) => {
-      clearTimeout(timer);
-      cleanup();
-      reject(new Error(event.message || "Actor worker failed"));
-    };
-    worker.postMessage({ ...context, actor: {
-      id: actor.id,
-      label: actor.label,
-      version: actor.version
-    } });
+  const runtime = createBrowserActorRuntime({
+    services: {
+      "documents.get": documentGetService,
+      "documents.query": documentQueryService,
+      "network.fetch": networkFetchService,
+      "browser.open": browserOpenService,
+      "events.emit": eventEmitService
+    }
   });
+  let requests = 0;
+  const result = await runtime.run(
+    browserActorManifestFromLegacy({
+      ...actor,
+      timeoutMs: timeout,
+      limits: {
+        ...actor.limits,
+        timeoutMs: timeout,
+        maxDocuments: Math.min(actor.limits.maxDocuments || MAX_ACTOR_DOCUMENTS, MAX_ACTOR_DOCUMENTS)
+      }
+    }),
+    context,
+    {
+      timeoutMs: timeout,
+      signal,
+      onEvent: (event) => {
+        if (event.event === "capability-request") requests += 1;
+        onEvent?.(event);
+      }
+    }
+  );
+  return {
+    ...result,
+    metrics: {
+      ...result.metrics,
+      requests: result.metrics.requests ?? requests
+    }
+  };
 }
+import {
+  BROWSER_ACTOR_RUNTIME,
+  browserActorManifestFromLegacy,
+  createBrowserActorRuntime
+} from "./browser-actor-runtime";

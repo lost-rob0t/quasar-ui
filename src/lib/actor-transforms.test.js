@@ -60,7 +60,7 @@ describe("actor transform results", () => {
       source: "() => ({ operations: [{ op: 'remove_document', id: 'x' }] })"
     });
     expect(wrapped.source).toContain("documents: []");
-    expect(wrapped.source).toContain("implementation(context)");
+    expect(wrapped.source).toContain("implementation(context, api)");
   });
 
   it("builds one undoable batch for create, update, relation, and remove transforms", () => {

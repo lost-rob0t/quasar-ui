@@ -90,9 +90,9 @@ export function normalizeActorTransformResult(result) {
 export function actorWithTransformEnvelope(actor) {
   return {
     ...actor,
-    source: `(context) => {
+    source: `(context, api) => {
       const implementation = (${actor.source});
-      return Promise.resolve(implementation(context)).then((result) => {
+      return Promise.resolve(implementation(context, api)).then((result) => {
         if (result && Array.isArray(result.operations) && !Array.isArray(result.documents)) {
           return { ...result, documents: [] };
         }
