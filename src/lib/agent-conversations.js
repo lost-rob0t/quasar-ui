@@ -83,12 +83,26 @@ function normalizedState(state) {
   return next;
 }
 
+function markPersistedState(state) {
+  if (typeof document === "undefined") return;
+  const active = state.conversations.find((conversation) => conversation.id === state.activeConversationId)
+    || state.conversations[0];
+  document.documentElement.dataset.agentChatPersistedDraftLength = String(active?.draft?.length || 0);
+  document.documentElement.dataset.agentChatPersistedStreams = state.streams
+    .map((stream) => `${stream.id}:${String(stream.text || "").length}`)
+    .join(",");
+}
+
 function queueStateWrite(state) {
   const next = normalizedState(state);
   cachedState = next;
   writeQueue = writeQueue
     .catch(() => undefined)
-    .then(() => writeState(CHAT_STATE_ID, next));
+    .then(() => writeState(CHAT_STATE_ID, next))
+    .then((result) => {
+      markPersistedState(next);
+      return result;
+    });
   return next;
 }
 
@@ -98,11 +112,13 @@ export async function hydrateConversationState() {
       const stored = await readState(CHAT_STATE_ID, null);
       if (stored?.version === SESSION_VERSION && Array.isArray(stored.conversations)) {
         cachedState = normalizedState(stored);
+        markPersistedState(cachedState);
         return loadConversationState();
       }
       const migrated = readLegacyState();
       cachedState = normalizedState(migrated || emptyState());
       await writeState(CHAT_STATE_ID, cachedState);
+      markPersistedState(cachedState);
       if (migrated && typeof localStorage !== "undefined") {
         localStorage.removeItem(LEGACY_CONVERSATION_KEY);
         localStorage.removeItem(LEGACY_ACTIVE_KEY);

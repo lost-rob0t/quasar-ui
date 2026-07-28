@@ -19,6 +19,7 @@ test("opens the persistent agent modal and derives command help from capabilitie
   await expect(modal.getByText(/\/fetch --url <string>/)).toBeVisible();
 
   await composer.fill("draft survives refresh");
+  await expect(page.locator("html")).toHaveAttribute("data-agent-chat-persisted-draft-length", String("draft survives refresh".length));
   await page.reload();
   await page.getByRole("button", { name: "Open agent chat" }).click();
   await expect(page.getByRole("textbox", { name: "Agent prompt" })).toHaveValue("draft survives refresh");
@@ -144,6 +145,7 @@ test("renders and restores a partial provider stream", async ({ page }) => {
   });
 
   await expect(page.locator('[data-provider-stream="stream:e2e"]')).toContainText("partial response");
+  await expect(page.locator("html")).toHaveAttribute("data-agent-chat-persisted-streams", "stream:e2e:16");
   await page.reload();
   await page.getByRole("button", { name: "Open agent chat" }).click();
   await expect(page.locator('[data-provider-stream="stream:e2e"]')).toContainText("partial response");
