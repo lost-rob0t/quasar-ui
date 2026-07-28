@@ -1,4 +1,4 @@
-export const MELISSA_ACTOR_PACK_VERSION = 1;
+export const MELISSA_ACTOR_PACK_VERSION = 2;
 
 const SERVICES = Object.freeze({
   "personator-search": {
@@ -337,10 +337,16 @@ function buildMelissaActorSource(service) {
     };
     const buildUrl = (source) => {
       const data = source?.data || {};
-      const full = firstInput(source, ["full_name", "fullname", "name", "display_name"]);
       const first = firstInput(source, ["first_name", "firstname", "given_name", "fname"]);
+      const middle = firstInput(source, ["middle_name", "middlename", "mname"]);
       const last = firstInput(source, ["last_name", "lastname", "family_name", "surname", "lname"]);
-      const company = firstInput(source, ["company", "company_name", "organization", "org", "legal_name"]);
+      const entityType = cleanKey(firstInput(source, ["etype", "entity_type", "entitytype", "object_type", "objecttype", "kind"]));
+      const personLike = source?.dtype === "person" || entityType === "person";
+      const organizationLike = source?.dtype === "org" || ["org", "organization", "company", "business"].includes(entityType);
+      const explicitFull = firstInput(source, ["full_name", "fullname", "name", "display_name", "main", "preferred_name"]);
+      const full = explicitFull || [first, middle, last].filter(Boolean).join(" ") || (personLike ? text(source?.title) : "");
+      const company = firstInput(source, ["company", "company_name", "organization", "org", "legal_name"])
+        || (organizationLike ? text(source?.title) : "");
       const address1 = ["email", "phone", "ip"].includes(source?.dtype)
         ? firstInput(source, ["address_line_1", "address1", "a1", "street"])
         : firstInput(source, ["address_line_1", "address1", "a1", "street", "address"]);
@@ -475,7 +481,7 @@ function buildMelissaActorSource(service) {
       if (SERVICE === "global-name" && !params.get("full") && !params.get("comp")) throw new Error("Global Name requires a person or company name");
       if (SERVICE === "global-address" && !params.get("a1") && !params.get("postal")) throw new Error("Global Address requires address input");
       if (SERVICE === "people-business-search" && !params.get("anyname") && !params.get("a1") && !params.get("postal")) throw new Error("People Business Search requires a name or address");
-      if (SERVICE === "personator-search" && !["full", "a1", "email", "phone", "mak", "mik"].some((key) => params.get(key))) throw new Error("Personator Search requires a name, address, email, phone, MAK, or MIK");
+      if (SERVICE === "personator-search" && !["full", "a1", "email", "phone", "mak", "mik"].some((key) => params.get(key))) throw new Error("Personator Search could not extract a name, address, email, phone, MAK, or MIK from the selected document");
       if (SERVICE === "property" && !["mak", "addresskey", "a1", "apn", "fips", "account", "ff"].some((key) => params.get(key))) throw new Error("Property lookup requires an address, MAK, APN/FIPS, account, or free-form input");
     };
     const recordsFrom = (payload) => {
