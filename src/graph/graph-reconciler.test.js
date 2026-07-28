@@ -1,4 +1,4 @@
-import cytoscape from "cytoscape";
+import { createGraphAdapter } from "./GraphAdapter";
 import { describe, expect, it } from "vitest";
 import { diffGraphElements, reconcileGraphElements } from "./graph-reconciler";
 
@@ -11,7 +11,7 @@ function graph(nodes, edges = []) {
 }
 
 function createCy(elements = []) {
-  return cytoscape({ headless: true, styleEnabled: false, elements });
+  return createGraphAdapter({ headless: true, styleEnabled: false, elements });
 }
 
 describe("graph differential reconciliation", () => {
