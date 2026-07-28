@@ -1,11 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   Bot,
   CircleDot,
   ExternalLink,
   Filter,
+  Maximize2,
   MessageSquareCode,
+  Minimize2,
   Play,
   Plus,
   SquareTerminal,
@@ -75,6 +77,7 @@ export default function GraphWorkspaceChrome() {
   const [dockTab, setDockTab] = useState("agent");
   const [prompt, setPrompt] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [fullViewport, setFullViewport] = useState(false);
 
   const scope = useMemo(() => {
     if (!activeGraph || activeGraph.documentIds === null) return documents;
@@ -95,6 +98,18 @@ export default function GraphWorkspaceChrome() {
   const recentActivity = useMemo(() => [...scope]
     .sort((left, right) => documentTimestamp(right) - documentTimestamp(left))
     .slice(0, 5), [scope]);
+
+  useEffect(() => {
+    document.body.classList.toggle("graph-viewport-full", fullViewport);
+    const exit = (event) => {
+      if (event.key === "Escape") setFullViewport(false);
+    };
+    document.addEventListener("keydown", exit);
+    return () => {
+      document.body.classList.remove("graph-viewport-full");
+      document.removeEventListener("keydown", exit);
+    };
+  }, [fullViewport]);
 
   const unreviewedCount = scope.filter((document) => document.verification?.verified !== true).length;
   const activeRun = agentSystem.activeRun;
@@ -140,6 +155,16 @@ export default function GraphWorkspaceChrome() {
           ))}
           <button className="graph-tab-add" type="button" onClick={addGraph} aria-label="Create graph">
             <Plus size={15} />
+          </button>
+          <button
+            className="graph-viewport-toggle"
+            type="button"
+            aria-label={fullViewport ? "Exit full viewport" : "Enter full viewport"}
+            aria-pressed={fullViewport}
+            onClick={() => setFullViewport((value) => !value)}
+          >
+            {fullViewport ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+            <span>{fullViewport ? "Exit full view" : "Full viewport"}</span>
           </button>
         </div>
 
