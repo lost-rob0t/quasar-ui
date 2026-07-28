@@ -444,7 +444,6 @@
 
   .graph-workspace-tabs .graph-viewport-toggle {
     min-width: max-content;
-    margin-left: auto;
     border-left: 1px solid color-mix(in srgb, var(--line) 48%, transparent);
     color: var(--text);
   }
