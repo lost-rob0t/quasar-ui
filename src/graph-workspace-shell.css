@@ -27,7 +27,7 @@
     grid-template-columns: 72px minmax(0, 1fr);
   }
 
-  body:has(.graph-page) .sidebar {
+  body:has(.graph-page) .app-shell > .sidebar {
     position: relative;
     top: auto;
     z-index: 70;
@@ -211,7 +211,8 @@
     justify-content: center;
   }
 
-  body:has(.graph-page) .workbench {
+  body:has(.graph-page) .app-shell > .workbench {
+    grid-column: 2;
     display: grid;
     grid-template-rows: 62px minmax(0, 1fr);
     width: 100%;
@@ -854,5 +855,13 @@
 @media (max-width: 850px) {
   .graph-workspace-chrome {
     display: none;
+  }
+
+  .topbar .top-actions {
+    display: none;
+  }
+
+  .topbar .global-search {
+    width: 100%;
   }
 }

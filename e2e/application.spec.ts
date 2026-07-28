@@ -13,8 +13,11 @@ test("opens the local workspace without a backend", async ({ page }) => {
   await expect(page).toHaveTitle("Quasar");
   await expect(page.getByRole("heading", { name: "Statistics dashboard" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "No documents loaded" })).toBeVisible();
-  await expect(page.locator(".sync-badge")).toHaveText("db offline");
-  await expect(page.locator(".sync-badge")).toHaveAttribute("title", "CouchDB: Local only");
+  await expect(page.locator(".sidebar .sync-badge")).toHaveText("db offline");
+  await expect(page.locator(".sidebar .sync-badge")).toHaveAttribute(
+    "title",
+    "CouchDB: Local only"
+  );
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", "/manifest.webmanifest");
   expect(failedApplicationRequests).toEqual([]);
 
@@ -81,7 +84,8 @@ test.describe("responsive application shell", () => {
     await expect(page.locator(".graph-toolbar")).toBeHidden();
     await expect(page.locator(".graph-list-panel")).toBeHidden();
     await expect(page.locator(".graph-inspector")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Open menu", exact: true })).toBeHidden();
+    await expect(page.locator(".topbar .mobile-menu-button")).toBeHidden();
+    await expect(page.locator(".graph-stage").getByRole("button", { name: "Open menu" })).toBeVisible();
     await expect(page.getByRole("tablist", { name: "Open graphs" })).toBeVisible();
     await expect(page.getByLabel("Graph statistics")).toBeVisible();
     await expect(page.getByLabel("Graph workspace dock")).toBeVisible();

@@ -132,7 +132,7 @@ function SidebarGraphs({ graphs, activeGraph, switchGraph, createGraph }) {
         {graphs.map((graph) => (
           <div key={graph.id} className={graph.id === activeGraph?.id ? "sidebar-graph-row active" : "sidebar-graph-row"}>
             <button type="button" onClick={() => switchGraph(graph.id)} title={graph.name}>{graph.name}</button>
-            {graph.id === activeGraph?.id && <span aria-label="Active graph">•</span>}
+            {graph.id === activeGraph?.id && <span aria-label="Current graph">•</span>}
           </div>
         ))}
       </div>
