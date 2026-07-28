@@ -8,7 +8,7 @@ import {
   MessageSquareCode,
   Play,
   Plus,
-  TerminalSquare,
+  SquareTerminal,
   TriangleAlert
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
@@ -17,7 +17,7 @@ import { useAgentSystem } from "./AgentSystem";
 
 const DOCK_TABS = [
   { id: "agent", label: "AI Agent", Icon: Bot },
-  { id: "console", label: "Console", Icon: TerminalSquare },
+  { id: "console", label: "Console", Icon: SquareTerminal },
   { id: "activity", label: "Activity", Icon: Activity },
   { id: "issues", label: "Issues", Icon: TriangleAlert }
 ];
@@ -64,8 +64,8 @@ function Metric({ label, value, tone = "" }) {
 export default function GraphWorkspaceChrome() {
   const location = useLocation();
   const {
-    documents,
-    graphs,
+    documents = [],
+    graphs = [],
     activeGraph,
     switchGraph,
     createGraph,
@@ -125,7 +125,7 @@ export default function GraphWorkspaceChrome() {
     <div className="graph-workspace-chrome" aria-label="Graph workspace controls">
       <div className="graph-workspace-top">
         <div className="graph-workspace-tabs" role="tablist" aria-label="Open graphs">
-          {(graphs || []).slice(0, 5).map((graph) => (
+          {graphs.slice(0, 5).map((graph) => (
             <button
               key={graph.id}
               type="button"
@@ -213,7 +213,7 @@ export default function GraphWorkspaceChrome() {
 
         {dockTab === "console" && (
           <div className="graph-dock-message">
-            <TerminalSquare size={20} />
+            <SquareTerminal size={20} />
             <div><strong>Agent console</strong><span>Open the full console for run history, provider controls, skills, and MCP servers.</span></div>
             <Link className="button small" to="/agents?tab=run">Open console</Link>
           </div>
