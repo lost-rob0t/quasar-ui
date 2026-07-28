@@ -11,7 +11,7 @@ function graph(nodes, edges = []) {
 }
 
 function createCy(elements = []) {
-  return createGraphAdapter({ headless: true, styleEnabled: false, elements });
+  return createGraphAdapter({ headless: true, styleEnabled: false, elements, layout: { name: "preset" } });
 }
 
 describe("graph differential reconciliation", () => {
