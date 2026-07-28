@@ -42,6 +42,25 @@ const BUILT_INS = Object.freeze([
   definition("resume", "Resume the active run.", "control", schema()),
   definition("retry", "Retry the active turn.", "control", schema()),
   definition("clear", "Clear the current conversation timeline.", "control", schema()),
+  definition("task-add", "Add a durable task to this conversation.", "tasks", schema({
+    title: stringProperty("Task title", { positional: true }),
+    description: stringProperty("Optional task detail"),
+    after: { type: "array", description: "Task IDs that must complete first" }
+  }, ["title"])),
+  definition("task-list", "Show the current conversation task list.", "tasks", schema()),
+  definition("task-start", "Mark a task in progress.", "tasks", schema({
+    id: stringProperty("Task ID", { positional: true })
+  }, ["id"])),
+  definition("task-done", "Mark a task complete.", "tasks", schema({
+    id: stringProperty("Task ID", { positional: true })
+  }, ["id"])),
+  definition("task-block", "Block a task with a reason.", "tasks", schema({
+    id: stringProperty("Task ID", { positional: true }),
+    reason: stringProperty("Why the task is blocked", { positional: true })
+  }, ["id", "reason"])),
+  definition("task-remove", "Remove a task from this conversation.", "tasks", schema({
+    id: stringProperty("Task ID", { positional: true })
+  }, ["id"])),
   definition("js", "Execute JavaScript in a disposable browser sandbox.", "javascript", schema({
     code: stringProperty("JavaScript source", { positional: true, example: "result(2 + 2)" }),
     timeout: integerProperty("Wall-clock timeout in milliseconds", { default: 5000, minimum: 50, maximum: 30000 }),
