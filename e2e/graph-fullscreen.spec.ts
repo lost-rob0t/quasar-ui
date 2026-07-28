@@ -1,12 +1,13 @@
 import { expect, test } from "@playwright/test";
 
-test("uses a fullscreen desktop graph with a navigation menu", async ({ page }) => {
+test("uses a bounded desktop workspace with a navigation menu", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/graph");
 
   await expect(page.locator(".graph-stage")).toBeVisible();
-  await expect(page.locator(".sidebar")).toBeHidden();
-  await expect(page.getByRole("button", { name: "Open menu" })).toBeVisible();
+  await expect(page.locator(".sidebar")).toBeVisible();
+  const graphMenu = page.locator(".graph-stage").getByRole("button", { name: "Open menu" });
+  await expect(graphMenu).toBeVisible();
 
   const viewport = await page.locator(".graph-workbench").evaluate((workbench) => {
     const bounds = workbench.getBoundingClientRect();
@@ -23,7 +24,7 @@ test("uses a fullscreen desktop graph with a navigation menu", async ({ page }) 
   expect(viewport.right).toBeLessThanOrEqual(viewport.width);
   expect(viewport.bottom).toBeLessThanOrEqual(viewport.height);
 
-  await page.getByRole("button", { name: "Open menu" }).click();
+  await graphMenu.click();
   await expect(page.getByRole("dialog", { name: "Navigation" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Graph", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Docs", exact: true })).toBeVisible();

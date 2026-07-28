@@ -29,9 +29,10 @@ async function graphSnapshot(canvas: Locator): Promise<GraphSnapshot> {
 }
 
 function backgroundPoint(node: Point, width: number, height: number): Point {
+  const horizontalInset = Math.min(180, Math.max(100, width / 3));
   return {
-    x: node.x < width / 2 ? width - 100 : 100,
-    y: height - 100
+    x: node.x < width / 2 ? width - horizontalInset : horizontalInset,
+    y: height - 80
   };
 }
 

@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 test("searches every known graph object type before opening the compact editor", async ({ page }) => {
   await page.goto("/graph");
 
+  await page.getByRole("button", { name: "Enter blank canvas" }).click();
   await page.locator(".graph-stage").click({ button: "right", position: { x: 240, y: 220 } });
   await page.getByRole("menuitem", { name: "Create node" }).click();
   await page.getByRole("menu", { name: "create actions" }).getByRole("menuitem", { name: "Other object type" }).click();

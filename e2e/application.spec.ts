@@ -13,8 +13,11 @@ test("opens the local workspace without a backend", async ({ page }) => {
   await expect(page).toHaveTitle("Quasar");
   await expect(page.getByRole("heading", { name: "Statistics dashboard" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "No documents loaded" })).toBeVisible();
-  await expect(page.locator(".sync-badge")).toHaveText("db offline");
-  await expect(page.locator(".sync-badge")).toHaveAttribute("title", "CouchDB: Local only");
+  await expect(page.locator(".sidebar .sync-badge")).toHaveText("db offline");
+  await expect(page.locator(".sidebar .sync-badge")).toHaveAttribute(
+    "title",
+    "CouchDB: Local only"
+  );
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", "/manifest.webmanifest");
   expect(failedApplicationRequests).toEqual([]);
 
@@ -33,6 +36,7 @@ test("creates a graph node through the compact editor and preserves its full-edi
   await expect(page.getByLabel("Dataset filter", { exact: true })).toBeHidden();
   await expect(page.getByLabel("Graph layout", { exact: true })).toBeHidden();
 
+  await page.getByRole("button", { name: "Enter blank canvas" }).click();
   await page.locator(".graph-stage").click({ button: "right", position: { x: 240, y: 220 } });
   await expect(page.getByRole("menu", { name: "canvas actions" })).toBeVisible();
   await page.getByRole("button", { name: "Create person here" }).click();
@@ -70,27 +74,47 @@ test.describe("responsive application shell", () => {
     await expect(page.locator(".app-shell")).toHaveCSS("grid-template-columns", "235px 1205px");
   });
 
-  test("uses the same full-screen graph shell on desktop", async ({ page }) => {
+  test("uses the investigation workspace without overlapping the graph on desktop", async ({
+    page
+  }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/graph");
 
-    await expect(page.locator(".sidebar")).toBeHidden();
-    await expect(page.locator(".topbar")).toBeHidden();
+    await expect(page.locator(".sidebar")).toBeVisible();
+    await expect(page.locator(".topbar")).toBeVisible();
     await expect(page.locator(".graph-toolbar")).toBeHidden();
     await expect(page.locator(".graph-list-panel")).toBeHidden();
-    await expect(page.locator(".graph-inspector")).toBeHidden();
-    await expect(page.getByRole("button", { name: "Open menu", exact: true })).toBeVisible();
+    await expect(page.locator(".graph-inspector")).toBeVisible();
+    await expect(page.locator(".topbar .mobile-menu-button")).toBeHidden();
+    await expect(page.locator(".graph-stage").getByRole("button", { name: "Open menu" })).toBeVisible();
+    await expect(page.getByRole("tablist", { name: "Open graphs" })).toBeVisible();
+    await expect(page.getByLabel("Graph statistics")).toBeVisible();
+    await expect(page.getByLabel("Graph workspace dock")).toBeVisible();
     await expect(page.getByRole("button", { name: "Cycle active graph" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Select dataset" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Cycle layout" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Graph tools" })).toHaveCount(0);
 
     const stage = await page.locator(".graph-stage").boundingBox();
+    const inspector = await page.locator(".graph-inspector").boundingBox();
+    const dock = await page.locator(".graph-agent-dock").boundingBox();
     expect(stage).not.toBeNull();
-    expect(stage?.x).toBe(0);
-    expect(stage?.y).toBe(0);
-    expect(stage?.width).toBe(1440);
-    expect(stage?.height).toBe(900);
+    expect(inspector).not.toBeNull();
+    expect(dock).not.toBeNull();
+    if (!stage || !inspector || !dock) throw new Error("Desktop workspace panels must be measurable");
+    expect(stage.x).toBeGreaterThan(0);
+    expect(stage.y).toBeGreaterThan(0);
+    expect(stage.width).toBeGreaterThan(0);
+    expect(stage.height).toBeGreaterThan(0);
+    expect(stage.x + stage.width).toBeLessThanOrEqual(inspector.x);
+    expect(stage.y + stage.height).toBeLessThanOrEqual(dock.y);
+
+    await page.getByRole("button", { name: "Enter blank canvas" }).click();
+    await page.locator(".graph-stage").click({
+      button: "right",
+      position: { x: 240, y: Math.min(220, stage.height - 20) }
+    });
+    await expect(page.getByRole("menu", { name: "canvas actions" })).toBeVisible();
   });
 
   test("uses gesture navigation without horizontal page overflow on mobile", async ({ page }) => {
