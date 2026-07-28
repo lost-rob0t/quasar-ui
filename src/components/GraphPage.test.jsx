@@ -129,6 +129,59 @@ describe("graph local corpus status", () => {
     expect(html).toContain("1 edges");
   });
 
+  it("shows research node state and execution scope in the inspector", () => {
+    const researchNode = {
+      ...document("starintel:research-node:map", "research-node", {
+        objective: "Map the network",
+        status: "paused",
+        input_ids: ["starintel:org:input"],
+        target_ids: [],
+        actor_ids: ["actor:search"],
+        actor_selection_rules: [],
+        output_ids: ["starintel:org:output"],
+        artifact_ids: [],
+        child_ids: [],
+        dependency_ids: [],
+        run_ids: [],
+        current_actor_id: "",
+        current_run_id: "",
+        limits: {},
+        stop: {},
+        counters: {},
+        history: [],
+        created_at: stamp,
+        started_at: null,
+        completed_at: null,
+        last_error: "",
+        paused_reason: "operator"
+      }, true),
+      status: "paused",
+      summary: "Map the network"
+    };
+    context.current = {
+      documents: [researchNode],
+      workspace: { positions: {}, layout: "cose" },
+      selectedIds: [researchNode._id],
+      selectedDocuments: [researchNode],
+      select: vi.fn(),
+      persistWorkspace: vi.fn(),
+      actors: [],
+      runActor: vi.fn(),
+      settings: { actorsEnabled: false },
+      setNotice: vi.fn()
+    };
+
+    const html = renderToStaticMarkup(
+      <MemoryRouter initialEntries={["/graph"]}>
+        <Routes><Route path="/graph" element={<GraphPage />} /></Routes>
+      </MemoryRouter>
+    );
+
+    expect(html).toContain("Research state: paused");
+    expect(html).toContain("1 inputs · 1 outputs · 1 actors");
+    expect(html).toContain("Outputs</button>");
+  });
+
   it("renders named graphs as a persistent workbench list", () => {
     const documents = [
       { ...document("starintel:org:first", "org", { name: "First" }, true), dataset: "alpha" },

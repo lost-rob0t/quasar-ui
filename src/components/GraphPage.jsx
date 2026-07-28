@@ -22,6 +22,8 @@ import { activeGraphMembershipKey } from "../lib/graph-workspaces";
 import { themedGraphStyle } from "../lib/graph-style";
 import { clampRenderedPosition } from "../lib/graph-viewport";
 import { operation } from "../lib/operations";
+import { cloneResearchNode, researchNodeOutputIds, researchNodeScope } from "../lib/research-node-graph";
+import { isResearchNode } from "../lib/research-nodes";
 import { useQuasar } from "../store";
 import { CompactNodeEditor, CompactRelationEditor } from "./GraphEditors";
 
@@ -835,9 +837,44 @@ export default function GraphPage() {
     }
   }
 
+  function inspectResearchOutputs(document) {
+    const outputIds = researchNodeOutputIds(document).filter((id) => graphDocumentIds.has(id));
+    setCanvasMenu(null);
+    if (!outputIds.length) {
+      setNotice({ kind: "info", message: "This research node has no outputs in the active graph." });
+      return;
+    }
+    select(outputIds);
+    focusSelection(outputIds);
+  }
+
+  async function cloneContextResearchNode(document) {
+    try {
+      const suffix = globalThis.crypto?.randomUUID
+        ? globalThis.crypto.randomUUID()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      const cloned = cloneResearchNode(document, {
+        id: `starintel:research-node:${suffix}`
+      });
+      await execute(operation.save(cloned), `Clone ${document._id}`);
+      if (activeGraph?.documentIds !== null) {
+        addDocumentsToActiveGraph([cloned._id], { selectedIds: [cloned._id] });
+      }
+      setReviewStatus("all");
+      clearFilters();
+      select([cloned._id]);
+      setCanvasMenu(null);
+      setNotice({ kind: "success", message: `Cloned research node as ${cloned._id}` });
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
+  }
+
   const menuMatches = (label) => !menuQuery.trim() || label.toLowerCase().includes(menuQuery.trim().toLowerCase());
   const contextNode = canvasMenu?.kind === "node" ? documents.find((document) => document._id === canvasMenu.id) : null;
   const contextRelation = canvasMenu?.kind === "edge" ? documents.find((document) => document._id === canvasMenu.id) : null;
+  const contextResearchScope = contextNode && isResearchNode(contextNode) ? researchNodeScope(contextNode) : null;
+  const selectedResearchScope = selected && isResearchNode(selected) ? researchNodeScope(selected) : null;
   const [contextSourceId, contextTargetId] = relationEndpoints(contextRelation);
 
   return (
@@ -920,7 +957,7 @@ export default function GraphPage() {
 
           {canvasMenu && (
             <div className={`graph-context-menu expanded ${canvasMenu.kind}-actions`} role="menu" aria-label={`${canvasMenu.kind} actions`} style={canvasMenuStyle} onContextMenu={(event) => event.preventDefault()}>
-              <div className="graph-context-header"><span className="context-kind">{canvasMenu.kind}</span><strong>{contextNode ? documentLabel(contextNode) : contextRelation ? documentLabel(contextRelation) : activeGraph?.name || "Graph"}</strong></div>
+              <div className="graph-context-header"><span className="context-kind">{canvasMenu.kind}</span><strong>{contextNode ? documentLabel(contextNode) : contextRelation ? documentLabel(contextRelation) : activeGraph?.name || "Graph"}</strong>{contextResearchScope && <span className={`research-state research-state-${contextNode.data?.status || "draft"}`}>{contextNode.data?.status || "draft"}</span>}</div>
               <label className="graph-context-search"><Search size={14} /><input aria-label="Search context actions" value={menuQuery} onChange={(event) => setMenuQuery(event.target.value)} placeholder="Find action…" /></label>
 
               {canvasMenu.kind === "node" && contextNode && (
@@ -933,6 +970,8 @@ export default function GraphPage() {
                   {actorEntries.filter(({ actor }) => menuMatches(`Run actor ${actor.label}`)).map(({ actor, availability }) => (
                     <button role="menuitem" key={actor.id} disabled={!availability.applicable || Boolean(runningActorId)} onClick={() => { setCanvasMenu(null); executeActor(actor); }}><Play size={15} /> Run actor: {actor.label}</button>
                   ))}
+                  {contextResearchScope && menuMatches("Inspect outputs") && <button role="menuitem" disabled={!contextResearchScope.outputs.length} onClick={() => inspectResearchOutputs(contextNode)}><Focus size={15} /> Inspect outputs ({contextResearchScope.outputs.length})</button>}
+                  {contextResearchScope && menuMatches("Clone research node") && <button role="menuitem" onClick={() => cloneContextResearchNode(contextNode)}><Copy size={15} /> Clone research node</button>}
                   {menuMatches("Submit as target") && <button role="menuitem" onClick={() => { setCanvasMenu(null); setTargetDocument(contextNode); }}><Send size={15} /> Submit as target</button>}
                   {menuMatches("Copy document ID") && <button role="menuitem" onClick={() => copyText(contextNode._id, "Copied document ID")}><Clipboard size={15} /> Copy document ID</button>}
                   {menuMatches("Copy document JSON") && <button role="menuitem" onClick={() => copyText(JSON.stringify(contextNode, null, 2), "Copied document JSON")}><Copy size={15} /> Copy document JSON</button>}
@@ -996,9 +1035,16 @@ export default function GraphPage() {
                 <code>{selected._id}</code>
                 <small className="inspector-dataset">Dataset: {selected.dataset || "unknown"}</small>
                 {selected.summary && <p>{selected.summary}</p>}
+                {selectedResearchScope && (
+                  <div className="research-node-summary">
+                    <span className={`research-state research-state-${selected.data?.status || "draft"}`}>Research state: {selected.data?.status || "draft"}</span>
+                    <small>{selectedResearchScope.inputs.length} inputs · {selectedResearchScope.outputs.length} outputs · {selectedResearchScope.actors.length} actors</small>
+                  </div>
+                )}
                 <div className="inspector-actions">
                   <Link className="button small" to={`/documents/${encodeURIComponent(selected._id)}`}><ExternalLink size={14} /> Open</Link>
                   <button className="button small" onClick={() => setQuickEdit({ document: selected, position: null })}><Pencil size={14} /> Edit</button>
+                  {selectedResearchScope && <button className="button small" disabled={!selectedResearchScope.outputs.length} onClick={() => inspectResearchOutputs(selected)}><Focus size={14} /> Outputs</button>}
                 </div>
               </>
             )}
