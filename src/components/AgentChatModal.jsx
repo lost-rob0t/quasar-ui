@@ -7,6 +7,7 @@ import {
   Expand,
   FilePlus2,
   GripVertical,
+  ListTodo,
   Maximize2,
   Minimize2,
   Paperclip,
@@ -54,6 +55,13 @@ import {
   evaluatePermission
 } from "../lib/agent-permissions-v2";
 import { executeSandboxedJavaScript } from "../lib/agent-javascript-sandbox";
+import {
+  addConversationTask,
+  removeConversationTask,
+  runnableConversationTasks,
+  taskListMarkdown,
+  updateConversationTask
+} from "../lib/agent-tasks";
 
 const UI_KEY = "quasar:agent-chat-ui:v1";
 const COMMAND_USAGE_KEY = "quasar:agent-command-usage:v1";
@@ -326,6 +334,37 @@ function ConversationPicker({ conversations, activeConversation, onSelect }) {
   );
 }
 
+function TaskPanel({ conversation, onUpdate, onRemove }) {
+  const tasks = conversation?.taskList || [];
+  const runnable = new Set(runnableConversationTasks(conversation || { taskList: [] }).map((task) => task.id));
+  return (
+    <aside className="agent-task-panel" aria-label="Conversation tasks">
+      <header>
+        <strong>Tasks</strong>
+        <span>{tasks.filter((task) => task.status === "completed").length}/{tasks.length} complete</span>
+      </header>
+      {!tasks.length && <p>No tasks yet. Use <code>/task-add</code>.</p>}
+      {tasks.map((task) => (
+        <article className={`agent-task agent-task-${task.status}`} key={task.id}>
+          <div>
+            <strong>{task.title}</strong>
+            <span>{task.status}{runnable.has(task.id) ? " · ready" : ""}</span>
+            {task.description && <p>{task.description}</p>}
+            {task.dependencies?.length > 0 && <small>after {task.dependencies.join(", ")}</small>}
+            {task.blockedReason && <small>{task.blockedReason}</small>}
+          </div>
+          <div className="agent-task-actions">
+            {task.status === "pending" && runnable.has(task.id) && <button type="button" onClick={() => onUpdate(task.id, { status: "in-progress" })}>start</button>}
+            {task.status === "in-progress" && <button type="button" onClick={() => onUpdate(task.id, { status: "completed" })}>done</button>}
+            {["blocked", "cancelled"].includes(task.status) && <button type="button" onClick={() => onUpdate(task.id, { status: "pending", blockedReason: "" })}>reopen</button>}
+            <button type="button" onClick={() => onRemove(task.id)}>remove</button>
+          </div>
+        </article>
+      ))}
+    </aside>
+  );
+}
+
 function stateLabel(activeRun, pendingPermission) {
   if (pendingPermission) return "waiting-for-permission";
   return mapRunState(activeRun?.status, activeRun?.phase);
@@ -349,6 +388,7 @@ export default function AgentChatBubble() {
   const [paletteIndex, setPaletteIndex] = useState(0);
   const [manualScroll, setManualScroll] = useState(false);
   const [contextOpen, setContextOpen] = useState(false);
+  const [taskOpen, setTaskOpen] = useState(false);
   const [pendingPermission, setPendingPermission] = useState(null);
   const timelineRef = useRef(null);
   const textareaRef = useRef(null);
@@ -497,6 +537,48 @@ export default function AgentChatBubble() {
             ? commandHelp(target)
             : registry.definitions.map((item) => `- \`/${item.command}\` — ${item.description}`).join("\n");
           persistConversation(appendConversationMessage(working, { role: "assistant", content, status: "completed" }));
+          return;
+        }
+        if (command.command === "task-add") {
+          const withTask = addConversationTask(working, {
+            title: command.input.title,
+            description: command.input.description,
+            dependencies: command.input.after
+          });
+          const task = withTask.taskList.at(-1);
+          persistConversation(appendConversationMessage(withTask, {
+            role: "assistant",
+            content: `Added task \`${task.id}\`: ${task.title}`,
+            status: "completed"
+          }));
+          setTaskOpen(true);
+          return;
+        }
+        if (command.command === "task-list") {
+          persistConversation(appendConversationMessage(working, {
+            role: "assistant",
+            content: taskListMarkdown(working),
+            status: "completed"
+          }));
+          setTaskOpen(true);
+          return;
+        }
+        if (["task-start", "task-done", "task-block", "task-remove"].includes(command.command)) {
+          const next = command.command === "task-remove"
+            ? removeConversationTask(working, command.input.id)
+            : updateConversationTask(working, command.input.id, command.command === "task-start"
+              ? { status: "in-progress" }
+              : command.command === "task-done"
+                ? { status: "completed" }
+                : { status: "blocked", blockedReason: command.input.reason });
+          persistConversation(appendConversationMessage(next, {
+            role: "assistant",
+            content: command.command === "task-remove"
+              ? `Removed task \`${command.input.id}\`.`
+              : `Updated task \`${command.input.id}\`.`,
+            status: "completed"
+          }));
+          setTaskOpen(true);
           return;
         }
         if (command.command === "stop") {
@@ -822,6 +904,7 @@ export default function AgentChatBubble() {
               }}
             />
             <button className="agent-chat-icon-button" type="button" onClick={createNewConversation} title="New conversation"><FilePlus2 size={16} /></button>
+            <button className="agent-chat-icon-button" type="button" aria-label="Toggle conversation tasks" aria-expanded={taskOpen} onClick={() => setTaskOpen((value) => !value)} title="Tasks"><ListTodo size={16} /></button>
             <Link className="agent-chat-icon-button" to="/agents" target="_blank" title="Agent settings"><ShieldCheck size={16} /></Link>
             <button className="agent-chat-icon-button" type="button" onClick={() => setUi((value) => saveUi({ ...value, expanded: !value.expanded }))} title={ui.expanded ? "Exit full screen" : "Full screen"}>
               {ui.expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
@@ -836,6 +919,13 @@ export default function AgentChatBubble() {
               <span>graph <code>{quasar.activeGraph?.name || quasar.activeGraph?.id || "none"}</code></span>
               <span>selected <code>{quasar.selectedIds?.length || 0}</code></span>
             </aside>
+          )}
+          {taskOpen && (
+            <TaskPanel
+              conversation={activeConversation}
+              onUpdate={(taskId, patch) => mutateConversation((conversation) => updateConversationTask(conversation, taskId, patch))}
+              onRemove={(taskId) => mutateConversation((conversation) => removeConversationTask(conversation, taskId))}
+            />
           )}
 
           <main
