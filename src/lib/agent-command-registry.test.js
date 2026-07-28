@@ -127,4 +127,11 @@ describe("agent command registry", () => {
     expect(registry.search("web")[0].command).toBe("search");
     expect(registry.search("public source").some((item) => item.command === "search")).toBe(true);
   });
+
+  it("ranks recent commands without overriding stronger query matches", () => {
+    const registry = createCommandRegistry({ recentCommands: ["fetch", "search"] });
+
+    expect(registry.search("").slice(0, 2).map((item) => item.command)).toEqual(["fetch", "search"]);
+    expect(registry.search("sea")[0].command).toBe("search");
+  });
 });

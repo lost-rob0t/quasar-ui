@@ -139,7 +139,7 @@ function capabilityDefinition(tool) {
   });
 }
 
-export function createCommandRegistry({ actors = [], mcpServers = [] } = {}) {
+export function createCommandRegistry({ actors = [], mcpServers = [], recentCommands = [] } = {}) {
   const toolRegistry = createAgentToolRegistry({});
   const allToolsAgent = { permissions: [...AGENT_PERMISSIONS] };
   const tools = toolRegistry.list(allToolsAgent).map(capabilityDefinition);
@@ -184,6 +184,7 @@ export function createCommandRegistry({ actors = [], mcpServers = [] } = {}) {
     byName.set(item.command, item);
     for (const alias of item.aliases || []) byName.set(alias, item);
   }
+  const recentIndex = new Map(recentCommands.map((command, index) => [normalize(command), index]));
   return Object.freeze({
     definitions,
     get(name) {
@@ -194,7 +195,16 @@ export function createCommandRegistry({ actors = [], mcpServers = [] } = {}) {
       return definitions
         .map((item) => ({ item, score: commandScore(item, needle) }))
         .filter(({ score }) => score > 0)
-        .sort((left, right) => right.score - left.score || left.item.command.localeCompare(right.item.command))
+        .sort((left, right) => {
+          const scoreDifference = right.score - left.score;
+          if (scoreDifference) return scoreDifference;
+          const leftRecent = recentIndex.get(normalize(left.item.command));
+          const rightRecent = recentIndex.get(normalize(right.item.command));
+          if (leftRecent !== undefined || rightRecent !== undefined) {
+            return (leftRecent ?? Number.MAX_SAFE_INTEGER) - (rightRecent ?? Number.MAX_SAFE_INTEGER);
+          }
+          return left.item.command.localeCompare(right.item.command);
+        })
         .map(({ item }) => item);
     }
   });

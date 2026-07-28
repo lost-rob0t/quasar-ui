@@ -54,6 +54,7 @@ import {
 import { executeSandboxedJavaScript } from "../lib/agent-javascript-sandbox";
 
 const UI_KEY = "quasar:agent-chat-ui:v1";
+const COMMAND_USAGE_KEY = "quasar:agent-command-usage:v1";
 const SESSION_ID = `session:${Date.now()}:${Math.random().toString(16).slice(2)}`;
 
 function loadUi() {
@@ -70,6 +71,22 @@ function loadUi() {
 
 function saveUi(value) {
   localStorage.setItem(UI_KEY, JSON.stringify(value));
+  return value;
+}
+
+function loadRecentCommands() {
+  try {
+    const value = JSON.parse(localStorage.getItem(COMMAND_USAGE_KEY) || "[]");
+    return Array.isArray(value)
+      ? [...new Set(value.filter((command) => typeof command === "string" && command.trim()).map((command) => command.trim()))].slice(0, 20)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentCommands(value) {
+  localStorage.setItem(COMMAND_USAGE_KEY, JSON.stringify(value));
   return value;
 }
 
@@ -196,8 +213,9 @@ function Message({ message, onEdit, onRetry, onPermissionDecision }) {
   );
 }
 
-function CommandPalette({ items, selected, onSelect }) {
+function CommandPalette({ items, selected, onSelect, recentCommands }) {
   if (!items.length) return null;
+  const recent = new Set(recentCommands);
   return (
     <div className="agent-command-palette" role="listbox" aria-label="Agent commands">
       {items.slice(0, 12).map((item, index) => (
@@ -213,7 +231,7 @@ function CommandPalette({ items, selected, onSelect }) {
         >
           <code>/{item.command}</code>
           <span>{item.description}</span>
-          <small>{item.availability !== "available" ? `${item.availability} · ` : ""}{item.category} · {item.permission || "no permission"}</small>
+          <small>{recent.has(item.command) ? "recent · " : ""}{item.availability !== "available" ? `${item.availability} · ` : ""}{item.category} · {item.permission || "no permission"}</small>
         </button>
       ))}
     </div>
@@ -324,6 +342,7 @@ export default function AgentChatBubble() {
   const [conversationState, setConversationState] = useState(loadConversationState);
   const [activeConversationId, setActiveConversationIdState] = useState(getActiveConversationId);
   const [composer, setComposer] = useState("");
+  const [recentCommands, setRecentCommands] = useState(loadRecentCommands);
   const [paletteIndex, setPaletteIndex] = useState(0);
   const [manualScroll, setManualScroll] = useState(false);
   const [contextOpen, setContextOpen] = useState(false);
@@ -337,8 +356,9 @@ export default function AgentChatBubble() {
 
   const registry = useMemo(() => createCommandRegistry({
     actors: quasar.actors || [],
-    mcpServers: agentSystem.mcpServers || []
-  }), [quasar.actors, agentSystem.mcpServers]);
+    mcpServers: agentSystem.mcpServers || [],
+    recentCommands
+  }), [quasar.actors, agentSystem.mcpServers, recentCommands]);
 
   useEffect(() => {
     if (conversationState.conversations.length) return;
@@ -435,6 +455,12 @@ export default function AgentChatBubble() {
     persistConversation(working);
     setComposer("");
     const command = parseCommandInput(raw, registry);
+    if (command?.definition) {
+      setRecentCommands((commands) => saveRecentCommands([
+        command.definition.command,
+        ...commands.filter((candidate) => candidate !== command.definition.command)
+      ].slice(0, 20)));
+    }
     try {
       if (command?.definition?.availability !== "available") {
         throw new Error(`/${command.definition.command} is ${command.definition.availability}: ${command.definition.availabilityReason || "This capability is not configured."}`);
@@ -811,7 +837,7 @@ export default function AgentChatBubble() {
                 {hint.allowedValues.length > 0 && <small>{hint.allowedValues.join(" · ")}</small>}
               </div>
             )}
-            <CommandPalette items={paletteItems} selected={paletteIndex} onSelect={selectCommand} />
+            <CommandPalette items={paletteItems} selected={paletteIndex} onSelect={selectCommand} recentCommands={recentCommands} />
             <form className="agent-chat-composer" onSubmit={submit}>
               <textarea
                 ref={textareaRef}

@@ -115,6 +115,24 @@ test("resizes the desktop chat and restores its dimensions", async ({ page }) =>
   expect(restored!.height).toBeCloseTo(resized!.height, 0);
 });
 
+test("ranks and persists recently used commands", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Open agent chat" }).click();
+  const modal = page.getByRole("region", { name: "Quasar agent chat" });
+  const composer = modal.getByRole("textbox", { name: "Agent prompt" });
+
+  await composer.fill("/clear");
+  await modal.getByRole("button", { name: "Send" }).click();
+  await composer.fill("/");
+  await expect(modal.getByRole("option").first()).toContainText("/clear");
+  await expect(modal.getByRole("option").first()).toContainText("recent");
+
+  await page.reload();
+  await page.getByRole("button", { name: "Open agent chat" }).click();
+  await page.getByRole("textbox", { name: "Agent prompt" }).fill("/");
+  await expect(page.getByRole("option").first()).toContainText("/clear");
+});
+
 test("renders and restores a partial provider stream", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Open agent chat" }).click();
