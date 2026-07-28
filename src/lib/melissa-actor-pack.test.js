@@ -1,6 +1,11 @@
 import { assertDocument } from "starintel_doc";
 import { describe, expect, it, vi } from "vitest";
-import { MELISSA_ACTORS, mergeMelissaActors, removeMelissaActors } from "./melissa-actor-pack";
+import {
+  MELISSA_ACTORS,
+  MELISSA_ACTOR_PACK_VERSION,
+  mergeMelissaActors,
+  removeMelissaActors
+} from "./melissa-actor-pack";
 
 const stamp = "2026-07-28T00:00:00.000Z";
 
@@ -37,6 +42,7 @@ function api(body) {
 
 describe("Melissa actor pack", () => {
   it("ships 11 executable actor manifests", () => {
+    expect(MELISSA_ACTOR_PACK_VERSION).toBe(2);
     expect(MELISSA_ACTORS).toHaveLength(11);
     for (const actor of MELISSA_ACTORS) {
       expect(Function(`"use strict"; return (${actor.source});`)()).toBeTypeOf("function");
@@ -85,6 +91,38 @@ describe("Melissa actor pack", () => {
     expect(result.documents.find((document) => document.dtype === "phone")?.data.number).toBe("+15551234567");
     expect(result.documents.find((document) => document.dtype === "email")?.data.address).toBe("ada@example.com");
     result.documents.forEach((document) => expect(() => assertDocument(document)).not.toThrow());
+  });
+
+  it("extracts Personator names from document title, main, and split name fields", async () => {
+    const runtime = api({ Records: [] });
+    const titleOnly = input({
+      _id: "starintel:person:title-only",
+      title: "Grace Hopper",
+      data: {}
+    });
+    const mainOnly = input({
+      _id: "starintel:person:main-only",
+      title: "Person",
+      data: { main: "Katherine Johnson" }
+    });
+    const splitName = input({
+      _id: "starintel:person:split-name",
+      title: "Person",
+      data: { fname: "Dorothy", mname: "Vaughan", lname: "Johnson" }
+    });
+
+    await implementation("personator-search")({
+      selection: [titleOnly, mainOnly, splitName]
+    }, runtime);
+
+    const names = runtime.network.fetch.mock.calls.map(([request]) =>
+      new URL(request.url).searchParams.get("full")
+    );
+    expect(names).toEqual([
+      "Grace Hopper",
+      "Katherine Johnson",
+      "Dorothy Vaughan Johnson"
+    ]);
   });
 
   it("creates valid reverse-geocoded location documents", async () => {
