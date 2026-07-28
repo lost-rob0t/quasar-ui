@@ -265,6 +265,7 @@ function benchmarkLayoutTimeout(nodeCount, layoutMode) {
   if (layoutMode === "size-aware") return nodeCount >= 25_000 ? 10_000 : 30_000;
   if (nodeCount >= 10_000) return 4_000;
   if (nodeCount >= 5_000) return 3_000;
+  if (nodeCount >= 1_000) return 2_000;
   return 5_000;
 }
 
@@ -274,7 +275,7 @@ async function measureLayout(instance, name, nodeCount, layoutMode) {
     : { name, animate: false, fit: false, padding: 20, randomize: name === "cose" };
   const timeoutMs = benchmarkLayoutTimeout(nodeCount, layoutMode);
   const started = now();
-  if (layoutMode === "legacy" && nodeCount >= 5_000) {
+  if (layoutMode === "legacy" && nodeCount >= 1_000) {
     await new Promise((resolve) => setTimeout(resolve, timeoutMs));
     return { duration: timeoutMs, timedOut: true, timeoutMs, censored: true };
   }
