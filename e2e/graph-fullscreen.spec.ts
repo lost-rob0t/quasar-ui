@@ -4,9 +4,27 @@ test("uses a bounded desktop workspace with a navigation menu", async ({ page })
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/graph");
 
-  await expect(page.locator(".graph-stage")).toBeVisible();
+  const stage = page.locator(".graph-stage");
+  await expect(stage).toBeVisible();
   await expect(page.locator(".sidebar")).toBeVisible();
-  const graphMenu = page.locator(".graph-stage").getByRole("button", { name: "Open menu" });
+  const defaultBounds = await stage.boundingBox();
+  expect(defaultBounds).not.toBeNull();
+  expect(defaultBounds!.height).toBeGreaterThan(540);
+
+  await page.getByRole("button", { name: "Enter full viewport" }).click();
+  await expect(page.locator("body")).toHaveClass(/graph-viewport-full/);
+  const fullBounds = await stage.boundingBox();
+  expect(fullBounds).not.toBeNull();
+  expect(fullBounds!.x).toBeCloseTo(0, 0);
+  expect(fullBounds!.y).toBeCloseTo(0, 0);
+  expect(fullBounds!.width).toBeCloseTo(1440, 0);
+  expect(fullBounds!.height).toBeCloseTo(900, 0);
+
+  await page.keyboard.press("Escape");
+  await expect(page.locator("body")).not.toHaveClass(/graph-viewport-full/);
+  await expect(page.locator(".sidebar")).toBeVisible();
+
+  const graphMenu = stage.getByRole("button", { name: "Open menu" });
   await expect(graphMenu).toBeVisible();
 
   const viewport = await page.locator(".graph-workbench").evaluate((workbench) => {
