@@ -775,7 +775,7 @@ export default function AgentChatBubble() {
   }
 
   function beginDrag(event) {
-    if (ui.expanded) return;
+    if (ui.expanded || event.target.closest("button, a, input, select, textarea")) return;
     const modal = event.currentTarget.closest(".agent-chat-modal")?.getBoundingClientRect();
     dragging.current = {
       x: event.clientX,
