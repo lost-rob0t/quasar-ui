@@ -42,6 +42,7 @@ test("renders and restores a partial provider stream", async ({ page }) => {
 
 test("creates, reads, patches, deletes, and restores a document through agent capabilities", async ({ page }) => {
   await page.goto("/");
+  await expect(page.locator('[data-agent-capability-ready="document"]')).toBeAttached();
   const stamp = "2026-07-27T00:00:00.000Z";
   const document = {
     _id: "starintel:org:agent-e2e",

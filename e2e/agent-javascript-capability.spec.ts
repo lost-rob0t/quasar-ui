@@ -7,8 +7,13 @@ type SandboxResult = {
   terminationReason: string | null;
 };
 
+async function waitForJavascriptBridge(page: import("@playwright/test").Page) {
+  await expect(page.locator('[data-agent-capability-ready="javascript"]')).toBeAttached();
+}
+
 test("executes model-selected JavaScript without DOM, storage, or network access", async ({ page }) => {
   await page.goto("/");
+  await waitForJavascriptBridge(page);
   const result = await page.evaluate(() => new Promise((resolve, reject) => {
     window.dispatchEvent(new CustomEvent("quasar:agent-javascript-capability", {
       detail: {
@@ -44,6 +49,7 @@ test("executes model-selected JavaScript without DOM, storage, or network access
 
 test("routes nested JavaScript calls through the typed capability bridge", async ({ page }) => {
   await page.goto("/");
+  await waitForJavascriptBridge(page);
   const result = await page.evaluate(() => new Promise((resolve, reject) => {
     window.dispatchEvent(new CustomEvent("quasar:agent-javascript-capability", {
       detail: {
@@ -68,6 +74,7 @@ test("routes nested JavaScript calls through the typed capability bridge", async
 
 test("terminates JavaScript that exceeds its wall-clock limit", async ({ page }) => {
   await page.goto("/");
+  await waitForJavascriptBridge(page);
   const result = await page.evaluate(() => new Promise((resolve, reject) => {
     window.dispatchEvent(new CustomEvent("quasar:agent-javascript-capability", {
       detail: {

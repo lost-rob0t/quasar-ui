@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { executeSandboxedJavaScript } from "../lib/agent-javascript-sandbox";
 import {
   registerJavascriptExecution,
@@ -15,31 +15,37 @@ function configuredLimits(args) {
 }
 
 export default function AgentJavascriptCapabilityBridge() {
-  useEffect(() => subscribeJavascriptCapability(async ({ args, context, resolve, reject }) => {
-    let unregister = () => {};
-    try {
-      const execution = executeSandboxedJavaScript({
-        code: String(args.code || ""),
-        input: args.input,
-        limits: configuredLimits(args),
-        bridge: async (name, nestedArgs, nestedCall) => {
-          if (typeof context.callTool !== "function") throw new Error("No capability bridge is configured for this run");
-          return context.callTool(name, nestedArgs, {
-            parentToolCallId: context.toolCallId || null,
-            sandboxCallId: nestedCall.id,
-            depth: nestedCall.depth
-          });
-        }
-      });
-      unregister = registerJavascriptExecution(context.run?.id || context.runId, execution);
-      const result = await execution.promise;
-      resolve(result);
-    } catch (error) {
-      reject(error);
-    } finally {
-      unregister();
-    }
-  }), []);
+  const [ready, setReady] = useState(false);
 
-  return null;
+  useEffect(() => {
+    const unsubscribe = subscribeJavascriptCapability(async ({ args, context, resolve, reject }) => {
+      let unregister = () => {};
+      try {
+        const execution = executeSandboxedJavaScript({
+          code: String(args.code || ""),
+          input: args.input,
+          limits: configuredLimits(args),
+          bridge: async (name, nestedArgs, nestedCall) => {
+            if (typeof context.callTool !== "function") throw new Error("No capability bridge is configured for this run");
+            return context.callTool(name, nestedArgs, {
+              parentToolCallId: context.toolCallId || null,
+              sandboxCallId: nestedCall.id,
+              depth: nestedCall.depth
+            });
+          }
+        });
+        unregister = registerJavascriptExecution(context.run?.id || context.runId, execution);
+        const result = await execution.promise;
+        resolve(result);
+      } catch (error) {
+        reject(error);
+      } finally {
+        unregister();
+      }
+    });
+    setReady(true);
+    return unsubscribe;
+  }, []);
+
+  return ready ? <span hidden data-agent-capability-ready="javascript" /> : null;
 }
