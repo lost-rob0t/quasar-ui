@@ -241,7 +241,8 @@ async function main() {
           layoutMode: iteration.layoutMode,
           interactionIterations: isLarge ? (iteration.name === "baseline" ? 1 : 3) : 8,
           viewportFrames: isLarge ? 60 : 90,
-          includeIncremental: iteration.name === "baseline" ? !isLarge : true
+          includeIncremental: iteration.name === "baseline" ? !isLarge : true,
+          graphSwitchIterations: isLarge ? (iteration.name === "baseline" ? 2 : 5) : 10
         };
         const tracePath = size === "large" && ["baseline", "final"].includes(iteration.name)
           ? path.resolve(`benchmarks/results/traces/${iteration.name}-large.zip`)
@@ -261,7 +262,8 @@ async function main() {
         layoutMode: "size-aware",
         interactionIterations: 2,
         viewportFrames: 60,
-        includeIncremental: false
+        includeIncremental: false,
+        graphSwitchIterations: 2
       }, null, context));
     }
 
@@ -277,7 +279,8 @@ async function main() {
         layoutMode: "size-aware",
         interactionIterations: 4,
         viewportFrames: 45,
-        includeIncremental: false
+        includeIncremental: false,
+        graphSwitchIterations: 2
       }, null, context));
     }
 
