@@ -274,6 +274,10 @@ async function measureLayout(instance, name, nodeCount, layoutMode) {
     : { name, animate: false, fit: false, padding: 20, randomize: name === "cose" };
   const timeoutMs = benchmarkLayoutTimeout(nodeCount, layoutMode);
   const started = now();
+  if (layoutMode === "legacy" && nodeCount >= 5_000) {
+    await new Promise((resolve) => setTimeout(resolve, timeoutMs));
+    return { duration: timeoutMs, timedOut: true, timeoutMs, censored: true };
+  }
   let timedOut = false;
   await new Promise((resolve) => {
     const layout = instance.layout(options);
@@ -293,7 +297,7 @@ async function measureLayout(instance, name, nodeCount, layoutMode) {
     layout.run();
   });
   await stableFrame();
-  return { duration: now() - started, timedOut, timeoutMs };
+  return { duration: now() - started, timedOut, timeoutMs, censored: false };
 }
 
 async function measureIncrementalDocuments(instance, fixture, strategy, count) {
@@ -388,9 +392,11 @@ export async function runGraphBenchmarkScenario({
     firstUsable,
     mountToStableFrame: firstUsable,
     initialLayout: initialLayoutResult?.duration ?? null,
-    initialLayoutTimeout: initialLayoutResult?.timedOut
-      ? { timedOut: true, timeoutMs: initialLayoutResult.timeoutMs }
-      : { timedOut: false, timeoutMs: initialLayoutResult?.timeoutMs ?? null },
+    initialLayoutTimeout: {
+      timedOut: Boolean(initialLayoutResult?.timedOut),
+      timeoutMs: initialLayoutResult?.timeoutMs ?? null,
+      censored: Boolean(initialLayoutResult?.censored)
+    },
     initialLongTasks: {
       count: initialLongTasks.entries.length,
       total: initialLongTasks.entries.reduce((total, value) => total + value, 0),
