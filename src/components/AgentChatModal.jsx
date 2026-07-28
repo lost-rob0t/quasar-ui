@@ -255,7 +255,11 @@ function ConversationPicker({ conversations, activeConversation, onSelect }) {
   }
 
   return (
-    <div className="agent-conversation-picker" ref={pickerRef}>
+    <div
+      className="agent-conversation-picker"
+      ref={pickerRef}
+      onPointerDown={(event) => event.stopPropagation()}
+    >
       <button
         className="agent-conversation-trigger"
         type="button"

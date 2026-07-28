@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuasar } from "../store";
 import { operation } from "../lib/operations";
 import { subscribeDocumentCapabilities } from "../lib/agent-document-capabilities";
@@ -26,14 +26,19 @@ function boundedLimit(value, fallback = 25) {
 export default function AgentDocumentCapabilityBridge() {
   const quasar = useQuasar();
   const [ready, setReady] = useState(false);
+  const quasarRef = useRef(quasar);
+  const documentsRef = useRef(quasar.documents);
+  quasarRef.current = quasar;
+  documentsRef.current = quasar.documents;
 
   useEffect(() => {
     const unsubscribe = subscribeDocumentCapabilities(async ({ name, args, context, resolve, reject }) => {
       try {
+        const runtime = quasarRef.current;
         if (name === "document_read") {
           const ids = new Set(args.ids || []);
           const needle = String(args.text || "").trim().toLowerCase();
-          const documents = quasar.documents
+          const documents = documentsRef.current
             .filter((document) => !ids.size || ids.has(document._id))
             .filter((document) => !args.dataset || document.dataset === args.dataset)
             .filter((document) => !args.objectType || document.dtype === args.objectType)
@@ -51,13 +56,17 @@ export default function AgentDocumentCapabilityBridge() {
         if (name === "document_create") {
           const document = clone(args.document);
           if (!document?._id) throw new TypeError("document_create requires document._id");
-          if (quasar.documents.some((candidate) => candidate._id === document._id)) throw new Error(`Document already exists: ${document._id}`);
-          const report = await quasar.executeBatch([document], `Agent create document ${document._id}`, {
+          if (documentsRef.current.some((candidate) => candidate._id === document._id)) throw new Error(`Document already exists: ${document._id}`);
+          const report = await runtime.executeBatch([document], `Agent create document ${document._id}`, {
             replace: false,
             atomic: true,
             origins: [{ kind: "agent", agentId: context.agent?.id, runId: context.run?.id }]
           });
-          if (args.addToGraph) quasar.addDocumentsToActiveGraph([document._id]);
+          documentsRef.current = [
+            document,
+            ...documentsRef.current.filter((candidate) => candidate._id !== document._id)
+          ];
+          if (args.addToGraph) runtime.addDocumentsToActiveGraph([document._id]);
           resolve({
             created: true,
             id: document._id,
@@ -68,18 +77,19 @@ export default function AgentDocumentCapabilityBridge() {
         }
 
         if (name === "document_patch") {
-          const previous = quasar.documents.find((document) => document._id === args.id);
+          const previous = documentsRef.current.find((document) => document._id === args.id);
           if (!previous) throw new Error(`Document not found: ${args.id}`);
           const patched = mergePatch(previous, args.patch);
           patched._id = previous._id;
           patched._rev = previous._rev;
           patched.date_updated = new Date().toISOString();
-          const report = await quasar.executeBatch([patched], `Agent patch document ${args.id}`, {
+          const report = await runtime.executeBatch([patched], `Agent patch document ${args.id}`, {
             replace: true,
             atomic: true,
             origins: [{ kind: "agent", agentId: context.agent?.id, runId: context.run?.id }]
           });
-          if (args.addToGraph) quasar.addDocumentsToActiveGraph([args.id]);
+          documentsRef.current = documentsRef.current.map((document) => document._id === args.id ? patched : document);
+          if (args.addToGraph) runtime.addDocumentsToActiveGraph([args.id]);
           resolve({
             patched: true,
             id: args.id,
@@ -92,9 +102,10 @@ export default function AgentDocumentCapabilityBridge() {
         }
 
         if (name === "document_delete") {
-          const previous = quasar.documents.find((document) => document._id === args.id);
+          const previous = documentsRef.current.find((document) => document._id === args.id);
           if (!previous) throw new Error(`Document not found: ${args.id}`);
-          await quasar.execute(operation.remove(args.id), `Agent delete document ${args.id}`);
+          await runtime.execute(operation.remove(args.id), `Agent delete document ${args.id}`);
+          documentsRef.current = documentsRef.current.filter((document) => document._id !== args.id);
           resolve({
             deleted: true,
             id: args.id,
@@ -111,7 +122,7 @@ export default function AgentDocumentCapabilityBridge() {
     });
     setReady(true);
     return unsubscribe;
-  }, [quasar]);
+  }, []);
 
   return ready ? <span hidden data-agent-capability-ready="document" /> : null;
 }
