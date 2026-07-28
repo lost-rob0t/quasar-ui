@@ -83,10 +83,50 @@ describe("browser imports", () => {
     const result = await collectImportDocuments([
       file("manifest.json", JSON.stringify(manifest)),
       file("records.jsonl", `${JSON.stringify(document)}\n`)
-    ]);
+    ], { resolveManifestReferences: true });
     expect(result.documents.map((item) => item._id)).toContain(manifest._id);
     expect(result.documents.map((item) => item._id)).toContain(document._id);
     expect(result.errors).toHaveLength(0);
+  });
+
+  it("imports manifest documents inside a corpus without treating them as bundle instructions", async () => {
+    const manifest = {
+      ...document,
+      _id: "starintel:dataset-manifest:archived-packet",
+      dtype: "dataset-manifest",
+      data: {
+        manifest_type: "dataset",
+        name: "Archived packet",
+        files: [{ path: "full-oldb.LATEST.zip" }, { path: "README.md" }]
+      }
+    };
+    const result = await collectImportDocuments([
+      file("starintel-complete-corpus.jsonl", `${JSON.stringify(manifest)}\n${JSON.stringify(document)}\n`)
+    ]);
+
+    expect(result.documents.map((item) => item._id)).toEqual([manifest._id, document._id]);
+    expect(result.errors).toEqual([]);
+  });
+
+  it("reports missing manifest files only in explicit bundle mode", async () => {
+    const manifest = {
+      ...document,
+      _id: "starintel:dataset-manifest:bundle",
+      dtype: "dataset-manifest",
+      data: {
+        manifest_type: "dataset",
+        name: "Bundle",
+        files: [{ path: "records.jsonl" }, { path: "README.md" }]
+      }
+    };
+    const result = await collectImportDocuments([
+      file("manifest.json", JSON.stringify(manifest)),
+      file("records.jsonl", `${JSON.stringify(document)}\n`)
+    ], { resolveManifestReferences: true });
+
+    expect(result.errors).toEqual([
+      { file: "manifest.json", message: "manifest reference not supplied: README.md" }
+    ]);
   });
 
   it("exports canonical JSONL with a terminating newline", () => {

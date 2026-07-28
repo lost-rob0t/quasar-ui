@@ -124,8 +124,9 @@ function manifestReferences(document) {
     .filter(Boolean);
 }
 
-export async function collectImportDocuments(fileList) {
+export async function collectImportDocuments(fileList, options = {}) {
   const files = Array.from(fileList || []);
+  const resolveManifestReferences = options.resolveManifestReferences === true;
   const byName = new Map(files.map((file) => [file.name, file]));
   const parsed = new Map();
   const errors = [];
@@ -145,11 +146,13 @@ export async function collectImportDocuments(fileList) {
     const result = parsed.get(name) || { documents: [], origins: [] };
     documents.push(...result.documents);
     origins.push(...result.origins);
-    for (const document of result.documents) {
-      for (const reference of manifestReferences(document)) {
-        const candidate = byName.has(reference) ? reference : [...byName.keys()].find((key) => key.endsWith(`/${reference}`));
-        if (candidate) include(candidate);
-        else errors.push({ file: name, message: `manifest reference not supplied: ${reference}` });
+    if (resolveManifestReferences) {
+      for (const document of result.documents) {
+        for (const reference of manifestReferences(document)) {
+          const candidate = byName.has(reference) ? reference : [...byName.keys()].find((key) => key.endsWith(`/${reference}`));
+          if (candidate) include(candidate);
+          else errors.push({ file: name, message: `manifest reference not supplied: ${reference}` });
+        }
       }
     }
   };
@@ -159,7 +162,7 @@ export async function collectImportDocuments(fileList) {
 }
 
 export async function importFiles(fileList, saveBatch, options = {}) {
-  const collected = await collectImportDocuments(fileList);
+  const collected = await collectImportDocuments(fileList, options);
   const records = collected.documents.map((document, index) => ({
     document,
     origin: collected.origins[index] || { record: index + 1 },
@@ -181,7 +184,8 @@ export async function importFiles(fileList, saveBatch, options = {}) {
     parseErrors,
     fileCount: collected.files.length,
     candidateCount: candidates.length,
-    recognizedCount: candidates.filter(isStarIntelDocument).length
+    recognizedCount: candidates.filter(isStarIntelDocument).length,
+    manifestMode: options.resolveManifestReferences === true ? "bundle" : "documents"
   };
   const decorate = (report = {}) => ({
     saved: [],
