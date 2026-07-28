@@ -2,11 +2,13 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "../App.jsx";
+import ActorConfigurationBridge from "../components/ActorConfigurationBridge.jsx";
 import GraphContextRadialBridge from "../components/GraphContextRadialBridge.jsx";
 import GraphObjectTypePickerBridge from "../components/GraphObjectTypePickerBridge.jsx";
 import MelissaActorBridge from "../components/MelissaActorBridge.jsx";
 import MobileGraphToolTray from "../components/MobileGraphToolTray.jsx";
 import OperatorUiEnhancer from "../components/OperatorUiEnhancer.jsx";
+import ReviewActorBridge from "../components/ReviewActorBridge.jsx";
 import RunAllTransformationsBridge from "../components/RunAllTransformationsBridge.jsx";
 import { QuasarProvider } from "../store.jsx";
 import { registerServiceWorker } from "../lib/service-worker-registration.js";
@@ -26,6 +28,7 @@ import "../graph-editors.css";
 import "../graph-editors-extra.css";
 import "../graph-workspace-shell.css";
 import "../melissa-actors.css";
+import "../actor-configuration.css";
 
 initializeTheme();
 
@@ -42,6 +45,8 @@ createRoot(rootElement).render(
         <App />
         <OperatorUiEnhancer />
         <MelissaActorBridge />
+        <ReviewActorBridge />
+        <ActorConfigurationBridge />
         <RunAllTransformationsBridge />
         <MobileGraphToolTray />
         <GraphContextRadialBridge />

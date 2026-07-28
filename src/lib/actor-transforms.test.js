@@ -1,9 +1,34 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { saveActorConfiguration } from "./actor-configuration";
 import {
   actorWithTransformEnvelope,
   buildActorTransform,
   normalizeActorTransformResult
 } from "./actor-transforms";
+
+class MemoryStorage {
+  constructor() { this.values = new Map(); }
+  getItem(key) { return this.values.has(key) ? this.values.get(key) : null; }
+  setItem(key, value) { this.values.set(key, String(value)); }
+  removeItem(key) { this.values.delete(key); }
+}
+
+let previousStorage;
+
+beforeEach(() => {
+  previousStorage = globalThis.localStorage;
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: new MemoryStorage()
+  });
+});
+
+afterEach(() => {
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: previousStorage
+  });
+});
 
 const stamp = "2026-07-26T01:00:00.000Z";
 const org = {
@@ -54,13 +79,19 @@ describe("actor transform results", () => {
     expect(result.legacyDocumentCount).toBe(1);
   });
 
-  it("accepts operations-only actors through the worker compatibility envelope", () => {
-    const wrapped = actorWithTransformEnvelope({
+  it("accepts operations-only actors and injects local configuration", () => {
+    const actor = {
       id: "test.actor",
-      source: "() => ({ operations: [{ op: 'remove_document', id: 'x' }] })"
-    });
+      label: "Test actor",
+      source: "(context) => ({ operations: [{ op: 'remove_document', id: context.configuration.removeId }] })"
+    };
+    saveActorConfiguration(actor, { removeId: "x" });
+    const wrapped = actorWithTransformEnvelope(actor);
+
     expect(wrapped.source).toContain("documents: []");
-    expect(wrapped.source).toContain("implementation(context, api)");
+    expect(wrapped.source).toContain("implementation(configuredContext, api)");
+    expect(wrapped.source).toContain('"removeId":"x"');
+    expect(wrapped.source).not.toContain("implementation(context, api)");
   });
 
   it("builds one undoable batch for create, update, relation, and remove transforms", () => {

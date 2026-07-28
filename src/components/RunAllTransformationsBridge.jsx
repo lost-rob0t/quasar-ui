@@ -3,6 +3,7 @@ import { Play } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
 import { assertDocument } from "starintel_doc";
+import { actorConfigurationStatus } from "../lib/actor-configuration";
 import { isBuiltinActor } from "../lib/actors";
 import { operation } from "../lib/operations";
 import {
@@ -69,7 +70,7 @@ function summaryMessage({
     details.push(
       `${skipped} actor${
         skipped === 1 ? " was" : "s were"
-      } already ineligible or disabled`
+      } already ineligible, manual-only, disabled, or unconfigured`
     );
   }
   if (failures) {
@@ -136,6 +137,14 @@ export default function RunAllTransformationsBridge() {
 
     try {
       for (const actor of actors || []) {
+        if (actor.manualOnly) {
+          reports.push({
+            actorId: actor.id,
+            status: "skipped",
+            reason: "Manual-only actor."
+          });
+          continue;
+        }
         const customDisabled =
           !isBuiltinActor(actor) && !settings?.actorsEnabled;
         if (customDisabled) {
@@ -143,6 +152,15 @@ export default function RunAllTransformationsBridge() {
             actorId: actor.id,
             status: "skipped",
             reason: "Custom actor execution is disabled."
+          });
+          continue;
+        }
+        const configurationStatus = actorConfigurationStatus(actor);
+        if (!configurationStatus.configured) {
+          reports.push({
+            actorId: actor.id,
+            status: "skipped",
+            reason: `Missing ${configurationStatus.missing.join(", ")}.`
           });
           continue;
         }
@@ -282,7 +300,7 @@ export default function RunAllTransformationsBridge() {
         className="actor-button run-all-transformations-button"
         type="button"
         disabled={running || !inputCount || !(actors || []).length}
-        title="Runs every enabled actor on active-graph inputs that have no links or have not been processed by that actor."
+        title="Runs every enabled non-manual actor on active-graph inputs that have no links or have not been processed by that actor."
         onClick={runAllTransformations}
       >
         <Play size={14} />
