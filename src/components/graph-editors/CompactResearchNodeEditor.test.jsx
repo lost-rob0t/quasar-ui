@@ -44,7 +44,44 @@ describe("compact research node editor", () => {
     expect(html).toContain("Actor IDs");
     expect(html).toContain("Depth");
     expect(html).toContain("Stop rules");
-    expect(html).toContain("Run controls unlock when the research-node runner is connected.");
+    expect(html).toContain("Save the plan to unlock run controls.");
     expect(html).toContain("Save plan");
+  });
+
+  it("shows lifecycle controls for an existing failed plan", () => {
+    context.current = {
+      actors: [],
+      execute: vi.fn(),
+      setNotice: vi.fn(),
+      addDocumentsToActiveGraph: vi.fn(),
+      researchRunState: {},
+      retryResearchNode: vi.fn(),
+      killResearchNode: vi.fn(),
+      workspace: { positions: {} }
+    };
+    const document = {
+      _id: "starintel:research-node:failed",
+      dataset: "case-alpha",
+      title: "Failed plan",
+      data: {
+        objective: "Retry the plan",
+        status: "failed",
+        input_ids: [],
+        target_ids: [],
+        actor_ids: [],
+        limits: {},
+        stop: {}
+      }
+    };
+
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <CompactResearchNodeEditor document={document} onClose={vi.fn()} />
+      </MemoryRouter>
+    );
+
+    expect(html).toContain("Retry</button>");
+    expect(html).toContain("Kill</button>");
+    expect(html).toContain("Open full editor");
   });
 });

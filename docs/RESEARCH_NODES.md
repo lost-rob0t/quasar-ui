@@ -80,11 +80,15 @@ The research node caches IDs needed by the executor. Relation documents remain t
 
 Actors do not receive Cytoscape or PouchDB handles.
 
+Quasar runs the ordered queue through `quasar.browser-js.v1`. Ambient worker network APIs are disabled. Actors must declare capabilities such as `network.fetch`, and every capability request is counted against the research-node request limit. Each lifecycle transition is validated and persisted through the normal command/undo path.
+
+The runner blocks before unsafe continuation when a dependency is incomplete, an actor is missing, or an actor-run, request, elapsed-time, repeat-state, or cost limit is reached. Pause and kill abort the active worker. Resume continues the interrupted actor, while retry continues the failed or blocked actor.
+
 ## UI
 
 The graph context menu can create a research node from current selection. The compact editor shows objective, inputs, actor queue, limits, and run controls. The full editor exposes stop rules, counters, and history.
 
-State is visible on the node without hard-coding colors that override the active theme. Context actions are `run`, `pause`, `resume`, `retry`, `kill`, `inspect outputs`, and `clone`.
+State is visible on the node without hard-coding colors that override the active theme. The compact editor, graph context menu, and inspector expose `run`, `pause`, `resume`, `retry`, and `kill`; the graph context menu also exposes `inspect outputs` and `clone`.
 
 Selecting a research node should support a focused subgraph containing inputs, actors, outputs, artifacts, dependencies, and child nodes.
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ExternalLink, Save } from "lucide-react";
+import { ExternalLink, Pause, Play, RotateCcw, Save, Square } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { touchDocument } from "starintel_doc";
 import { operation } from "../../lib/operations";
@@ -42,7 +42,13 @@ export default function CompactResearchNodeEditor({
     execute,
     setNotice,
     addDocumentsToActiveGraph,
-    workspace
+    workspace,
+    researchRunState = {},
+    runResearchNode,
+    pauseResearchNode,
+    resumeResearchNode,
+    retryResearchNode,
+    killResearchNode
   } = useQuasar();
   const data = document?.data || {};
   const limits = data.limits || {};
@@ -64,6 +70,8 @@ export default function CompactResearchNodeEditor({
   const [haltOnFailure, setHaltOnFailure] = useState(stop.halt_on_actor_failure ?? false);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const status = document?.data?.status || "draft";
+  const active = ["queued", "running"].includes(researchRunState[document?._id]?.state);
 
   function change(setter) {
     return (event) => {
@@ -151,6 +159,23 @@ export default function CompactResearchNodeEditor({
     }
   }
 
+  function control(action) {
+    const actions = {
+      run: runResearchNode,
+      pause: pauseResearchNode,
+      resume: resumeResearchNode,
+      retry: retryResearchNode,
+      kill: killResearchNode
+    };
+    try {
+      const pending = actions[action](document);
+      onClose();
+      Promise.resolve(pending).catch((error) => setNotice({ kind: "error", message: error.message }));
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
+  }
+
   return (
     <GraphModalShell
       title={document ? "Edit research node" : "New research node"}
@@ -219,15 +244,22 @@ export default function CompactResearchNodeEditor({
 
           <div className="graph-editor-secondary-actions">
             {document && (
-              <button
-                className="button small"
-                type="button"
-                onClick={() => navigate(`/documents/${encodeURIComponent(document._id)}/edit?advanced=1&returnTo=graph`)}
-              >
-                <ExternalLink size={14} /> Open full editor
-              </button>
+              <>
+                {!active && ["draft", "queued", "running", "completed", "killed"].includes(status) && <button className="button small" type="button" onClick={() => control("run")}><Play size={14} /> {["queued", "running"].includes(status) ? "Continue" : "Run"}</button>}
+                {active && <button className="button small" type="button" onClick={() => control("pause")}><Pause size={14} /> Pause</button>}
+                {status === "paused" && <button className="button small" type="button" onClick={() => control("resume")}><Play size={14} /> Resume</button>}
+                {["failed", "blocked"].includes(status) && <button className="button small" type="button" onClick={() => control("retry")}><RotateCcw size={14} /> Retry</button>}
+                {["queued", "running", "paused", "blocked", "failed"].includes(status) && <button className="button small danger" type="button" onClick={() => control("kill")}><Square size={14} /> Kill</button>}
+                <button
+                  className="button small"
+                  type="button"
+                  onClick={() => navigate(`/documents/${encodeURIComponent(document._id)}/edit?advanced=1&returnTo=graph`)}
+                >
+                  <ExternalLink size={14} /> Open full editor
+                </button>
+              </>
             )}
-            <small>Run controls unlock when the research-node runner is connected.</small>
+            {!document && <small>Save the plan to unlock run controls.</small>}
           </div>
 
           <div className="form-actions graph-editor-actions">

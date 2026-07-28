@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   installUserNavigationGuard,
+  isGraphUserNavigationActive,
   isUserNavigationActive,
   markUserNavigation
 } from "./user-navigation-guard";
@@ -16,7 +17,7 @@ describe("user navigation guard", () => {
     expect(isUserNavigationActive(state, 460)).toBe(false);
   });
 
-  it("blocks delayed recenter panBy calls after user navigation", () => {
+  it("tracks graph navigation without intercepting native pan steps", () => {
     const nativePanBy = vi.fn();
     let navigationHandler = null;
     const cy = {
@@ -32,14 +33,15 @@ describe("user navigation guard", () => {
     navigationHandler();
 
     Date.now.mockReturnValue(200);
-    expect(cy.panBy({ x: 10, y: 5 })).toBe(cy);
-    expect(nativePanBy).not.toHaveBeenCalled();
-
-    Date.now.mockReturnValue(500);
     cy.panBy({ x: 10, y: 5 });
     expect(nativePanBy).toHaveBeenCalledWith({ x: 10, y: 5 });
+    expect(isGraphUserNavigationActive(cy)).toBe(true);
+
+    Date.now.mockReturnValue(500);
+    expect(isGraphUserNavigationActive(cy)).toBe(false);
 
     restore();
     expect(cy.off).toHaveBeenCalled();
+    expect(isGraphUserNavigationActive(cy)).toBe(false);
   });
 });

@@ -25,6 +25,7 @@ import {
   runBrowserActor
 } from "./lib/actors";
 import { actorWithTransformEnvelope, buildActorTransform } from "./lib/actor-transforms";
+import { createResearchNodeRunner } from "./lib/research-node-runner";
 import { startDocumentSource } from "./lib/document-source";
 import { startRabbitMqIngest } from "./lib/rabbitmq-ingest";
 import { probeStarIntelServer, submitTargetToServer } from "./lib/starintel-server";
@@ -59,12 +60,20 @@ export function QuasarProvider({ children }) {
     rejected: 0
   });
   const [history, setHistory] = useState({ undo: [], redo: [] });
+  const [researchRunState, setResearchRunState] = useState({});
   const syncRef = useRef(null);
   const queueRef = useRef(null);
   const queueIngestRef = useRef(null);
   const queueAutostartRef = useRef(false);
   const workspaceRef = useRef(null);
   const workspaceTimer = useRef(null);
+  const researchRunnerRef = useRef(null);
+  const documentsRef = useRef([]);
+  const actorsRef = useRef([]);
+  const runActorRef = useRef(null);
+  const executeRef = useRef(null);
+
+  documentsRef.current = documents;
 
   const refresh = useCallback(async () => setDocuments(await listDocuments()), []);
 
@@ -92,6 +101,7 @@ export function QuasarProvider({ children }) {
       source.stop();
       syncRef.current?.cancel?.();
       queueRef.current?.cancel?.();
+      researchRunnerRef.current?.dispose?.();
       clearTimeout(workspaceTimer.current);
     };
   }, []);
@@ -107,6 +117,7 @@ export function QuasarProvider({ children }) {
     await refresh();
     return applied.result;
   }, [record, refresh]);
+  executeRef.current = execute;
 
   const executeBatch = useCallback(async (nextDocuments, label = "Save documents", options = {}) => {
     const applied = await saveDocumentBatch(nextDocuments, label, options);
@@ -361,8 +372,9 @@ export function QuasarProvider({ children }) {
     ...BUILTIN_ACTORS,
     ...(settings?.actors || [])
   ], [settings?.actors]);
+  actorsRef.current = actors;
 
-  const runActor = useCallback(async (actor, requestedSelection = selectedIds) => {
+  const runActor = useCallback(async (actor, requestedSelection = selectedIds, runOptions = {}) => {
     if (!isBuiltinActor(actor) && !settings?.actorsEnabled) throw new Error("Custom browser actors are disabled in settings");
     const requested = Array.isArray(requestedSelection) ? requestedSelection : [requestedSelection];
     const explicitDocuments = requested.filter((item) => item && typeof item === "object");
@@ -375,20 +387,86 @@ export function QuasarProvider({ children }) {
     const availability = actorApplicability(actor, selection);
     if (!availability.applicable) throw new Error(availability.reason);
     const corpusDocuments = [...corpus.values()];
-    const result = await runBrowserActor(actorWithTransformEnvelope(actor), {
-      selection,
-      documents: corpusDocuments.map((document) => ({ ...document })),
-      workspace: { layout: workspace?.layout || "cose" }
-    });
+    const result = await runBrowserActor(
+      actorWithTransformEnvelope(actor),
+      {
+        selection,
+        documents: corpusDocuments.map((document) => ({ ...document })),
+        workspace: { layout: workspace?.layout || "cose" },
+        researchNodeId: runOptions.researchNodeId || "",
+        runId: runOptions.runId || ""
+      },
+      { signal: runOptions.signal }
+    );
     const label = `Actor: ${actor.label}`;
     const transform = buildActorTransform(result, corpusDocuments, label);
+    const existingIds = new Set(corpusDocuments.map((document) => document._id));
+    const newDocumentIds = transform.documents
+      .map((document) => document._id)
+      .filter((id) => !existingIds.has(id));
     if (transform.command) await execute(transform.command, label);
     if (transform.documents.length) {
       addDocumentsToActiveGraph(transform.documents.map((document) => document._id));
     }
-    setNotice({ kind: "success", message: transform.message });
-    return { ...result, ...transform, documents: transform.documents };
+    if (!runOptions.quiet) setNotice({ kind: "success", message: transform.message });
+    return { ...result, ...transform, documents: transform.documents, newDocumentIds };
   }, [addDocumentsToActiveGraph, documents, execute, selectedIds, settings?.actorsEnabled, workspace?.layout]);
+  runActorRef.current = runActor;
+
+  const getResearchRunner = useCallback(() => {
+    if (!researchRunnerRef.current) {
+      researchRunnerRef.current = createResearchNodeRunner({
+        resolveActor: (id) => actorsRef.current.find((actor) => actor.id === id),
+        resolveDocument: (id) => documentsRef.current.find((document) => document._id === id),
+        runActor: (...args) => runActorRef.current(...args),
+        saveNode: (document, label) => executeRef.current(operation.save(document), label),
+        onStatus: (status) => setResearchRunState((current) => ({
+          ...current,
+          [status.id]: status
+        }))
+      });
+    }
+    return researchRunnerRef.current;
+  }, []);
+
+  const currentResearchNode = useCallback((documentOrId) => {
+    const id = typeof documentOrId === "string" ? documentOrId : documentOrId?._id;
+    const current = documentsRef.current.find((document) => document._id === id);
+    if (!current) throw new Error(`Research node not found: ${id || "<missing>"}`);
+    return current;
+  }, []);
+
+  const runResearchNode = useCallback(async (documentOrId) => {
+    const result = await getResearchRunner().run(currentResearchNode(documentOrId));
+    setNotice({ kind: "success", message: `Research node ${result.data.status}: ${result.title}` });
+    return result;
+  }, [currentResearchNode, getResearchRunner]);
+
+  const pauseResearchNode = useCallback(async (documentOrId) => {
+    const node = currentResearchNode(documentOrId);
+    const result = await getResearchRunner().pause(node._id);
+    setNotice({ kind: "success", message: `Paused research node: ${node.title}` });
+    return result;
+  }, [currentResearchNode, getResearchRunner]);
+
+  const resumeResearchNode = useCallback(async (documentOrId) => {
+    const result = await getResearchRunner().resume(currentResearchNode(documentOrId));
+    setNotice({ kind: "success", message: `Research node ${result.data.status}: ${result.title}` });
+    return result;
+  }, [currentResearchNode, getResearchRunner]);
+
+  const retryResearchNode = useCallback(async (documentOrId) => {
+    const result = await getResearchRunner().retry(currentResearchNode(documentOrId));
+    setNotice({ kind: "success", message: `Research node ${result.data.status}: ${result.title}` });
+    return result;
+  }, [currentResearchNode, getResearchRunner]);
+
+  const killResearchNode = useCallback(async (documentOrId) => {
+    const node = currentResearchNode(documentOrId);
+    const result = await getResearchRunner().kill(node._id);
+    setNotice({ kind: "success", message: `Killed research node: ${node.title}` });
+    return result;
+  }, [currentResearchNode, getResearchRunner]);
 
   const runTargetActors = useCallback(async (target) => {
     const candidates = actorsForTarget(actors, target);
@@ -429,6 +507,7 @@ export function QuasarProvider({ children }) {
     syncStatus,
     serverStatus,
     queueStatus,
+    researchRunState,
     history,
     canUndo: history.undo.length > 0,
     canRedo: history.redo.length > 0,
@@ -457,6 +536,11 @@ export function QuasarProvider({ children }) {
     actors,
     runActor,
     runTargetActors,
+    runResearchNode,
+    pauseResearchNode,
+    resumeResearchNode,
+    retryResearchNode,
+    killResearchNode,
     exportDocuments,
     databaseInfo,
     bulkSaveDocuments,
@@ -469,7 +553,8 @@ export function QuasarProvider({ children }) {
     addDocumentsToActiveGraph, removeDocumentsFromActiveGraph,
     createGraph, switchGraph, renameGraph, deleteGraph, clearGraph,
     activeGraph, select, startSync, stopSync, synchronize, testServer, submitTarget,
-    startQueue, stopQueue, actors, runActor, runTargetActors
+    startQueue, stopQueue, actors, runActor, runTargetActors, researchRunState,
+    runResearchNode, pauseResearchNode, resumeResearchNode, retryResearchNode, killResearchNode
   ]);
 
   return <QuasarContext.Provider value={value}>{children}</QuasarContext.Provider>;
