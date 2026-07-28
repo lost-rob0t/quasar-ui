@@ -179,6 +179,8 @@ describe("graph local corpus status", () => {
 
     expect(html).toContain("Research state: paused");
     expect(html).toContain("1 inputs · 1 outputs · 1 actors");
+    expect(html).toContain("Resume</button>");
+    expect(html).toContain("Kill</button>");
     expect(html).toContain("Outputs</button>");
   });
 

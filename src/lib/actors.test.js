@@ -74,6 +74,18 @@ describe("actor manifests", () => {
     expect(isBuiltinActor({ ...BUILTIN_ACTORS[0], source: "() => ({ documents: [] })" })).toBe(false);
   });
 
+  it("preserves declared runtime capabilities for the host actor boundary", () => {
+    const actor = normalizeActorManifest({
+      id: "test.network",
+      source: "() => ({ documents: [] })",
+      capabilities: ["network.fetch", "network.fetch"]
+    });
+    expect(actor.runtime).toBe("quasar.browser-js.v1");
+    expect(actor.capabilities).toEqual(["network.fetch"]);
+    expect(BUILTIN_ACTORS.find((item) => item.id === "quasar.actor.city-legistar-calendar")?.capabilities)
+      .toEqual(["network.fetch"]);
+  });
+
   it("ships executable worker function sources", () => {
     for (const actor of BUILTIN_ACTORS) {
       const implementation = Function(`"use strict"; return (${actor.source});`)();
