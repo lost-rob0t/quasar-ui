@@ -24,6 +24,38 @@ describe("agent command registry", () => {
     expect(registry.get("actor")?.capability).toBe("run_actor");
   });
 
+  it("surfaces dedicated document commands with typed schemas and permissions", () => {
+    const registry = createCommandRegistry();
+
+    expect(registry.get("doc-read")).toMatchObject({
+      capability: "document_read",
+      category: "documents",
+      permission: "document_read"
+    });
+    expect(registry.get("create-doc")?.capability).toBe("document_create");
+    expect(registry.get("edit-doc")?.capability).toBe("document_patch");
+    expect(registry.get("delete-doc")).toMatchObject({
+      capability: "document_delete",
+      permission: "document_write",
+      risk: "high"
+    });
+  });
+
+  it("parses typed document command arguments for the shared agent loop", () => {
+    const registry = createCommandRegistry();
+    const parsed = parseCommandInput(
+      `/doc-create document:'{"_id":"starintel:person:ada","dtype":"person"}' addToGraph:true`,
+      registry
+    );
+
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.input).toEqual({
+      document: { _id: "starintel:person:ada", dtype: "person" },
+      addToGraph: true
+    });
+    expect(commandToAgentPrompt(parsed)).toContain("`document_create`");
+  });
+
   it("discovers actor and MCP commands without chat-component edits", () => {
     const registry = createCommandRegistry({
       actors: [{ id: "enrich", label: "Enrich" }],

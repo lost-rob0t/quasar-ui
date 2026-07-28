@@ -19,6 +19,23 @@ export const GRAPH_STYLE = [
       "overlay-padding": 8
     }
   },
+  {
+    selector: "node[dtype = 'research-node']",
+    style: {
+      label: "data(researchLabel)",
+      width: 54,
+      height: 54,
+      "text-wrap": "wrap",
+      "text-max-width": 150,
+      "border-width": 4
+    }
+  },
+  { selector: "node[dtype = 'research-node'][researchStatus = 'running']", style: { "border-color": "#22c55e" } },
+  { selector: "node[dtype = 'research-node'][researchStatus = 'paused']", style: { "border-color": "#f59e0b", "border-style": "dashed" } },
+  { selector: "node[dtype = 'research-node'][researchStatus = 'blocked']", style: { "border-color": "#f59e0b", "border-style": "double" } },
+  { selector: "node[dtype = 'research-node'][researchStatus = 'completed']", style: { "border-color": "#38bdf8" } },
+  { selector: "node[dtype = 'research-node'][researchStatus = 'failed']", style: { "border-color": "#ef4444", "border-style": "dashed" } },
+  { selector: "node[dtype = 'research-node'][researchStatus = 'killed']", style: { opacity: 0.58, "border-style": "dotted" } },
   { selector: "node[?unresolved]", style: { "border-style": "dashed", opacity: 0.72 } },
   { selector: "node:selected", style: { "border-color": "#f8fafc", "border-width": 4, "underlay-color": "#38bdf8", "underlay-opacity": 0.18, "underlay-padding": 10 } },
   { selector: "node.path", style: { "border-color": "#f59e0b", "border-width": 5 } },
@@ -79,7 +96,8 @@ const THEME_COLOR = {
   "#46617f": "--line",
   "#8fa5bc": "--muted",
   "#e0f2fe": "--white",
-  "#22c55e": "--success"
+  "#22c55e": "--success",
+  "#ef4444": "--danger"
 };
 
 export function themedGraphStyle(root = document.documentElement) {

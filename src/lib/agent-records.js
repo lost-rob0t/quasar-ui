@@ -1,6 +1,8 @@
 import { getState, putState, stateDb } from "./db";
 
 export const AGENT_SCHEMA_VERSION = 1;
+export const AGENT_PACK_FORMAT = "quasar-agent-pack";
+export const AGENT_PACK_VERSION = 1;
 const DEFAULT_PERMISSION_PROFILE_VERSION = 2;
 const DEFAULT_PERMISSION_UPGRADES = Object.freeze({
   researcher: ["graph.edit"],
@@ -128,6 +130,25 @@ export const DEFAULT_ROLES = Object.freeze([
 
 const PREFIX = "agent-system:";
 const INDEX_ID = `${PREFIX}index`;
+const AGENT_PACK_SECTIONS = Object.freeze({
+  roles: AGENT_RECORD_TYPES.role,
+  agents: AGENT_RECORD_TYPES.agent,
+  providers: AGENT_RECORD_TYPES.provider,
+  models: AGENT_RECORD_TYPES.model,
+  budgets: AGENT_RECORD_TYPES.budget,
+  skills: AGENT_RECORD_TYPES.skill,
+  mcpServers: AGENT_RECORD_TYPES.mcpServer
+});
+const IMPORT_ORDER = Object.freeze([
+  AGENT_RECORD_TYPES.role,
+  AGENT_RECORD_TYPES.provider,
+  AGENT_RECORD_TYPES.model,
+  AGENT_RECORD_TYPES.budget,
+  AGENT_RECORD_TYPES.skill,
+  AGENT_RECORD_TYPES.mcpServer,
+  AGENT_RECORD_TYPES.agent
+]);
+const SECRET_FIELD = /^(?:api[-_]?key|secret|access[-_]?token|refresh[-_]?token|authorization|password)$/i;
 
 function now() {
   return new Date().toISOString();
@@ -154,6 +175,43 @@ function stripPouchFields(record) {
   const result = clone(record);
   delete result._rev;
   return result;
+}
+
+function assertSecretFree(value, path = "payload") {
+  if (!value || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => assertSecretFree(item, `${path}[${index}]`));
+    return;
+  }
+  for (const [name, item] of Object.entries(value)) {
+    if (SECRET_FIELD.test(name)) throw new TypeError(`Imported config cannot contain secrets: ${path}.${name}`);
+    assertSecretFree(item, `${path}.${name}`);
+  }
+}
+
+function packAgentInput(input) {
+  return {
+    ...input,
+    roleId: input.roleId ?? input.role ?? "researcher",
+    providerId: input.providerId ?? input.provider ?? "openrouter",
+    modelId: input.modelId ?? input.model ?? "",
+    systemPrompt: input.systemPrompt ?? input.system_prompt ?? "",
+    recordType: AGENT_RECORD_TYPES.agent
+  };
+}
+
+function packRoleInput(input) {
+  return {
+    ...input,
+    instructions: input.instructions ?? input.systemPrompt ?? input.system_prompt ?? "",
+    recordType: AGENT_RECORD_TYPES.role
+  };
+}
+
+function normalizeImportedRecord(input) {
+  if (input.recordType === AGENT_RECORD_TYPES.agent) return normalizeAgent(packAgentInput(input));
+  if (input.recordType === AGENT_RECORD_TYPES.role) return normalizeRole(packRoleInput(input));
+  return normalizeAgentRecord(input);
 }
 
 export function normalizeAgentRecord(record, expectedType) {
@@ -350,6 +408,57 @@ export async function ensureDefaultRoles() {
   return listAgentRecords(AGENT_RECORD_TYPES.role);
 }
 
+export function normalizeAgentSystemImport(payload) {
+  assertSecretFree(payload);
+  let records;
+  let metadata;
+  if (payload?.format === "quasar-agent-system" && Array.isArray(payload.records)) {
+    records = payload.records;
+    metadata = {
+      format: payload.format,
+      version: Number(payload.version || AGENT_SCHEMA_VERSION),
+      name: String(payload.name || "Agent system export"),
+      description: String(payload.description || "")
+    };
+  } else if (payload?.format === AGENT_PACK_FORMAT) {
+    if (Number(payload.version || 0) !== AGENT_PACK_VERSION) {
+      throw new TypeError(`Unsupported Quasar agent pack version: ${payload.version || "<missing>"}`);
+    }
+    records = Object.entries(AGENT_PACK_SECTIONS).flatMap(([section, recordType]) => {
+      const items = payload[section] || [];
+      if (!Array.isArray(items)) throw new TypeError(`Agent pack field must be an array: ${section}`);
+      return items.map((item) => ({
+        ...item,
+        recordType,
+        ...(recordType === AGENT_RECORD_TYPES.agent ? packAgentInput(item) : {}),
+        ...(recordType === AGENT_RECORD_TYPES.role ? packRoleInput(item) : {})
+      }));
+    });
+    metadata = {
+      format: payload.format,
+      version: AGENT_PACK_VERSION,
+      name: String(payload.name || "Agent config pack"),
+      description: String(payload.description || "")
+    };
+  } else {
+    throw new TypeError("Invalid Quasar agent config pack");
+  }
+
+  const seen = new Set();
+  const normalized = records.map((input) => {
+    const record = normalizeImportedRecord(input);
+    const key = `${record.recordType}:${record.id}`;
+    if (seen.has(key)) throw new TypeError(`Duplicate imported record: ${record.id} (${record.recordType})`);
+    seen.add(key);
+    return record;
+  });
+  const counts = normalized.reduce((result, record) => {
+    result[record.recordType] = (result[record.recordType] || 0) + 1;
+    return result;
+  }, {});
+  return { ...metadata, records: normalized, counts };
+}
+
 export async function exportAgentSystemRecords({ includeRuns = false } = {}) {
   const allowed = new Set([
     AGENT_RECORD_TYPES.agent,
@@ -386,24 +495,59 @@ export async function exportAgentSystemRecords({ includeRuns = false } = {}) {
   };
 }
 
-export async function importAgentSystemRecords(payload, { replace = false } = {}) {
-  if (payload?.format !== "quasar-agent-system" || !Array.isArray(payload.records)) {
-    throw new TypeError("Invalid Quasar agent export");
+export async function importAgentSystemRecords(payload, { replace = false, conflictMode } = {}) {
+  const imported = normalizeAgentSystemImport(payload);
+  const mode = conflictMode || (replace ? "replace" : "error");
+  if (!["error", "skip", "replace"].includes(mode)) throw new TypeError(`Unknown import conflict mode: ${mode}`);
+
+  const importedRoleIds = new Set(imported.records
+    .filter((record) => record.recordType === AGENT_RECORD_TYPES.role)
+    .map((record) => record.id));
+  for (const agent of imported.records.filter((record) => record.recordType === AGENT_RECORD_TYPES.agent)) {
+    if (importedRoleIds.has(agent.roleId)) continue;
+    const existingRole = await getState(recordId(AGENT_RECORD_TYPES.role, agent.roleId), null);
+    if (!existingRole) throw new TypeError(`Agent ${agent.id} references unknown role: ${agent.roleId}`);
   }
+
   const conflicts = [];
   const staged = [];
-  for (const input of payload.records) {
-    if ("secret" in input || "apiKey" in input) throw new TypeError("Imported records cannot contain secrets");
-    const record = input.recordType === AGENT_RECORD_TYPES.agent
-      ? normalizeAgent(input)
-      : input.recordType === AGENT_RECORD_TYPES.role
-        ? normalizeRole(input)
-        : normalizeAgentRecord(input);
+  let replaced = 0;
+  let skipped = 0;
+  let created = 0;
+  for (const record of imported.records) {
     const existing = await getState(record._id, null);
-    if (existing && !replace) conflicts.push({ id: record.id, recordType: record.recordType });
-    else staged.push(record);
+    if (!existing) {
+      staged.push(record);
+      created += 1;
+      continue;
+    }
+    conflicts.push({ id: record.id, recordType: record.recordType });
+    if (mode === "replace") {
+      staged.push(record);
+      replaced += 1;
+    } else if (mode === "skip") {
+      skipped += 1;
+    }
   }
-  if (conflicts.length) return { applied: 0, conflicts };
+  if (conflicts.length && mode === "error") {
+    return {
+      applied: 0,
+      created: 0,
+      replaced: 0,
+      skipped: 0,
+      conflicts,
+      counts: imported.counts
+    };
+  }
+
+  staged.sort((left, right) => IMPORT_ORDER.indexOf(left.recordType) - IMPORT_ORDER.indexOf(right.recordType));
   for (const record of staged) await saveAgentRecord(record, record.recordType);
-  return { applied: staged.length, conflicts: [] };
+  return {
+    applied: staged.length,
+    created,
+    replaced,
+    skipped,
+    conflicts,
+    counts: imported.counts
+  };
 }

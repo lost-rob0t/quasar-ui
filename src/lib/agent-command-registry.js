@@ -1,4 +1,5 @@
 import { AGENT_PERMISSIONS } from "./agent-records";
+import { AGENT_DOCUMENT_CAPABILITIES } from "./agent-document-capabilities";
 import { createAgentToolRegistry } from "./agent-tools";
 
 const LEGACY_PERMISSION_MAP = Object.freeze({
@@ -26,7 +27,11 @@ const TOOL_COMMANDS = Object.freeze({
   propose_graph_operations: { command: "edit", aliases: ["patch"], category: "graph" },
   apply_graph_operations: { command: "apply", aliases: [], category: "graph" },
   validate_actor: { command: "actor-test", aliases: ["test-actor"], category: "actors" },
-  save_actor: { command: "actor-save", aliases: ["save-actor"], category: "actors" }
+  save_actor: { command: "actor-save", aliases: ["save-actor"], category: "actors" },
+  document_read: { command: "doc-read", aliases: ["read-doc"], category: "documents" },
+  document_create: { command: "doc-create", aliases: ["create-doc"], category: "documents" },
+  document_patch: { command: "doc-patch", aliases: ["edit-doc"], category: "documents" },
+  document_delete: { command: "doc-delete", aliases: ["delete-doc"], category: "documents" }
 });
 
 const BUILT_INS = Object.freeze([
@@ -102,6 +107,7 @@ export function createCommandRegistry({ actors = [], mcpServers = [] } = {}) {
   const toolRegistry = createAgentToolRegistry({});
   const allToolsAgent = { permissions: [...AGENT_PERMISSIONS] };
   const tools = toolRegistry.list(allToolsAgent).map(capabilityDefinition);
+  const documentCommands = AGENT_DOCUMENT_CAPABILITIES.map(capabilityDefinition);
   const actorCommands = actors.map((actor) => Object.freeze({
     id: `actor:${actor.id}`,
     command: `actor/${actor.id}`,
@@ -136,7 +142,7 @@ export function createCommandRegistry({ actors = [], mcpServers = [] } = {}) {
     fixedInput: { serverId: server.id, toolName },
     builtIn: false
   })));
-  const definitions = [...BUILT_INS, ...tools, ...actorCommands, ...mcpCommands];
+  const definitions = [...BUILT_INS, ...tools, ...documentCommands, ...actorCommands, ...mcpCommands];
   const byName = new Map();
   for (const item of definitions) {
     byName.set(item.command, item);

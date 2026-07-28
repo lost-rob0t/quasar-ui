@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, ArrowLeftRight, BookOpen, Building2, CalendarDays, CircleDot,
   Clipboard, Copy, Database, ExternalLink, FileText, Focus, FolderPlus,
-  Grid2X2, Lightbulb, Link2, MapPin, MoreHorizontal, Network, Pencil,
-  Play, Plus, RadioTower, Search, Send, Server, Trash2, TriangleAlert,
-  UserRound, X
+  Grid2X2, Lightbulb, Link2, MapPin, MoreHorizontal, Network, Pause, Pencil,
+  Play, Plus, RadioTower, RotateCcw, Search, Send, Server, Square, Trash2,
+  TriangleAlert, UserRound, X
 } from "lucide-react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -15,6 +15,7 @@ import {
   touchDocument
 } from "starintel_doc";
 import { createGraphAdapter } from "../graph/GraphAdapter";
+import { isGraphUserNavigationActive } from "../graph/user-navigation-guard";
 import { actorApplicability, isBuiltinActor } from "../lib/actors";
 import { connectedDocumentIds } from "../lib/document-delete";
 import { buildGraph, filterGraph, findPaths, importedGraphNodeIds, partitionDocumentsByReview } from "../lib/graph";
@@ -22,8 +23,10 @@ import { activeGraphMembershipKey } from "../lib/graph-workspaces";
 import { themedGraphStyle } from "../lib/graph-style";
 import { clampRenderedPosition } from "../lib/graph-viewport";
 import { operation } from "../lib/operations";
+import { cloneResearchNode, researchNodeOutputIds, researchNodeScope } from "../lib/research-node-graph";
+import { isResearchNode } from "../lib/research-nodes";
 import { useQuasar } from "../store";
-import { CompactNodeEditor, CompactRelationEditor } from "./GraphEditors";
+import { CompactNodeEditor, CompactRelationEditor, CompactResearchNodeEditor } from "./GraphEditors";
 
 const QUICK_NODE_TYPES = [
   { dtype: "person", label: "Person", Icon: UserRound },
@@ -33,7 +36,8 @@ const QUICK_NODE_TYPES = [
   { dtype: "entity", label: "Entity", Icon: CircleDot },
   { dtype: "document", label: "Document", Icon: FileText },
   { dtype: "source", label: "Source", Icon: BookOpen },
-  { dtype: "concept", label: "Concept", Icon: Lightbulb }
+  { dtype: "concept", label: "Concept", Icon: Lightbulb },
+  { dtype: "research-node", label: "Research node", Icon: Network }
 ];
 
 function fitElements(cy, elements, padding, duration) {
@@ -151,7 +155,10 @@ function GraphCanvas({
           const bounds = container.getBoundingClientRect();
           const rendered = activeNode.renderedPosition();
           const clamped = clampRenderedPosition(rendered, bounds.width, bounds.height);
-          if (clamped.x !== rendered.x || clamped.y !== rendered.y) {
+          if (
+            !isGraphUserNavigationActive(cy)
+            && (clamped.x !== rendered.x || clamped.y !== rendered.y)
+          ) {
             cy.panBy({ x: clamped.x - rendered.x, y: clamped.y - rendered.y });
           }
         }
@@ -421,7 +428,9 @@ export default function GraphPage() {
     actors, runActor, settings, setNotice, graphs, activeGraph,
     addDocumentsToActiveGraph, removeDocumentsFromActiveGraph,
     createGraph, switchGraph, renameGraph, deleteGraph, clearGraph, execute,
-    queueStatus, startQueue, stopQueue
+    queueStatus, startQueue, stopQueue, researchRunState = {},
+    runResearchNode, pauseResearchNode, resumeResearchNode, retryResearchNode,
+    killResearchNode
   } = useQuasar();
   const apiRef = useRef(null);
   const edgeHandlesRef = useRef(null);
@@ -441,6 +450,7 @@ export default function GraphPage() {
   const [relationEdit, setRelationEdit] = useState(null);
   const [nodeDraft, setNodeDraft] = useState(null);
   const [quickEdit, setQuickEdit] = useState(null);
+  const [researchDraft, setResearchDraft] = useState(null);
   const [targetDocument, setTargetDocument] = useState(null);
   const [showGraphCreate, setShowGraphCreate] = useState(false);
   const [showMembershipAdd, setShowMembershipAdd] = useState(false);
@@ -488,6 +498,7 @@ export default function GraphPage() {
     setRelationEdit(null);
     setNodeDraft(null);
     setQuickEdit(null);
+    setResearchDraft(null);
     setTargetDocument(null);
     setMenuQuery("");
     setEmptyStateDismissed(false);
@@ -615,11 +626,14 @@ export default function GraphPage() {
 
   function openQuickAdd(context = null, objectType = "entity") {
     setCanvasMenu(null);
-    setNodeDraft({
+    const draft = {
       objectType,
       dataset: selected?.dataset || dataset || "default",
+      inputIds: selectedIds,
       position: context?.position ? context : null
-    });
+    };
+    if (objectType === "research-node") setResearchDraft(draft);
+    else setNodeDraft(draft);
   }
 
   function openCanvasMenu(context) {
@@ -835,9 +849,64 @@ export default function GraphPage() {
     }
   }
 
+  function inspectResearchOutputs(document) {
+    const outputIds = researchNodeOutputIds(document).filter((id) => graphDocumentIds.has(id));
+    setCanvasMenu(null);
+    if (!outputIds.length) {
+      setNotice({ kind: "info", message: "This research node has no outputs in the active graph." });
+      return;
+    }
+    select(outputIds);
+    focusSelection(outputIds);
+  }
+
+  async function cloneContextResearchNode(document) {
+    try {
+      const suffix = globalThis.crypto?.randomUUID
+        ? globalThis.crypto.randomUUID()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      const cloned = cloneResearchNode(document, {
+        id: `starintel:research-node:${suffix}`
+      });
+      await execute(operation.save(cloned), `Clone ${document._id}`);
+      if (activeGraph?.documentIds !== null) {
+        addDocumentsToActiveGraph([cloned._id], { selectedIds: [cloned._id] });
+      }
+      setReviewStatus("all");
+      clearFilters();
+      select([cloned._id]);
+      setCanvasMenu(null);
+      setNotice({ kind: "success", message: `Cloned research node as ${cloned._id}` });
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
+  }
+
+  async function executeResearchAction(action, document) {
+    setCanvasMenu(null);
+    const actions = {
+      run: runResearchNode,
+      pause: pauseResearchNode,
+      resume: resumeResearchNode,
+      retry: retryResearchNode,
+      kill: killResearchNode
+    };
+    try {
+      await actions[action](document);
+    } catch (error) {
+      setNotice({ kind: "error", message: error.message });
+    }
+  }
+
   const menuMatches = (label) => !menuQuery.trim() || label.toLowerCase().includes(menuQuery.trim().toLowerCase());
   const contextNode = canvasMenu?.kind === "node" ? documents.find((document) => document._id === canvasMenu.id) : null;
   const contextRelation = canvasMenu?.kind === "edge" ? documents.find((document) => document._id === canvasMenu.id) : null;
+  const contextResearchScope = contextNode && isResearchNode(contextNode) ? researchNodeScope(contextNode) : null;
+  const selectedResearchScope = selected && isResearchNode(selected) ? researchNodeScope(selected) : null;
+  const contextResearchStatus = contextNode?.data?.status || "draft";
+  const contextResearchActive = ["queued", "running"].includes(researchRunState[contextNode?._id]?.state);
+  const selectedResearchStatus = selected?.data?.status || "draft";
+  const selectedResearchActive = ["queued", "running"].includes(researchRunState[selected?._id]?.state);
   const [contextSourceId, contextTargetId] = relationEndpoints(contextRelation);
 
   return (
@@ -920,12 +989,13 @@ export default function GraphPage() {
 
           {canvasMenu && (
             <div className={`graph-context-menu expanded ${canvasMenu.kind}-actions`} role="menu" aria-label={`${canvasMenu.kind} actions`} style={canvasMenuStyle} onContextMenu={(event) => event.preventDefault()}>
-              <div className="graph-context-header"><span className="context-kind">{canvasMenu.kind}</span><strong>{contextNode ? documentLabel(contextNode) : contextRelation ? documentLabel(contextRelation) : activeGraph?.name || "Graph"}</strong></div>
+              <div className="graph-context-header"><span className="context-kind">{canvasMenu.kind}</span><strong>{contextNode ? documentLabel(contextNode) : contextRelation ? documentLabel(contextRelation) : activeGraph?.name || "Graph"}</strong>{contextResearchScope && <span className={`research-state research-state-${contextNode.data?.status || "draft"}`}>{contextNode.data?.status || "draft"}</span>}</div>
               <label className="graph-context-search"><Search size={14} /><input aria-label="Search context actions" value={menuQuery} onChange={(event) => setMenuQuery(event.target.value)} placeholder="Find action…" /></label>
 
               {canvasMenu.kind === "node" && contextNode && (
                 <>
-                  {menuMatches("Edit") && <button role="menuitem" onClick={() => { setQuickEdit({ document: contextNode, position: canvasMenu }); setCanvasMenu(null); }}><Pencil size={15} /> Edit</button>}
+                  {menuMatches("Edit") && <button role="menuitem" onClick={() => { if (isResearchNode(contextNode)) setResearchDraft({ document: contextNode, position: canvasMenu }); else setQuickEdit({ document: contextNode, position: canvasMenu }); setCanvasMenu(null); }}><Pencil size={15} /> Edit</button>}
+                  {menuMatches("Create research node from selection") && <button role="menuitem" onClick={() => { setResearchDraft({ dataset: contextNode.dataset || "default", inputIds: selectedIds.length ? selectedIds : [contextNode._id], position: canvasMenu }); setCanvasMenu(null); }}><Network size={15} /> Create research node from selection</button>}
                   {menuMatches("Add relation") && <button role="menuitem" onClick={() => beginRelationFromNode(contextNode._id)}><Link2 size={15} /> Add relation</button>}
                   {menuMatches("Open full editor") && <Link role="menuitem" to={`/documents/${encodeURIComponent(contextNode._id)}/edit?returnTo=graph`}><ExternalLink size={15} /> Open full editor</Link>}
                   {menuMatches("Focus") && <button role="menuitem" onClick={() => { setCanvasMenu(null); focusSelection([contextNode._id]); }}><Focus size={15} /> Focus</button>}
@@ -933,6 +1003,13 @@ export default function GraphPage() {
                   {actorEntries.filter(({ actor }) => menuMatches(`Run actor ${actor.label}`)).map(({ actor, availability }) => (
                     <button role="menuitem" key={actor.id} disabled={!availability.applicable || Boolean(runningActorId)} onClick={() => { setCanvasMenu(null); executeActor(actor); }}><Play size={15} /> Run actor: {actor.label}</button>
                   ))}
+                  {contextResearchScope && !contextResearchActive && ["draft", "queued", "running", "completed", "killed"].includes(contextResearchStatus) && menuMatches("Run research node") && <button role="menuitem" onClick={() => executeResearchAction("run", contextNode)}><Play size={15} /> {["queued", "running"].includes(contextResearchStatus) ? "Continue" : "Run"} research node</button>}
+                  {contextResearchScope && contextResearchActive && menuMatches("Pause research node") && <button role="menuitem" onClick={() => executeResearchAction("pause", contextNode)}><Pause size={15} /> Pause research node</button>}
+                  {contextResearchScope && contextResearchStatus === "paused" && menuMatches("Resume research node") && <button role="menuitem" onClick={() => executeResearchAction("resume", contextNode)}><Play size={15} /> Resume research node</button>}
+                  {contextResearchScope && ["failed", "blocked"].includes(contextResearchStatus) && menuMatches("Retry research node") && <button role="menuitem" onClick={() => executeResearchAction("retry", contextNode)}><RotateCcw size={15} /> Retry research node</button>}
+                  {contextResearchScope && ["queued", "running", "paused", "blocked", "failed"].includes(contextResearchStatus) && menuMatches("Kill research node") && <button role="menuitem" className="danger" onClick={() => executeResearchAction("kill", contextNode)}><Square size={15} /> Kill research node</button>}
+                  {contextResearchScope && menuMatches("Inspect outputs") && <button role="menuitem" disabled={!contextResearchScope.outputs.length} onClick={() => inspectResearchOutputs(contextNode)}><Focus size={15} /> Inspect outputs ({contextResearchScope.outputs.length})</button>}
+                  {contextResearchScope && menuMatches("Clone research node") && <button role="menuitem" onClick={() => cloneContextResearchNode(contextNode)}><Copy size={15} /> Clone research node</button>}
                   {menuMatches("Submit as target") && <button role="menuitem" onClick={() => { setCanvasMenu(null); setTargetDocument(contextNode); }}><Send size={15} /> Submit as target</button>}
                   {menuMatches("Copy document ID") && <button role="menuitem" onClick={() => copyText(contextNode._id, "Copied document ID")}><Clipboard size={15} /> Copy document ID</button>}
                   {menuMatches("Copy document JSON") && <button role="menuitem" onClick={() => copyText(JSON.stringify(contextNode, null, 2), "Copied document JSON")}><Copy size={15} /> Copy document JSON</button>}
@@ -978,6 +1055,7 @@ export default function GraphPage() {
 
           {nodeDraft && <CompactNodeEditor objectType={nodeDraft.objectType} dataset={nodeDraft.dataset} position={nodeDraft.position} onClose={() => setNodeDraft(null)} onSaved={() => setReviewStatus("all")} />}
           {quickEdit && <CompactNodeEditor document={quickEdit.document} position={quickEdit.position} onClose={() => setQuickEdit(null)} />}
+          {researchDraft && <CompactResearchNodeEditor document={researchDraft.document || null} dataset={researchDraft.dataset || "default"} inputIds={researchDraft.inputIds || []} position={researchDraft.position} onClose={() => setResearchDraft(null)} onSaved={() => setReviewStatus("all")} />}
           {relationDraft && <CompactRelationEditor key={relationDraft.ids.join(":")} ids={relationDraft.ids} documents={scopedDocuments} position={relationDraft} onClose={() => setRelationDraft(null)} />}
           {relationEdit && <CompactRelationEditor relationDocument={relationEdit.document} documents={documents} position={relationEdit.position} onClose={() => setRelationEdit(null)} />}
         </div>
@@ -996,9 +1074,21 @@ export default function GraphPage() {
                 <code>{selected._id}</code>
                 <small className="inspector-dataset">Dataset: {selected.dataset || "unknown"}</small>
                 {selected.summary && <p>{selected.summary}</p>}
+                {selectedResearchScope && (
+                  <div className="research-node-summary">
+                    <span className={`research-state research-state-${selected.data?.status || "draft"}`}>Research state: {selected.data?.status || "draft"}</span>
+                    <small>{selectedResearchScope.inputs.length} inputs · {selectedResearchScope.outputs.length} outputs · {selectedResearchScope.actors.length} actors</small>
+                  </div>
+                )}
                 <div className="inspector-actions">
                   <Link className="button small" to={`/documents/${encodeURIComponent(selected._id)}`}><ExternalLink size={14} /> Open</Link>
-                  <button className="button small" onClick={() => setQuickEdit({ document: selected, position: null })}><Pencil size={14} /> Edit</button>
+                  <button className="button small" onClick={() => isResearchNode(selected) ? setResearchDraft({ document: selected, position: null }) : setQuickEdit({ document: selected, position: null })}><Pencil size={14} /> Edit</button>
+                  {selectedResearchScope && !selectedResearchActive && ["draft", "queued", "running", "completed", "killed"].includes(selectedResearchStatus) && <button className="button small" onClick={() => executeResearchAction("run", selected)}><Play size={14} /> {["queued", "running"].includes(selectedResearchStatus) ? "Continue" : "Run"}</button>}
+                  {selectedResearchScope && selectedResearchActive && <button className="button small" onClick={() => executeResearchAction("pause", selected)}><Pause size={14} /> Pause</button>}
+                  {selectedResearchScope && selectedResearchStatus === "paused" && <button className="button small" onClick={() => executeResearchAction("resume", selected)}><Play size={14} /> Resume</button>}
+                  {selectedResearchScope && ["failed", "blocked"].includes(selectedResearchStatus) && <button className="button small" onClick={() => executeResearchAction("retry", selected)}><RotateCcw size={14} /> Retry</button>}
+                  {selectedResearchScope && ["queued", "running", "paused", "blocked", "failed"].includes(selectedResearchStatus) && <button className="button small danger" onClick={() => executeResearchAction("kill", selected)}><Square size={14} /> Kill</button>}
+                  {selectedResearchScope && <button className="button small" disabled={!selectedResearchScope.outputs.length} onClick={() => inspectResearchOutputs(selected)}><Focus size={14} /> Outputs</button>}
                 </div>
               </>
             )}

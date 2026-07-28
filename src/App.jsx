@@ -1,23 +1,33 @@
 import { useEffect, useState } from "react";
 import {
-  Activity,
   Bot,
+  ChevronLeft,
+  ChevronRight,
+  CircleAlert,
+  CircleHelp,
   Database,
   Download,
   FilePlus2,
+  Filter,
   FolderInput,
+  House,
+  Layers3,
   Menu,
   Network,
+  Plus,
   Redo2,
   Search,
   Settings,
+  Sparkles,
   TableProperties,
-  Undo2
+  Undo2,
+  UserRound
 } from "lucide-react";
-import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useQuasar } from "./store";
 import GraphPage from "./components/GraphPage";
 import GraphLayoutControl from "./components/GraphLayoutControl";
+import GraphWorkspaceChrome from "./components/GraphWorkspaceChrome";
 import { DocumentPage, DocumentsPage } from "./components/Documents";
 import DocumentEditor from "./components/DocumentEditor";
 import { ImportPage, SettingsPage } from "./components/ImportSettings";
@@ -32,16 +42,25 @@ import MobileGestureMenu from "./components/MobileGestureMenu";
 import "./lib/agent-supervisor-permissions";
 
 const navigation = [
-  { to: "/", label: "Dashboard", mobileLabel: "Home", Icon: Activity, end: true },
-  { to: "/graph", label: "Graph", mobileLabel: "Graph", Icon: Network },
-  { to: "/documents", label: "Documents", mobileLabel: "Docs", Icon: TableProperties },
+  { to: "/", label: "Home", mobileLabel: "Home", Icon: House, end: true },
+  { to: "/graph", label: "Graphs", mobileLabel: "Graph", Icon: Network },
+  { to: "/documents?group=dataset", label: "Datasets", Icon: Layers3 },
+  { to: "/documents", label: "Documents", mobileLabel: "Docs", Icon: TableProperties, end: true },
   { to: "/documents/new", label: "Add document", mobileLabel: "Add", Icon: FilePlus2 },
-  { to: "/agents", label: "Agents", Icon: Bot },
+  { to: "/agents", label: "Actors", Icon: Bot },
   { to: "/import", label: "Import", Icon: FolderInput },
   { to: "/settings", label: "Settings", mobileLabel: "Settings", Icon: Settings }
 ];
 
 const mobileNavigation = navigation.filter(({ mobileLabel }) => mobileLabel);
+
+function loadSidebarCollapsed() {
+  try {
+    return globalThis.localStorage?.getItem("quasar:sidebar-collapsed") === "1";
+  } catch {
+    return false;
+  }
+}
 
 function SyncBadge() {
   const { syncStatus, serverStatus, queueStatus } = useQuasar();
@@ -99,32 +118,100 @@ function NavigationLinks({ mobile = false }) {
   ));
 }
 
+function SidebarGraphs({ graphs, activeGraph, switchGraph, createGraph }) {
+  function addGraph() {
+    const name = window.prompt("Graph name", "Untitled graph");
+    if (!name?.trim()) return;
+    createGraph(name.trim());
+  }
+
+  return (
+    <>
+      <div className="sidebar-section-label">Workspace</div>
+      <button className="workspace-selector" type="button">
+        <Database size={15} />
+        <span>OSINT Workspace</span>
+        <ChevronRight size={14} aria-hidden="true" />
+      </button>
+      <div className="sidebar-section-label">Graphs</div>
+      <div className="sidebar-graph-list" aria-label="Workspace graphs">
+        {graphs.map((graph) => (
+          <div key={graph.id} className={graph.id === activeGraph?.id ? "sidebar-graph-row active" : "sidebar-graph-row"}>
+            <button type="button" onClick={() => switchGraph(graph.id)} title={graph.name}>{graph.name}</button>
+            {graph.id === activeGraph?.id && <span aria-label="Current graph">•</span>}
+          </div>
+        ))}
+      </div>
+      <button className="button small sidebar-new-graph" type="button" onClick={addGraph}>
+        <Plus size={14} /> <span>New graph</span>
+      </button>
+    </>
+  );
+}
+
 function WorkbenchShell({ children }) {
   const navigate = useNavigate();
-  const { loading, notice, setNotice, canUndo, canRedo, undo, redo, documents } = useQuasar();
+  const location = useLocation();
+  const {
+    loading,
+    notice,
+    setNotice,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
+    documents = [],
+    graphs = [],
+    activeGraph,
+    switchGraph,
+    createGraph
+  } = useQuasar();
   const [query, setQuery] = useState("");
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed);
+  const graphRoute = location.pathname === "/graph";
 
   function submitSearch(event) {
     event.preventDefault();
     navigate(`/documents?q=${encodeURIComponent(query)}`);
   }
 
+  function toggleSidebar() {
+    setSidebarCollapsed((current) => {
+      const next = !current;
+      try {
+        globalThis.localStorage?.setItem("quasar:sidebar-collapsed", next ? "1" : "0");
+      } catch {
+        // Storage is optional; the shell still works without persistence.
+      }
+      return next;
+    });
+  }
+
   return (
-    <div className="app-shell">
+    <div className={`app-shell${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
       <aside className="sidebar">
         <div className="brand-block">
-          <div className="brand-mark">Q</div>
+          <div className="brand-mark">✦</div>
           <div>
             <strong>Quasar</strong>
             <span>StarIntel workspace</span>
           </div>
+          <button className="icon-button sidebar-collapse" type="button" onClick={toggleSidebar} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
+            {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
         </div>
+        <div className="sidebar-section-label">Navigation</div>
         <nav aria-label="Primary navigation"><NavigationLinks /></nav>
+        {graphRoute && <SidebarGraphs graphs={graphs} activeGraph={activeGraph} switchGraph={switchGraph} createGraph={createGraph} />}
         <div className="sidebar-foot">
           <div><Database size={15} /> {documents.length} documents</div>
           <div><SyncBadge /></div>
           <small>Offline-first · v0.9.0</small>
+          <div className="sidebar-user">
+            <UserRound size={18} />
+            <span><strong>unseen</strong><small>Admin</small></span>
+          </div>
         </div>
       </aside>
 
@@ -141,10 +228,15 @@ function WorkbenchShell({ children }) {
           </button>
           <form className="global-search" onSubmit={submitSearch} role="search">
             <Search size={17} aria-hidden="true" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search workspace" placeholder="Search IDs, titles, data, sources…" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search workspace" placeholder="Search everything…" />
           </form>
           <div className="top-actions">
+            <SyncBadge />
             <InstallButton />
+            <NavLink className="button graph-agent-top-action" to="/agents?tab=run"><Sparkles size={16} /> AI Agent</NavLink>
+            <NavLink className="icon-button" to="/documents/new" title="Create document" aria-label="Create document"><Plus size={18} /></NavLink>
+            <button className="icon-button" type="button" title="Filter" aria-label="Filter"><Filter size={17} /></button>
+            <button className="icon-button" type="button" title="Help" aria-label="Help"><CircleHelp size={17} /></button>
             <button className="icon-button" disabled={!canUndo} onClick={() => undo().catch((error) => setNotice({ kind: "error", message: error.message }))} title="Undo" aria-label="Undo">
               <Undo2 size={18} />
             </button>
@@ -163,6 +255,7 @@ function WorkbenchShell({ children }) {
 
         <main className="content">
           {loading ? <div className="loading-panel">Opening local workspace…</div> : children}
+          <GraphWorkspaceChrome />
         </main>
       </section>
 
@@ -177,6 +270,7 @@ function WorkbenchShell({ children }) {
 function NotFound() {
   return (
     <section className="empty-state">
+      <CircleAlert size={32} />
       <h1>Route not found</h1>
       <NavLink className="button primary" to="/">Open dashboard</NavLink>
     </section>

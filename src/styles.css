@@ -581,3 +581,86 @@ td small { max-width: 65ch; color: var(--muted); }
   .graph-stage { height: 520px; }
   .notice { right: .6rem; top: 64px; }
 }
+
+
+.research-node-summary {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.75rem 0;
+}
+
+.research-state {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.18rem 0.55rem;
+  color: var(--text);
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.045em;
+}
+
+.research-state-running,
+.research-state-completed {
+  border-color: var(--success);
+}
+
+.research-state-paused,
+.research-state-blocked {
+  border-color: var(--warning);
+}
+
+.research-state-failed,
+.research-state-killed {
+  border-color: var(--danger);
+}
+
+
+.graph-research-node-editor {
+  width: min(46rem, calc(100vw - 1rem));
+}
+
+.research-node-limits,
+.research-node-stop-rules {
+  display: grid;
+  gap: 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  padding: 0.8rem;
+}
+
+.research-node-limits {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.research-node-limits legend,
+.research-node-stop-rules legend {
+  padding: 0 0.35rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.research-node-limits label {
+  display: grid;
+  gap: 0.3rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.research-node-stop-rules {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 700px) {
+  .research-node-limits,
+  .research-node-stop-rules {
+    grid-template-columns: 1fr;
+  }
+}

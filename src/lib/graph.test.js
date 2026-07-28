@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createResearchNode } from "./research-nodes";
 import {
   buildGraph,
   filterGraph,
@@ -48,6 +49,25 @@ describe("StarIntel graph projection", () => {
     expect(graph.edges).toHaveLength(2);
     expect(graph.edges[0].data.predicate).toBe("founded");
     expect(graph.nodes[0].data.reviewState).toBe("reviewed");
+  });
+
+  it("projects research node state into graph presentation data", () => {
+    const researchNode = createResearchNode({
+      id: "starintel:research-node:map",
+      dataset: "test",
+      title: "Map the network",
+      objective: "Map the network",
+      status: "running",
+      createdAt: stamp
+    });
+    const graph = buildGraph([researchNode]);
+    expect(graph.nodes[0].data).toMatchObject({
+      dtype: "research-node",
+      shape: "round-hexagon",
+      color: "#ec4899",
+      researchStatus: "running",
+      researchLabel: "Map the network\n[running]"
+    });
   });
 
   it("projects every relation direction as a boolean with directed as the legacy default", () => {

@@ -24,7 +24,8 @@ const QUICK_TYPES = [
   { label: "entity", Icon: CircleDot },
   { label: "document", Icon: FileText },
   { label: "source", Icon: BookOpen },
-  { label: "concept", Icon: Lightbulb }
+  { label: "concept", Icon: Lightbulb },
+  { label: "research node", Icon: Network }
 ];
 
 const CATEGORY_MATCHERS = {

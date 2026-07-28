@@ -33,7 +33,7 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.1",
-    "starintel_doc": "github:lost-rob0t/starintel_doc.js#108310c1bcee403cb7e40dabfd3547a6b5228c51"
+    "starintel_doc": "github:lost-rob0t/starintel_doc.js#ef9ea6b84fa6060013babdfd361f64660b2a5ebf"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
