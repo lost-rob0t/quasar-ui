@@ -323,12 +323,12 @@ async function measureIncrementalElements(instance, graph, strategy, operation, 
   return duration;
 }
 
-async function measureGraphSwitchMemory(instance, graph, alternate, strategy) {
+async function measureGraphSwitchMemory(instance, graph, alternate, strategy, iterations = 10) {
   const memory = performance.memory;
   if (!memory) return null;
   globalThis.gc?.();
   const before = memory.usedJSHeapSize;
-  for (let index = 0; index < 10; index += 1) {
+  for (let index = 0; index < iterations; index += 1) {
     applyGraph(instance, index % 2 ? graph : alternate, strategy);
     await stableFrame();
   }
@@ -351,7 +351,8 @@ export async function runGraphBenchmarkScenario({
   includeLayout = true,
   includeIncremental = true,
   interactionIterations = 10,
-  viewportFrames = 90
+  viewportFrames = 90,
+  graphSwitchIterations = 10
 } = {}) {
   destroyGraph();
   status.value = `${strategy}:${size}:${shape}`;
@@ -442,7 +443,8 @@ export async function runGraphBenchmarkScenario({
     cy,
     graph,
     buildGraph(alternateFixture.documents),
-    strategy
+    strategy,
+    graphSwitchIterations
   );
 
   await stableFrame();
