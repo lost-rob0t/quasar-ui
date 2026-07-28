@@ -21,7 +21,7 @@ export function markReviewedActor(context) {
         extensions: {
           ...(source.extensions || {}),
           "quasar.actor": {
-            actor_id: REVIEW_ACTOR_ID,
+            actor_id: "quasar.actor.mark-reviewed",
             input_ids: [source._id]
           }
         }
