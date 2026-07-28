@@ -1,45 +1,45 @@
 const SECRET_PREFIX = "quasar:provider-secret:";
+const memory = new Map();
 
-function persistentStorage() {
-  if (typeof localStorage === "undefined") return null;
-  return localStorage;
-}
-
-function legacyStorage() {
+function sessionStorageBackend() {
   if (typeof sessionStorage === "undefined") return null;
   return sessionStorage;
+}
+
+function legacyPersistentStorage() {
+  if (typeof localStorage === "undefined") return null;
+  return localStorage;
 }
 
 function key(providerId) {
   return `${SECRET_PREFIX}${providerId}`;
 }
 
-function migrate(providerId) {
-  const name = key(providerId);
-  const persistent = persistentStorage();
-  const legacy = legacyStorage();
-  if (!persistent || !legacy || persistent.getItem(name)) return;
-  const value = legacy.getItem(name);
-  if (!value) return;
-  persistent.setItem(name, value);
-  legacy.removeItem(name);
+function purgeLegacy(providerId) {
+  legacyPersistentStorage()?.removeItem(key(providerId));
 }
 
 export function setProviderSecret(providerId, secret) {
   const value = String(secret || "");
   if (!value) throw new TypeError("Provider key is required");
-  persistentStorage()?.setItem(key(providerId), value);
-  legacyStorage()?.removeItem(key(providerId));
+
+  const name = key(providerId);
+  purgeLegacy(providerId);
+  memory.set(name, value);
+  sessionStorageBackend()?.setItem(name, value);
 }
 
 export function getProviderSecret(providerId) {
-  migrate(providerId);
-  return persistentStorage()?.getItem(key(providerId)) || "";
+  const name = key(providerId);
+  purgeLegacy(providerId);
+  return sessionStorageBackend()?.getItem(name) || memory.get(name) || "";
 }
 
 export function deleteProviderSecret(providerId) {
-  persistentStorage()?.removeItem(key(providerId));
-  legacyStorage()?.removeItem(key(providerId));
+  const name = key(providerId);
+  memory.delete(name);
+  sessionStorageBackend()?.removeItem(name);
+  purgeLegacy(providerId);
 }
 
 export function hasProviderSecret(providerId) {
