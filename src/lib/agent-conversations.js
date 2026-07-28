@@ -88,6 +88,9 @@ function markPersistedState(state) {
   const active = state.conversations.find((conversation) => conversation.id === state.activeConversationId)
     || state.conversations[0];
   document.documentElement.dataset.agentChatPersistedDraftLength = String(active?.draft?.length || 0);
+  document.documentElement.dataset.agentChatPersistedAttachments = (active?.attachments || [])
+    .map((attachment) => attachment.name)
+    .join(",");
   document.documentElement.dataset.agentChatPersistedTasks = (active?.taskList || [])
     .map((task) => `${task.id}:${task.status}`)
     .join(",");
@@ -165,13 +168,15 @@ export function createConversation(input = {}) {
     messages: [],
     turns: [],
     taskList: [],
+    attachments: [],
     draft: "",
     runId: null,
     state: "idle",
     ...clone(input),
     messages: (input.messages || []).map((message) => redactConversationValue(message)),
     turns: (input.turns || []).map((turn) => redactConversationValue(turn)),
-    taskList: (input.taskList || []).map((task) => redactConversationValue(task))
+    taskList: (input.taskList || []).map((task) => redactConversationValue(task)),
+    attachments: (input.attachments || []).map((attachment) => redactConversationValue(attachment))
   };
 }
 
