@@ -6,7 +6,7 @@ import { installUserNavigationGuard } from "./user-navigation-guard";
 
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 const AUTO_NODE_SPACING = 96;
-const DEFAULT_WHEEL_SENSITIVITY = 0.18;
+export const DEFAULT_WHEEL_SENSITIVITY = 0.42;
 
 let pluginsRegistered = false;
 
