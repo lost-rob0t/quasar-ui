@@ -2,6 +2,7 @@ import cytoscape from "cytoscape";
 import edgehandles from "cytoscape-edgehandles";
 import { installGraphGestures } from "./graph-gestures";
 import { installMaltegoLayouts } from "./maltego-layouts";
+import { installUserNavigationGuard } from "./user-navigation-guard";
 
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 const AUTO_NODE_SPACING = 96;
@@ -54,12 +55,16 @@ function installAutomaticNodePlacement(cy) {
 
 function installViewportInput(cy, options) {
   const container = options.container;
-  if (!container?.addEventListener) return cy;
-
-  const rootWindow = container.ownerDocument?.defaultView;
   const allowPan = options.panningEnabled !== false && options.userPanningEnabled !== false;
   const allowZoom = options.zoomingEnabled !== false && options.userZoomingEnabled !== false;
-  const allowBoxSelection = options.boxSelectionEnabled === true;
+
+  cy.panningEnabled(options.panningEnabled !== false);
+  cy.userPanningEnabled(allowPan);
+  cy.zoomingEnabled(options.zoomingEnabled !== false);
+  cy.userZoomingEnabled(allowZoom);
+  cy.boxSelectionEnabled(false);
+
+  if (!container?.addEventListener) return cy;
 
   const syncViewportState = () => {
     const pan = cy.pan();
@@ -68,39 +73,27 @@ function installViewportInput(cy, options) {
     container.dataset.graphZoom = String(cy.zoom());
   };
 
-  const restoreViewportInput = () => {
-    cy.boxSelectionEnabled(false);
-    cy.userPanningEnabled(allowPan);
-    cy.userZoomingEnabled(allowZoom);
-  };
-
-  const prepareViewportInput = (event) => {
-    const boxSelection = allowBoxSelection
-      && event.shiftKey
-      && event.pointerType !== "touch";
-    cy.boxSelectionEnabled(boxSelection);
-    cy.userPanningEnabled(allowPan && !boxSelection);
-    cy.userZoomingEnabled(allowZoom);
-  };
-
   const cleanup = () => {
-    container.removeEventListener("pointerdown", prepareViewportInput, true);
-    rootWindow?.removeEventListener("pointerup", restoreViewportInput, true);
-    rootWindow?.removeEventListener("pointercancel", restoreViewportInput, true);
     cy.off("pan zoom", syncViewportState);
   };
 
-  container.addEventListener("pointerdown", prepareViewportInput, true);
-  rootWindow?.addEventListener("pointerup", restoreViewportInput, true);
-  rootWindow?.addEventListener("pointercancel", restoreViewportInput, true);
   cy.on("pan zoom", syncViewportState);
   cy.one("destroy", cleanup);
-
-  cy.panningEnabled(options.panningEnabled !== false);
-  cy.zoomingEnabled(options.zoomingEnabled !== false);
-  restoreViewportInput();
   syncViewportState();
   return cy;
+}
+
+function exposeDevelopmentGraph(cy) {
+  const container = cy.container?.();
+  if (!import.meta.env.DEV || !container) return;
+
+  Object.defineProperty(container, "__quasarGraphAdapter", {
+    configurable: true,
+    value: cy
+  });
+  cy.one("destroy", () => {
+    delete container.__quasarGraphAdapter;
+  });
 }
 
 export class GraphAdapter {
@@ -114,8 +107,11 @@ export class GraphAdapter {
       wheelSensitivity: DEFAULT_WHEEL_SENSITIVITY,
       ...options
     }));
+    const restoreUserNavigation = installUserNavigationGuard(cy);
+    cy.one("destroy", restoreUserNavigation);
     installAutomaticNodePlacement(cy);
     installGraphGestures(cy);
+    exposeDevelopmentGraph(cy);
     return installViewportInput(cy, options);
   }
 }
