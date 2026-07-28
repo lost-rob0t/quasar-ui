@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { dtypes } from "starintel_doc";
 import { dtypeLabel } from "../lib/schema-form";
-import { CompactNodeEditor, GraphModalShell } from "./GraphEditors";
+import { CompactNodeEditor, CompactResearchNodeEditor, GraphModalShell } from "./GraphEditors";
 
 export function knownGraphObjectTypes() {
   return [...new Set(dtypes)]
@@ -119,9 +119,16 @@ export default function GraphObjectTypePickerBridge() {
           </div>
         </GraphModalShell>
       )}
-      {draft && (
+      {draft && draft.objectType !== "research-node" && (
         <CompactNodeEditor
           objectType={draft.objectType}
+          dataset={draft.dataset}
+          position={draft.position}
+          onClose={() => setDraft(null)}
+        />
+      )}
+      {draft?.objectType === "research-node" && (
+        <CompactResearchNodeEditor
           dataset={draft.dataset}
           position={draft.position}
           onClose={() => setDraft(null)}
