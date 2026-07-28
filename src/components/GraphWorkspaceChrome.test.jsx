@@ -62,11 +62,10 @@ describe("graph workspace chrome", () => {
 
     expect(html).toContain("Case Alpha");
     expect(html).toContain("Graph statistics");
-    expect(html).toContain("Nodes");
-    expect(html).toContain(">2<");
-    expect(html).toContain("Edges");
-    expect(html).toContain(">1<");
-    expect(html).toContain("67%");
+    expect(html).toContain("<span>Nodes</span><strong>2</strong>");
+    expect(html).toContain("<span>Edges</span><strong>1</strong>");
+    expect(html).toContain("<span>Documents</span><strong>3</strong>");
+    expect(html).toContain("<span>Reviewed</span><strong>67%</strong>");
     expect(html).toContain("Operator");
     expect(html).toContain("Find missing connections");
     expect(html).toContain("First person");
