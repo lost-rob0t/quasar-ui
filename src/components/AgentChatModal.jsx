@@ -56,6 +56,12 @@ import {
 } from "../lib/agent-permissions-v2";
 import { executeSandboxedJavaScript } from "../lib/agent-javascript-sandbox";
 import {
+  addConversationAttachments,
+  attachmentPromptContext,
+  ingestAttachmentFiles,
+  removeConversationAttachment
+} from "../lib/agent-attachments";
+import {
   addConversationTask,
   removeConversationTask,
   runnableConversationTasks,
@@ -204,6 +210,22 @@ function PermissionCard({ message, onDecision }) {
   );
 }
 
+function AttachmentChips({ attachments = [], onRemove }) {
+  if (!attachments.length) return null;
+  return (
+    <div className="agent-attachment-list" aria-label="Attached files">
+      {attachments.map((attachment) => (
+        <span className="agent-attachment-chip" key={attachment.id}>
+          <Paperclip size={12} />
+          <span title={attachment.name}>{attachment.name}</span>
+          <small>{Math.max(1, Math.ceil(Number(attachment.size || 0) / 1024))} KB</small>
+          {onRemove && <button type="button" aria-label={`Remove ${attachment.name}`} onClick={() => onRemove(attachment.id)}><X size={12} /></button>}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function Message({ message, onEdit, onRetry, onPermissionDecision }) {
   if (message.kind === "tool") return <ToolCard message={message} onRetry={onRetry} />;
   if (message.kind === "permission") return <PermissionCard message={message} onDecision={onPermissionDecision} />;
@@ -215,6 +237,7 @@ function Message({ message, onEdit, onRetry, onPermissionDecision }) {
         <CopyButton value={message.content} />
       </header>
       <Markdown content={message.content} />
+      <AttachmentChips attachments={message.attachments} />
       <footer>
         {message.role === "user" && <button type="button" onClick={() => onEdit(message)}>Edit and resubmit</button>}
         {(message.status === "failed" || message.role === "assistant") && <button type="button" onClick={() => onRetry(message)}><RotateCcw size={13} /> Retry</button>}
@@ -390,8 +413,11 @@ export default function AgentChatBubble() {
   const [contextOpen, setContextOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
   const [pendingPermission, setPendingPermission] = useState(null);
+  const [attachmentError, setAttachmentError] = useState("");
+  const [attachmentLoading, setAttachmentLoading] = useState(false);
   const timelineRef = useRef(null);
   const textareaRef = useRef(null);
+  const attachmentInputRef = useRef(null);
   const permissionResolvers = useRef(new Map());
   const activeExecution = useRef(null);
   const dragging = useRef(null);
@@ -496,18 +522,20 @@ export default function AgentChatBubble() {
 
   const runAgentInput = useCallback(async (raw, { retry = false } = {}) => {
     if (!activeConversation) return;
+    const turnAttachments = activeConversation.attachments || [];
     const userMessage = {
       id: randomId("message"),
       role: "user",
       content: raw,
       status: "completed",
       createdAt: stamp(),
-      retry
+      retry,
+      attachments: turnAttachments
     };
     const turn = { id: randomId("turn"), messageId: userMessage.id, status: "running", createdAt: stamp() };
     let working = appendConversationMessage(activeConversation, userMessage);
     working = appendConversationTurn(working, turn);
-    working = { ...working, draft: "", state: "thinking", agentId: agentSystem.activeAgent?.id, modelId: agentSystem.activeAgent?.modelId };
+    working = { ...working, draft: "", attachments: [], state: "thinking", agentId: agentSystem.activeAgent?.id, modelId: agentSystem.activeAgent?.modelId };
     persistConversation(working);
     setComposer("");
     const command = parseCommandInput(raw, registry);
@@ -669,7 +697,7 @@ export default function AgentChatBubble() {
         if (command.errors.length) throw new Error(command.errors.join("; "));
         if (command.definition.permission) await askPermission(command.definition, command.input, { type: "capability", turnId: turn.id });
       }
-      const prompt = command?.definition ? commandToAgentPrompt(command) : raw;
+      const prompt = attachmentPromptContext(command?.definition ? commandToAgentPrompt(command) : raw, turnAttachments);
       const run = await agentSystem.command(prompt);
       if (run) {
         agentSystem.setActiveRunId(run.id);
@@ -702,6 +730,22 @@ export default function AgentChatBubble() {
     setComposer(signature + (Object.keys(item.inputSchema?.properties || {}).length ? " " : ""));
     setPaletteIndex(0);
     requestAnimationFrame(() => textareaRef.current?.focus());
+  }
+
+  async function attachFiles(event) {
+    const files = event.target.files;
+    event.target.value = "";
+    if (!files?.length || !activeConversation) return;
+    setAttachmentLoading(true);
+    setAttachmentError("");
+    try {
+      const attachments = await ingestAttachmentFiles(files, activeConversation.attachments || []);
+      mutateConversation((conversation) => addConversationAttachments(conversation, attachments));
+    } catch (error) {
+      setAttachmentError(error?.message || String(error));
+    } finally {
+      setAttachmentLoading(false);
+    }
   }
 
   function submit(event) {
@@ -972,7 +1016,21 @@ export default function AgentChatBubble() {
               </div>
             )}
             <CommandPalette items={paletteItems} selected={paletteIndex} onSelect={selectCommand} recentCommands={recentCommands} />
+            <AttachmentChips
+              attachments={activeConversation?.attachments}
+              onRemove={(attachmentId) => mutateConversation((conversation) => removeConversationAttachment(conversation, attachmentId))}
+            />
+            {attachmentError && <div className="agent-attachment-error" role="alert">{attachmentError}</div>}
             <form className="agent-chat-composer" onSubmit={submit}>
+              <input
+                ref={attachmentInputRef}
+                className="agent-attachment-input"
+                type="file"
+                multiple
+                accept="text/*,.md,.markdown,.json,.jsonl,.ndjson,.csv,.tsv,.yaml,.yml,.xml,.html,.css,.js,.jsx,.ts,.tsx,.py,.rb,.go,.rs,.java,.c,.h,.cpp,.hpp,.cl,.lisp,.el,.pl,.prolog,.sql,.sh,.nix,.toml,.ini,.conf,.log"
+                onChange={attachFiles}
+                aria-label="Choose text attachments"
+              />
               <textarea
                 ref={textareaRef}
                 value={composer}
@@ -984,7 +1042,7 @@ export default function AgentChatBubble() {
               />
               <div className="agent-chat-composer-actions">
                 <button type="button" className="agent-chat-icon-button" title="Show active context" onClick={() => setContextOpen((value) => !value)}><Expand size={16} /></button>
-                <button type="button" className="agent-chat-icon-button" title="Attach context"><Paperclip size={16} /></button>
+                <button type="button" className="agent-chat-icon-button" title="Attach text files" aria-label="Attach text files" disabled={attachmentLoading} onClick={() => attachmentInputRef.current?.click()}><Paperclip size={16} /></button>
                 <select aria-label="Active model" value={agentSystem.activeAgent?.id || ""} onChange={(event) => agentSystem.setActiveAgentId(event.target.value)}>
                   {agentSystem.agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name} · {agent.modelId || "no model"}</option>)}
                 </select>
