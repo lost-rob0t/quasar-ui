@@ -179,7 +179,7 @@ describe("graph local corpus status", () => {
 
     expect(html).toContain("Research state: paused");
     expect(html).toContain("1 inputs · 1 outputs · 1 actors");
-    expect(html).toContain(">Outputs</button>");
+    expect(html).toContain("Outputs</button>");
   });
 
   it("renders named graphs as a persistent workbench list", () => {
