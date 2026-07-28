@@ -77,6 +77,21 @@
 
 .agent-context-strip { display: flex; gap: 12px; overflow-x: auto; padding: 7px 12px; border-bottom: 1px solid var(--border, #334155); color: var(--muted, #94a3b8); background: rgb(15 23 42 / 95%); font-size: 12px; white-space: nowrap; }
 .agent-context-strip code { color: var(--text, #e5e7eb); }
+.agent-task-panel { max-height: min(280px, 38vh); overflow-y: auto; padding: 10px 12px; border-bottom: 1px solid var(--border, #334155); background: rgb(2 6 23 / 82%); }
+.agent-task-panel > header { display: flex; justify-content: space-between; margin-bottom: 8px; color: var(--muted, #94a3b8); font-size: 12px; }
+.agent-task-panel > header strong { color: var(--text, #e5e7eb); }
+.agent-task-panel > p { margin: 8px 0; color: var(--muted, #94a3b8); font-size: 12px; }
+.agent-task { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; padding: 8px 0; border-top: 1px solid rgb(51 65 85 / 55%); }
+.agent-task > div:first-child { display: grid; min-width: 0; gap: 2px; }
+.agent-task strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.agent-task span,
+.agent-task small,
+.agent-task p { margin: 0; color: var(--muted, #94a3b8); font-size: 10px; }
+.agent-task-completed strong { text-decoration: line-through; opacity: .7; }
+.agent-task-blocked { border-left: 2px solid #f59e0b; padding-left: 8px; }
+.agent-task-actions { display: flex; flex-shrink: 0; gap: 6px; }
+.agent-task-actions button { padding: 3px 6px; border: 1px solid var(--border, #334155); border-radius: 5px; color: inherit; background: transparent; font-size: 10px; }
+.agent-task-actions button:hover { background: rgb(59 130 246 / 18%); }
 .agent-chat-timeline { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 18px; scroll-behavior: smooth; }
 .agent-chat-empty { display: grid; min-height: 100%; place-content: center; justify-items: center; color: var(--muted, #94a3b8); text-align: center; }
 .agent-chat-empty strong { margin-top: 8px; color: var(--text, #e5e7eb); }
