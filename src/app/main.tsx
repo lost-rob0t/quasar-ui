@@ -7,6 +7,7 @@ import GraphObjectTypePickerBridge from "../components/GraphObjectTypePickerBrid
 import MelissaActorBridge from "../components/MelissaActorBridge.jsx";
 import MobileGraphToolTray from "../components/MobileGraphToolTray.jsx";
 import OperatorUiEnhancer from "../components/OperatorUiEnhancer.jsx";
+import RunAllTransformationsBridge from "../components/RunAllTransformationsBridge.jsx";
 import { QuasarProvider } from "../store.jsx";
 import { registerServiceWorker } from "../lib/service-worker-registration.js";
 import { initializeTheme } from "../lib/themes.js";
@@ -41,6 +42,7 @@ createRoot(rootElement).render(
         <App />
         <OperatorUiEnhancer />
         <MelissaActorBridge />
+        <RunAllTransformationsBridge />
         <MobileGraphToolTray />
         <GraphContextRadialBridge />
         <GraphObjectTypePickerBridge />
