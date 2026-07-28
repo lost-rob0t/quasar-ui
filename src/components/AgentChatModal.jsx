@@ -13,6 +13,7 @@ import {
   Pause,
   Play,
   RotateCcw,
+  Search,
   Send,
   ShieldCheck,
   Square,
@@ -214,6 +215,87 @@ function CommandPalette({ items, selected, onSelect }) {
           <small>{item.category} · {item.permission || "no permission"}</small>
         </button>
       ))}
+    </div>
+  );
+}
+
+function ConversationPicker({ conversations, activeConversation, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const pickerRef = useRef(null);
+  const matches = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return conversations;
+    return conversations.filter((conversation) => [
+      conversation.title,
+      conversation.messages?.at(-1)?.content
+    ].some((value) => String(value || "").toLowerCase().includes(needle)));
+  }, [conversations, query]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const dismiss = (event) => {
+      if (event.key === "Escape" || !pickerRef.current?.contains(event.target)) {
+        setOpen(false);
+        setQuery("");
+      }
+    };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", dismiss);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", dismiss);
+    };
+  }, [open]);
+
+  function choose(conversationId) {
+    onSelect(conversationId);
+    setOpen(false);
+    setQuery("");
+  }
+
+  return (
+    <div className="agent-conversation-picker" ref={pickerRef}>
+      <button
+        className="agent-conversation-trigger"
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span>{activeConversation?.title || "Select conversation"}</span>
+        <ChevronDown size={14} />
+      </button>
+      {open && (
+        <section className="agent-conversation-menu" role="dialog" aria-label="Switch conversation">
+          <label className="agent-conversation-search">
+            <Search size={14} />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search chats"
+              aria-label="Search conversations"
+              autoFocus
+            />
+          </label>
+          <div className="agent-conversation-list" role="listbox" aria-label="Conversations">
+            {matches.map((conversation) => (
+              <button
+                className={conversation.id === activeConversation?.id ? "active" : ""}
+                type="button"
+                role="option"
+                aria-selected={conversation.id === activeConversation?.id}
+                key={conversation.id}
+                onClick={() => choose(conversation.id)}
+              >
+                <strong>{conversation.title}</strong>
+                <span>{formatTime(conversation.updatedAt)} · {conversation.state || "idle"}</span>
+              </button>
+            ))}
+            {!matches.length && <p>No matching chats</p>}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
@@ -581,17 +663,14 @@ export default function AgentChatBubble() {
               <strong>{agentSystem.activeAgent?.name || "Quasar agent"}</strong>
               <span className={`state-${currentState}`}>{currentState}</span>
             </div>
-            <select
-              className="agent-chat-conversation-select"
-              value={activeConversation?.id || ""}
-              onChange={(event) => {
-                setActiveConversationIdState(event.target.value);
-                setActiveConversationId(event.target.value);
+            <ConversationPicker
+              conversations={conversationState.conversations}
+              activeConversation={activeConversation}
+              onSelect={(conversationId) => {
+                setActiveConversationIdState(conversationId);
+                setActiveConversationId(conversationId);
               }}
-              aria-label="Conversation"
-            >
-              {conversationState.conversations.map((conversation) => <option value={conversation.id} key={conversation.id}>{conversation.title}</option>)}
-            </select>
+            />
             <button className="agent-chat-icon-button" type="button" onClick={createNewConversation} title="New conversation"><FilePlus2 size={16} /></button>
             <Link className="agent-chat-icon-button" to="/agents" target="_blank" title="Agent settings"><ShieldCheck size={16} /></Link>
             <button className="agent-chat-icon-button" type="button" onClick={() => setUi((value) => saveUi({ ...value, expanded: !value.expanded }))} title={ui.expanded ? "Exit full screen" : "Full screen"}>

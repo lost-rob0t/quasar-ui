@@ -24,6 +24,53 @@ test("opens the persistent agent modal and derives command help from capabilitie
   await expect(page.getByRole("textbox", { name: "Agent prompt" })).toHaveValue("draft survives refresh");
 });
 
+test("searches and switches between saved conversations", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("quasar:agent-conversations:v1", JSON.stringify({
+      version: 1,
+      conversations: [
+        {
+          id: "conversation:alpha",
+          title: "Alpha investigation",
+          createdAt: "2026-07-28T10:00:00.000Z",
+          updatedAt: "2026-07-28T10:05:00.000Z",
+          messages: [],
+          turns: [],
+          taskList: [],
+          draft: "alpha draft",
+          runId: null,
+          state: "idle"
+        },
+        {
+          id: "conversation:bravo",
+          title: "Bravo sources",
+          createdAt: "2026-07-28T09:00:00.000Z",
+          updatedAt: "2026-07-28T09:05:00.000Z",
+          messages: [],
+          turns: [],
+          taskList: [],
+          draft: "bravo draft",
+          runId: null,
+          state: "completed"
+        }
+      ]
+    }));
+    localStorage.setItem("quasar:agent-active-conversation:v1", "conversation:alpha");
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Open agent chat" }).click();
+
+  await page.getByRole("button", { name: /Alpha investigation/ }).click();
+  const switcher = page.getByRole("dialog", { name: "Switch conversation" });
+  await expect(switcher).toBeVisible();
+  await switcher.getByRole("textbox", { name: "Search conversations" }).fill("bravo");
+  await expect(switcher.getByRole("option", { name: /Bravo sources/ })).toBeVisible();
+  await switcher.getByRole("option", { name: /Bravo sources/ }).click();
+
+  await expect(page.getByRole("textbox", { name: "Agent prompt" })).toHaveValue("bravo draft");
+  await expect(page.getByRole("button", { name: /Bravo sources/ })).toBeVisible();
+});
+
 test("renders and restores a partial provider stream", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Open agent chat" }).click();
