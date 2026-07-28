@@ -20,4 +20,39 @@ describe("Cytoscape graph edge styling", () => {
     expect(graph.getElementById("undirected").pstyle("target-arrow-shape").value).toBe("none");
     graph.destroy();
   });
+
+  it("uses cheaper deterministic styles while interacting", () => {
+    const graph = cytoscape({
+      headless: true,
+      styleEnabled: true,
+      style: GRAPH_STYLE,
+      elements: [
+        { data: { id: "source", label: "Source" } },
+        { data: { id: "target", label: "Target" } },
+        { data: { id: "edge", source: "source", target: "target", directed: true, label: "linked" } }
+      ]
+    });
+    const edge = graph.getElementById("edge");
+    edge.addClass("interaction-detail");
+
+    expect(edge.pstyle("curve-style").value).toBe("straight");
+    expect(edge.pstyle("target-arrow-shape").value).toBe("none");
+    expect(edge.pstyle("label").strValue).toBe("");
+    graph.destroy();
+  });
+
+  it("restores labels for selected elements at low zoom", () => {
+    const graph = cytoscape({
+      headless: true,
+      styleEnabled: true,
+      style: GRAPH_STYLE,
+      elements: [{ data: { id: "node", label: "Visible" }, selected: true }]
+    });
+    const node = graph.getElementById("node");
+    node.addClass("zoom-labels-hidden");
+    node.select();
+
+    expect(node.pstyle("label").strValue).toBe("Visible");
+    graph.destroy();
+  });
 });
