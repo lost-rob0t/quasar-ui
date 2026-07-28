@@ -270,7 +270,6 @@ export function installGraphGestures(cy) {
   });
   cy.on("tap", "node", (event) => {
     if (event.target.data("unresolved")) return;
-    selectSingleNode(cy, event.target);
     state.armedNodeId = event.target.id();
   });
   cy.on("unselect", "node", (event) => {
