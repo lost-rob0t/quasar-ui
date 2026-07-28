@@ -56,6 +56,23 @@ describe("automaticNodePosition", () => {
     }
   });
 
+  it("samples the graph extent once for a synchronous addition burst", async () => {
+    const cy = createGraphAdapter({ headless: true, styleEnabled: false, elements: [] });
+    const nativeExtent = cy.extent.bind(cy);
+    let calls = 0;
+    cy.extent = (...args) => {
+      calls += 1;
+      return nativeExtent(...args);
+    };
+
+    cy.add(Array.from({ length: 100 }, (_, index) => ({ data: { id: `node-${index}` } })));
+    expect(calls).toBe(1);
+    await Promise.resolve();
+    cy.add({ data: { id: "later" } });
+    expect(calls).toBe(2);
+    cy.destroy();
+  });
+
   it("uses native left drag and native single-click selection", () => {
     const cy = createGraphAdapter({
       headless: true,

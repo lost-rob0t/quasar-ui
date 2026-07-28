@@ -93,6 +93,27 @@ describe("graph workspaces", () => {
     expect(activeGraphMembershipKey(switchActiveGraph(workspace, "all-documents"))).toBe("*");
   });
 
+  it("preserves projection references during viewport-only updates", () => {
+    let workspace = createGraph({}, "Case Alpha", { id: "case-alpha" });
+    workspace = addDocumentsToActiveGraph(workspace, ["a", "b"], {
+      positions: { a: { x: 10, y: 20 } },
+      selectedIds: ["a"]
+    });
+    const active = getActiveGraph(workspace);
+    const positions = active.positions;
+    const documentIds = active.documentIds;
+    const selectedIds = active.selectedIds;
+
+    const updated = updateActiveGraph(workspace, {
+      viewport: { pan: { x: 30, y: 40 }, zoom: 1.2 }
+    });
+    const next = getActiveGraph(updated);
+
+    expect(next.positions).toBe(positions);
+    expect(next.documentIds).toBe(documentIds);
+    expect(next.selectedIds).toBe(selectedIds);
+  });
+
   it("filters the corpus by active graph membership", () => {
     let workspace = createGraph({}, "Case Alpha", { id: "case-alpha" });
     workspace = addDocumentsToActiveGraph(workspace, ["a", "r"]);

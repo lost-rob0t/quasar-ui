@@ -15,6 +15,15 @@ import {
   touchDocument
 } from "starintel_doc";
 import { createGraphAdapter } from "../graph/GraphAdapter";
+import {
+  applyGraphDetailClasses,
+  rendererOptionsForGraph,
+  runExclusiveGraphLayout,
+  shouldRunInitialLayout,
+  sizeAwareLayoutOptions,
+  stopActiveGraphLayout
+} from "../graph/graph-performance";
+import { reconcileGraphElements } from "../graph/graph-reconciler";
 import { isGraphUserNavigationActive } from "../graph/user-navigation-guard";
 import { actorApplicability, isBuiltinActor } from "../lib/actors";
 import { connectedDocumentIds } from "../lib/document-delete";
@@ -49,6 +58,8 @@ function fitElements(cy, elements, padding, duration) {
 function GraphCanvas({
   graph,
   layout,
+  viewport,
+  workspaceId,
   selectedIds,
   onSelection,
   onMove,
@@ -65,7 +76,16 @@ function GraphCanvas({
   const lastTap = useRef({ id: null, at: 0 });
   const syncingSelection = useRef(false);
   const callbacks = useRef({});
+  const graphSize = useRef({ nodeCount: graph.nodes.length, edgeCount: graph.edges.length });
+  const initialGraphSize = useRef(graphSize.current);
+  const labelsRef = useRef(labels);
+  const detailState = useRef(null);
+  const flushViewportRef = useRef(null);
+  const retainedNodes = useRef(new Map());
+  const lastWorkspaceId = useRef(null);
   const navigate = useNavigate();
+  graphSize.current = { nodeCount: graph.nodes.length, edgeCount: graph.edges.length };
+  labelsRef.current = labels;
   callbacks.current = {
     onSelection,
     onMove,
@@ -79,6 +99,10 @@ function GraphCanvas({
   useEffect(() => {
     if (!containerRef.current) return undefined;
     const container = containerRef.current;
+    const rendererOptions = rendererOptionsForGraph(
+      initialGraphSize.current.nodeCount,
+      initialGraphSize.current.edgeCount
+    );
     const cy = createGraphAdapter({
       container,
       elements: [],
@@ -86,29 +110,79 @@ function GraphCanvas({
       minZoom: 0.05,
       maxZoom: 6,
       selectionType: "additive",
-      boxSelectionEnabled: true
+      boxSelectionEnabled: true,
+      ...rendererOptions
     });
     apiRef.current = cy;
-    const eh = cy.edgehandles({
-      canConnect: (sourceNode, targetNode) => (
-        sourceNode.id() !== targetNode.id()
-        && !sourceNode.data("unresolved")
-        && !targetNode.data("unresolved")
-      ),
-      edgeParams: (sourceNode, targetNode) => ({
-        data: {
-          id: `relation-preview-${sourceNode.id()}-${targetNode.id()}`,
-          source: sourceNode.id(),
-          target: targetNode.id()
-        }
-      }),
-      snap: true,
-      snapThreshold: 48,
-      hoverDelay: 120
-    });
-    edgeHandlesRef.current = eh;
+
+    let edgeHandles = null;
+    const ensureEdgeHandles = () => {
+      if (edgeHandles) return edgeHandles;
+      edgeHandles = cy.edgehandles({
+        canConnect: (sourceNode, targetNode) => (
+          sourceNode.id() !== targetNode.id()
+          && !sourceNode.data("unresolved")
+          && !targetNode.data("unresolved")
+        ),
+        edgeParams: (sourceNode, targetNode) => ({
+          data: {
+            id: `relation-preview-${sourceNode.id()}-${targetNode.id()}`,
+            source: sourceNode.id(),
+            target: targetNode.id()
+          }
+        }),
+        snap: true,
+        snapThreshold: 48,
+        hoverDelay: 120
+      });
+      return edgeHandles;
+    };
+    edgeHandlesRef.current = {
+      start: (node) => ensureEdgeHandles().start(node),
+      stop: () => edgeHandles?.stop?.()
+    };
 
     let viewportTimer = null;
+    let detailTimer = null;
+    let viewportDirty = false;
+    const applyDetail = (interacting) => {
+      detailState.current = applyGraphDetailClasses(cy, {
+        ...graphSize.current,
+        zoom: cy.zoom(),
+        interacting,
+        labels: labelsRef.current
+      }, detailState.current);
+    };
+    const flushViewport = () => {
+      if (!viewportDirty) return;
+      viewportDirty = false;
+      callbacks.current.onViewport({ pan: cy.pan(), zoom: cy.zoom() });
+    };
+    flushViewportRef.current = flushViewport;
+    const settleViewport = () => {
+      const activeNode = cy.$("node:selected").first();
+      if (activeNode.length) {
+        const bounds = container.getBoundingClientRect();
+        const rendered = activeNode.renderedPosition();
+        const clamped = clampRenderedPosition(rendered, bounds.width, bounds.height);
+        if (
+          !isGraphUserNavigationActive(cy)
+          && (clamped.x !== rendered.x || clamped.y !== rendered.y)
+        ) {
+          cy.panBy({ x: clamped.x - rendered.x, y: clamped.y - rendered.y });
+        }
+      }
+      applyDetail(false);
+      flushViewport();
+    };
+    const scheduleViewport = () => {
+      viewportDirty = true;
+      applyDetail(true);
+      clearTimeout(viewportTimer);
+      clearTimeout(detailTimer);
+      viewportTimer = setTimeout(settleViewport, 140);
+      detailTimer = setTimeout(() => applyDetail(false), 160);
+    };
     const contextPosition = (event) => {
       const rendered = event.renderedPosition || event.target?.renderedPosition?.() || { x: 12, y: 12 };
       const bounds = container.getBoundingClientRect();
@@ -141,30 +215,15 @@ function GraphCanvas({
       }
       lastTap.current = { id, at: now };
     });
+    cy.on("drag", "node", () => applyDetail(true));
     cy.on("dragfree", "node", (event) => {
       const bounds = container.getBoundingClientRect();
       const rendered = clampRenderedPosition(event.target.renderedPosition(), bounds.width, bounds.height);
       event.target.renderedPosition(rendered);
       callbacks.current.onMove(event.target.id(), event.target.position());
+      applyDetail(false);
     });
-    cy.on("pan zoom", () => {
-      clearTimeout(viewportTimer);
-      viewportTimer = setTimeout(() => {
-        const activeNode = cy.$("node:selected").first();
-        if (activeNode.length) {
-          const bounds = container.getBoundingClientRect();
-          const rendered = activeNode.renderedPosition();
-          const clamped = clampRenderedPosition(rendered, bounds.width, bounds.height);
-          if (
-            !isGraphUserNavigationActive(cy)
-            && (clamped.x !== rendered.x || clamped.y !== rendered.y)
-          ) {
-            cy.panBy({ x: clamped.x - rendered.x, y: clamped.y - rendered.y });
-          }
-        }
-        callbacks.current.onViewport({ pan: cy.pan(), zoom: cy.zoom() });
-      }, 140);
-    });
+    cy.on("pan zoom", scheduleViewport);
     cy.on("cxttap", (event) => {
       const context = contextPosition(event);
       if (event.target === cy) callbacks.current.onCanvasContext(context);
@@ -180,10 +239,14 @@ function GraphCanvas({
         bounds: context.bounds
       });
     });
+    applyDetail(false);
 
     return () => {
       clearTimeout(viewportTimer);
-      eh.destroy();
+      clearTimeout(detailTimer);
+      flushViewport();
+      flushViewportRef.current = null;
+      edgeHandles?.destroy();
       edgeHandlesRef.current = null;
       apiRef.current = null;
       cy.destroy();
@@ -199,19 +262,45 @@ function GraphCanvas({
   useEffect(() => {
     const cy = apiRef.current;
     if (!cy) return;
-    const previous = new Map(cy.nodes().map((node) => [node.id(), node.position()]));
-    cy.batch(() => {
-      cy.elements().remove();
-      cy.add(graph.elements);
-      cy.nodes().forEach((node) => {
-        const position = graph.nodes.find((item) => item.data.id === node.id())?.position || previous.get(node.id());
-        if (position) node.position(position);
-      });
-    });
-    if (graph.nodes.length && !graph.nodes.some((node) => node.position)) {
-      cy.layout({ name: layout || "cose", animate: false, padding: 50, randomize: true }).run();
+    const graphChanged = lastWorkspaceId.current !== workspaceId;
+    if (graphChanged) {
+      flushViewportRef.current?.();
+      retainedNodes.current = new Map();
     }
-  }, [apiRef, graph, layout]);
+    stopActiveGraphLayout(cy);
+
+    syncingSelection.current = true;
+    try {
+      reconcileGraphElements(cy, graph, { retainedNodes: retainedNodes.current });
+    } finally {
+      syncingSelection.current = false;
+    }
+    detailState.current = applyGraphDetailClasses(cy, {
+      ...graphSize.current,
+      zoom: cy.zoom(),
+      interacting: false,
+      labels: labelsRef.current
+    }, detailState.current);
+
+    if (graphChanged && viewport?.pan && Number.isFinite(viewport.zoom)) {
+      cy.viewport(viewport);
+    }
+
+    if (shouldRunInitialLayout({
+      nodeCount: graph.nodes.length,
+      hasAnySavedPosition: graph.nodes.some((node) => node.position),
+      graphChanged
+    })) {
+      runExclusiveGraphLayout(
+        cy,
+        sizeAwareLayoutOptions(layout || "organic", graph.nodes.length, {
+          animate: false,
+          padding: 50
+        })
+      );
+    }
+    lastWorkspaceId.current = workspaceId;
+  }, [apiRef, graph, layout, viewport, workspaceId]);
 
   useEffect(() => {
     const cy = apiRef.current;
@@ -219,10 +308,13 @@ function GraphCanvas({
     const selected = new Set(selectedIds);
     syncingSelection.current = true;
     try {
-      cy.nodes().forEach((node) => {
-        if (selected.has(node.id()) && !node.selected()) node.select();
-        if (!selected.has(node.id()) && node.selected()) node.unselect();
+      cy.$("node:selected").forEach((node) => {
+        if (!selected.has(node.id())) node.unselect();
       });
+      for (const id of selected) {
+        const node = cy.getElementById(id);
+        if (node.length && node.isNode() && !node.selected()) node.select();
+      }
     } finally {
       syncingSelection.current = false;
     }
@@ -231,8 +323,12 @@ function GraphCanvas({
   useEffect(() => {
     const cy = apiRef.current;
     if (!cy) return;
-    if (labels) cy.elements().removeClass("labels-hidden");
-    else cy.elements().addClass("labels-hidden");
+    detailState.current = applyGraphDetailClasses(cy, {
+      ...graphSize.current,
+      zoom: cy.zoom(),
+      interacting: false,
+      labels
+    }, detailState.current);
   }, [apiRef, labels]);
 
   return <div className="graph-canvas" ref={containerRef} onContextMenu={(event) => event.preventDefault()} />;
@@ -425,6 +521,7 @@ export default function GraphPage() {
   const location = useLocation();
   const {
     documents, workspace, selectedIds, selectedDocuments, select, persistWorkspace,
+    persistGraphViewport, persistGraphPosition,
     actors, runActor, settings, setNotice, graphs, activeGraph,
     addDocumentsToActiveGraph, removeDocumentsFromActiveGraph,
     createGraph, switchGraph, renameGraph, deleteGraph, clearGraph, execute,
@@ -464,6 +561,15 @@ export default function GraphPage() {
   const [runningActorId, setRunningActorId] = useState("");
   const [lastActorRun, setLastActorRun] = useState(null);
 
+  const positionsRef = useRef(workspace?.positions || {});
+  if (positionsRef.current !== workspace?.positions && workspace?.positions) {
+    positionsRef.current = workspace.positions;
+  }
+  const documentsById = useMemo(
+    () => new Map(documents.map((document) => [document._id, document])),
+    [documents]
+  );
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const membershipKey = activeGraphMembershipKey(workspace || {});
   const scopedDocuments = useMemo(() => {
     if (membershipKey === "*") return documents;
@@ -478,18 +584,33 @@ export default function GraphPage() {
   const predicates = useMemo(() => [...new Set(graph.edges.map((edge) => edge.data.predicate).filter(Boolean))].sort(), [graph.edges]);
   const graphDocumentIds = useMemo(() => new Set(graph.nodes.map((node) => node.data.id)), [graph.nodes]);
   const importedFocusIds = useMemo(() => importedGraphNodeIds(graph, importedIds), [graph, importedIds]);
-  const nodeOptions = graph.nodes.filter((node) => !node.data.unresolved).slice().sort((left, right) => left.data.label.localeCompare(right.data.label));
-  const selected = selectedDocuments.find((document) => graphDocumentIds.has(document._id));
+  const nodeOptions = useMemo(
+    () => graph.nodes
+      .filter((node) => !node.data.unresolved)
+      .slice()
+      .sort((left, right) => left.data.label.localeCompare(right.data.label)),
+    [graph.nodes]
+  );
+  const selected = selectedIds
+    .map((id) => documentsById.get(id))
+    .find((document) => document && graphDocumentIds.has(document._id));
   const actorEntries = useMemo(() => actors.map((actor) => ({
     actor,
     builtin: isBuiltinActor(actor),
     availability: actorApplicability(actor, selectedDocuments)
   })), [actors, selectedDocuments]);
 
-  const onMove = useMemo(() => (id, position) => {
-    persistWorkspace({ positions: { ...(workspace?.positions || {}), [id]: position } });
-  }, [persistWorkspace, workspace?.positions]);
-  const onViewport = useMemo(() => (viewport) => persistWorkspace({ viewport }), [persistWorkspace]);
+  const onMove = useMemo(
+    () => (id, position) => {
+      positionsRef.current = { ...positionsRef.current, [id]: position };
+      persistGraphPosition(id, position);
+    },
+    [persistGraphPosition]
+  );
+  const onViewport = useMemo(
+    () => (viewport) => persistGraphViewport(viewport),
+    [persistGraphViewport]
+  );
   const onSelection = useMemo(() => (ids) => select(ids), [select]);
 
   useEffect(() => {
@@ -541,7 +662,7 @@ export default function GraphPage() {
 
   useEffect(() => {
     const node = params.get("node");
-    const document = documents.find((item) => item._id === node);
+    const document = documentsById.get(node);
     if (!node || !document) return;
     if (!graphDocumentIds.has(node) && reviewStatus === "reviewed") {
       setReviewStatus("all");
@@ -554,7 +675,7 @@ export default function GraphPage() {
       fitElements(cy, element, 160, 350);
     }, 100);
     return () => clearTimeout(timer);
-  }, [documents, graphDocumentIds, params, reviewStatus, select]);
+  }, [documentsById, graphDocumentIds, params, reviewStatus, select]);
 
   function fit() {
     const cy = apiRef.current;
@@ -565,16 +686,19 @@ export default function GraphPage() {
     const cy = apiRef.current;
     if (!cy) return;
     persistWorkspace({ layout: name });
-    const options = name === "breadthfirst"
-      ? { name, directed: true, padding: 60, spacingFactor: 1.25, animate: true }
-      : { name, padding: 60, animate: true, randomize: name === "cose" };
-    const layout = cy.layout(options);
-    layout.on("layoutstop", () => {
-      const positions = { ...(workspace?.positions || {}) };
-      cy.nodes().forEach((node) => { positions[node.id()] = node.position(); });
-      persistWorkspace({ positions, layout: name });
-    });
-    layout.run();
+    runExclusiveGraphLayout(
+      cy,
+      sizeAwareLayoutOptions(name, cy.nodes().length, {
+        animate: true,
+        padding: 60
+      }),
+      () => {
+        const positions = { ...positionsRef.current };
+        cy.nodes().forEach((node) => { positions[node.id()] = node.position(); });
+        positionsRef.current = positions;
+        persistWorkspace({ positions, layout: name });
+      }
+    );
   }
 
   function calculatePaths() {
@@ -643,7 +767,7 @@ export default function GraphPage() {
   }
 
   function openNodeMenu(id, context) {
-    if (!selectedIds.includes(id)) select([id]);
+    if (!selectedIdSet.has(id)) select([id]);
     setMenuQuery("");
     setCanvasMenu({ kind: "node", id, ...context });
   }
@@ -699,6 +823,8 @@ export default function GraphPage() {
 
   function changeGraph(id) {
     try {
+      const cy = apiRef.current;
+      if (cy) persistGraphViewport({ pan: cy.pan(), zoom: cy.zoom() });
       switchGraph(id);
       setReviewStatus("all");
       clearFilters();
@@ -899,8 +1025,8 @@ export default function GraphPage() {
   }
 
   const menuMatches = (label) => !menuQuery.trim() || label.toLowerCase().includes(menuQuery.trim().toLowerCase());
-  const contextNode = canvasMenu?.kind === "node" ? documents.find((document) => document._id === canvasMenu.id) : null;
-  const contextRelation = canvasMenu?.kind === "edge" ? documents.find((document) => document._id === canvasMenu.id) : null;
+  const contextNode = canvasMenu?.kind === "node" ? documentsById.get(canvasMenu.id) || null : null;
+  const contextRelation = canvasMenu?.kind === "edge" ? documentsById.get(canvasMenu.id) || null : null;
   const contextResearchScope = contextNode && isResearchNode(contextNode) ? researchNodeScope(contextNode) : null;
   const selectedResearchScope = selected && isResearchNode(selected) ? researchNodeScope(selected) : null;
   const contextResearchStatus = contextNode?.data?.status || "draft";
@@ -958,6 +1084,8 @@ export default function GraphPage() {
           <GraphCanvas
             graph={visibleGraph}
             layout={workspace?.layout || "cose"}
+            viewport={workspace?.viewport || null}
+            workspaceId={activeGraph?.id || "all-documents"}
             selectedIds={selectedIds}
             onSelection={onSelection}
             onMove={onMove}

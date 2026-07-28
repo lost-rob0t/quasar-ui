@@ -161,11 +161,18 @@ function unresolvedNode(id) {
 }
 
 export function buildGraph(documents, positions = {}) {
-  const entities = documents.filter((document) => document.dtype !== "relation");
-  const nodes = new Map(entities.map((document) => [document._id, nodeData(document, positions[document._id])]));
+  const entities = [];
+  const relations = [];
+  for (const document of documents) {
+    (document.dtype === "relation" ? relations : entities).push(document);
+  }
+  const nodes = new Map();
+  for (const document of entities) {
+    nodes.set(document._id, nodeData(document, positions[document._id]));
+  }
   const edges = [];
 
-  for (const relation of documents.filter((document) => document.dtype === "relation")) {
+  for (const relation of relations) {
     const { subjects, objects, predicate, directed, confidence } = relationParts(relation);
     for (const source of subjects) {
       for (const target of objects) {

@@ -2,7 +2,15 @@ const DEFAULT_GRAPH_ID = "all-documents";
 const MAX_GRAPHS = 100;
 
 function uniqueStrings(values) {
-  return [...new Set((values || []).map(String).filter(Boolean))];
+  const normalized = [...new Set((values || []).map(String).filter(Boolean))];
+  if (
+    Array.isArray(values)
+    && values.length === normalized.length
+    && values.every((value, index) => value === normalized[index])
+  ) {
+    return values;
+  }
+  return normalized;
 }
 
 function cleanPositions(value) {
@@ -11,29 +19,68 @@ function cleanPositions(value) {
 
 function cleanGroups(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return Object.fromEntries(Object.entries(value).map(([id, group]) => [id, {
-    id,
-    name: String(group?.name || id),
-    documentIds: uniqueStrings(group?.documentIds),
-    collapsed: Boolean(group?.collapsed)
-  }]));
+  let changed = false;
+  const groups = {};
+  for (const [id, group] of Object.entries(value)) {
+    const documentIds = uniqueStrings(group?.documentIds);
+    const normalized = {
+      id,
+      name: String(group?.name || id),
+      documentIds,
+      collapsed: Boolean(group?.collapsed)
+    };
+    if (
+      group?.id === normalized.id
+      && group?.name === normalized.name
+      && group?.documentIds === documentIds
+      && group?.collapsed === normalized.collapsed
+    ) {
+      groups[id] = group;
+    } else {
+      groups[id] = normalized;
+      changed = true;
+    }
+  }
+  return changed ? groups : value;
 }
 
 function normalizeGraph(graph, fallback = {}) {
   const documentIds = graph?.documentIds === null
     ? null
     : uniqueStrings(graph?.documentIds || fallback.documentIds || []);
-  const normalized = {
-    id: String(graph?.id || fallback.id || "").trim(),
-    name: String(graph?.name || fallback.name || "Untitled graph").trim(),
+  const positions = cleanPositions(graph?.positions || fallback.positions);
+  const viewport = graph?.viewport || fallback.viewport || null;
+  const selectedIds = uniqueStrings(graph?.selectedIds || fallback.selectedIds || []);
+  const id = String(graph?.id || fallback.id || "").trim();
+  const name = String(graph?.name || fallback.name || "Untitled graph").trim();
+  const layout = String(graph?.layout || fallback.layout || "cose");
+  const hasGroups = Boolean(graph?.groups || fallback.groups);
+  const groups = hasGroups ? cleanGroups(graph?.groups || fallback.groups) : undefined;
+
+  if (
+    graph
+    && graph.id === id
+    && graph.name === name
+    && graph.documentIds === documentIds
+    && graph.positions === positions
+    && graph.viewport === viewport
+    && graph.layout === layout
+    && graph.selectedIds === selectedIds
+    && (!hasGroups || graph.groups === groups)
+  ) {
+    return graph;
+  }
+
+  return {
+    id,
+    name,
     documentIds,
-    positions: cleanPositions(graph?.positions || fallback.positions),
-    viewport: graph?.viewport || fallback.viewport || null,
-    layout: String(graph?.layout || fallback.layout || "cose"),
-    selectedIds: uniqueStrings(graph?.selectedIds || fallback.selectedIds || [])
+    positions,
+    viewport,
+    layout,
+    selectedIds,
+    ...(hasGroups ? { groups } : {})
   };
-  if (graph?.groups || fallback.groups) normalized.groups = cleanGroups(graph?.groups || fallback.groups);
-  return normalized;
 }
 
 function generatedGraphId(name) {

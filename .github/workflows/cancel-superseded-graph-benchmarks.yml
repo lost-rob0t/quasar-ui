@@ -1,0 +1,30 @@
+name: Cancel superseded graph benchmarks
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cancel:
+    if: github.event.pull_request.head.ref == 'perf/large-graph-responsiveness'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel obsolete benchmark runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          for run_id in \
+            30404935026 \
+            30405798252 \
+            30405931002 \
+            30406341588 \
+            30406398868 \
+            30407157667
+          do
+            gh api --method POST "repos/$GH_REPO/actions/runs/$run_id/cancel" || true
+          done

@@ -58,8 +58,38 @@ export const GRAPH_STYLE = [
     }
   },
   { selector: "edge[!directed]", style: { "target-arrow-shape": "none" } },
+  {
+    selector: "edge.detail-reduced",
+    style: {
+      "curve-style": "straight",
+      "text-background-opacity": 0,
+      "arrow-scale": 0.55
+    }
+  },
+  {
+    selector: "edge.detail-minimal",
+    style: {
+      "curve-style": "straight",
+      "target-arrow-shape": "none",
+      label: "",
+      width: 1
+    }
+  },
+  {
+    selector: "edge.interaction-detail",
+    style: {
+      "curve-style": "straight",
+      "target-arrow-shape": "none",
+      label: "",
+      "text-background-opacity": 0
+    }
+  },
+  { selector: ".zoom-labels-hidden", style: { label: "" } },
   { selector: "edge:selected", style: { width: 3, "line-color": "#38bdf8", "target-arrow-color": "#38bdf8" } },
   { selector: "edge.path", style: { width: 4, "line-color": "#f59e0b", "target-arrow-color": "#f59e0b", "z-index": 20 } },
+  { selector: "node:selected.zoom-labels-hidden, node.path.zoom-labels-hidden", style: { label: "data(label)" } },
+  { selector: "node[dtype = 'research-node'].zoom-labels-hidden", style: { label: "data(researchLabel)" } },
+  { selector: "edge:selected.zoom-labels-hidden, edge.path.zoom-labels-hidden", style: { label: "data(label)" } },
   {
     selector: ".eh-handle",
     style: {

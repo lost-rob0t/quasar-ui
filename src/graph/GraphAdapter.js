@@ -65,10 +65,19 @@ function installAdaptiveWheelSensitivity(cy, container, allowZoom) {
   const renderer = cy.renderer?.();
   if (!renderer) return () => {};
 
+  let renderedNodeSize = TARGET_RENDERED_NODE_SIZE;
+  let sampledAt = Number.NEGATIVE_INFINITY;
   const updateWheelSensitivity = (event) => {
-    const sensitivity = adaptiveWheelSensitivity(sampleRenderedNodeSize(cy), event.deltaY);
+    const now = performance.now();
+    if (now - sampledAt >= 120) {
+      renderedNodeSize = sampleRenderedNodeSize(cy);
+      sampledAt = now;
+    }
+    const sensitivity = adaptiveWheelSensitivity(renderedNodeSize, event.deltaY);
     renderer.wheelSensitivity = sensitivity;
-    if (container.dataset) container.dataset.graphWheelSensitivity = String(sensitivity);
+    if (import.meta.env.DEV && container.dataset) {
+      container.dataset.graphWheelSensitivity = String(sensitivity);
+    }
   };
 
   container.addEventListener("wheel", updateWheelSensitivity, { capture: true, passive: true });
@@ -97,6 +106,20 @@ function hasPosition(node) {
 
 function installAutomaticNodePlacement(cy) {
   let automaticIndex = 0;
+  let burstExtent = null;
+  let resetScheduled = false;
+
+  const placementExtent = () => {
+    if (!burstExtent) burstExtent = cy.extent();
+    if (!resetScheduled) {
+      resetScheduled = true;
+      queueMicrotask(() => {
+        burstExtent = null;
+        resetScheduled = false;
+      });
+    }
+    return burstExtent;
+  };
 
   cy.on("remove", "node", () => {
     if (cy.nodes().length === 0) automaticIndex = 0;
@@ -105,7 +128,7 @@ function installAutomaticNodePlacement(cy) {
   cy.on("add", "node", (event) => {
     const node = event.target;
     if (hasPosition(node)) return;
-    node.position(automaticNodePosition(automaticIndex, cy.extent()));
+    node.position(automaticNodePosition(automaticIndex, placementExtent()));
     automaticIndex += 1;
   });
 
@@ -126,6 +149,11 @@ function installViewportInput(cy, options) {
   if (!container?.addEventListener) return cy;
 
   const restoreWheelSensitivity = installAdaptiveWheelSensitivity(cy, container, allowZoom);
+  if (!import.meta.env.DEV) {
+    cy.one("destroy", restoreWheelSensitivity);
+    return cy;
+  }
+
   const syncViewportState = () => {
     const pan = cy.pan();
     container.dataset.graphPanX = String(pan.x);

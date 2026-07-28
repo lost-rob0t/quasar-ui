@@ -1,0 +1,54 @@
+name: Graph performance
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "graph-benchmark.html"
+      - "src/benchmark/**"
+      - "src/components/GraphPage.jsx"
+      - "src/graph/**"
+      - "src/lib/graph*.js"
+      - "src/store.jsx"
+      - "scripts/bench-graph*.mjs"
+      - "benchmarks/**"
+      - "package.json"
+      - ".github/workflows/graph-performance.yml"
+
+concurrency:
+  group: graph-performance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run deterministic graph benchmark
+        run: npm run bench:graph
+      - name: Compare checked baseline
+        run: |
+          if test -f benchmarks/baseline/graph-baseline.json; then
+            npm run bench:graph:compare
+          else
+            echo "No checked performance baseline yet; comparison deferred."
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: graph-performance-results
+          path: |
+            benchmarks/results/*.json
+            benchmarks/results/*.md
+            benchmarks/results/traces/*.zip
+          retention-days: 14

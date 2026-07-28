@@ -2,6 +2,7 @@ import cytoscape from "cytoscape";
 import { describe, expect, it } from "vitest";
 import {
   MALTEGO_LAYOUTS,
+  maltegoLayoutOptions,
   normalizeMaltegoLayout,
   installMaltegoLayouts
 } from "../../src/graph/maltego-layouts";
@@ -39,6 +40,16 @@ describe("Maltego graph layouts", () => {
     expect(normalizeMaltegoLayout("breadthfirst")).toBe("hierarchical");
     expect(normalizeMaltegoLayout("concentric")).toBe("circular");
     expect(normalizeMaltegoLayout("grid")).toBe("orthogonal");
+  });
+
+  it("preserves bounded force-layout iteration options", () => {
+    const cy = createGraph();
+    expect(maltegoLayoutOptions(cy, { name: "interactive-organic", numIter: 125 })).toMatchObject({
+      name: "cose",
+      randomize: false,
+      numIter: 125
+    });
+    cy.destroy();
   });
 
   it.each(MALTEGO_LAYOUTS)("runs $label without invalid positions", ({ id }) => {
