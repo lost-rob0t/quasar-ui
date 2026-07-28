@@ -189,7 +189,7 @@ export function maltegoLayoutOptions(cy, options = {}) {
         ...options,
         name: "cose",
         eles: elements,
-        randomize: true,
+        randomize: options.randomize ?? true,
         idealEdgeLength: () => 90,
         nodeRepulsion: () => 5200,
         componentSpacing: 90,
@@ -200,12 +200,12 @@ export function maltegoLayoutOptions(cy, options = {}) {
         ...options,
         name: "cose",
         eles: elements,
-        randomize: false,
+        randomize: options.randomize ?? false,
         idealEdgeLength: () => 90,
         nodeRepulsion: () => 4600,
         componentSpacing: 100,
         initialTemp: 60,
-        numIter: 450,
+        numIter: options.numIter ?? 450,
         padding: options.padding ?? 60
       };
     case "orthogonal":
