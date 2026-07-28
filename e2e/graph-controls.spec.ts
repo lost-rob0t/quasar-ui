@@ -1,8 +1,9 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
+type Point = { x: number; y: number };
 type GraphSnapshot = {
-  node: { x: number; y: number };
-  pan: { x: number; y: number };
+  node: Point;
+  pan: Point;
   zoom: number;
 };
 
@@ -27,11 +28,20 @@ async function graphSnapshot(canvas: Locator): Promise<GraphSnapshot> {
   });
 }
 
-function backgroundPoint(node: { x: number; y: number }, width: number, height: number) {
+function backgroundPoint(node: Point, width: number, height: number): Point {
   return {
     x: node.x < width / 2 ? width - 100 : 100,
     y: height - 100
   };
+}
+
+function absolutePoint(origin: Point, point: Point): Point {
+  return { x: origin.x + point.x, y: origin.y + point.y };
+}
+
+async function clickGraphPoint(page: Page, origin: Point, point: Point, button: "left" | "right" = "left") {
+  const absolute = absolutePoint(origin, point);
+  await page.mouse.click(absolute.x, absolute.y, { button });
 }
 
 test("uses left click select, left drag pan, and right drag box select", async ({ page }) => {
@@ -67,7 +77,8 @@ test("uses left click select, left drag pan, and right drag box select", async (
   const origin = { x: bounds?.x || 0, y: bounds?.y || 0 };
 
   const beforeZoom = await graphSnapshot(canvas);
-  await page.mouse.move(origin.x + beforeZoom.node.x, origin.y + beforeZoom.node.y);
+  const zoomTarget = absolutePoint(origin, beforeZoom.node);
+  await page.mouse.move(zoomTarget.x, zoomTarget.y);
   await page.mouse.wheel(0, 900);
   await page.waitForTimeout(200);
   const afterZoom = await graphSnapshot(canvas);
@@ -77,14 +88,16 @@ test("uses left click select, left drag pan, and right drag box select", async (
   expect(settledZoom.zoom).toBeCloseTo(afterZoom.zoom, 5);
 
   let background = backgroundPoint(settledZoom.node, width, height);
-  await canvas.click({ position: background });
+  await clickGraphPoint(page, origin, background);
   await expect(selectionHeading).toContainText("0");
 
-  await canvas.click({ position: settledZoom.node });
+  const nodeAfterBackground = await graphSnapshot(canvas);
+  await clickGraphPoint(page, origin, nodeAfterBackground.node);
   await expect(selectionHeading).toContainText("1");
 
-  background = backgroundPoint(settledZoom.node, width, height);
-  await canvas.click({ position: background });
+  const nodeBeforePan = await graphSnapshot(canvas);
+  background = backgroundPoint(nodeBeforePan.node, width, height);
+  await clickGraphPoint(page, origin, background);
   await expect(selectionHeading).toContainText("0");
 
   const beforePan = await graphSnapshot(canvas);
@@ -99,9 +112,11 @@ test("uses left click select, left drag pan, and right drag box select", async (
     y: panEnd.y - panStart.y
   };
 
-  await page.mouse.move(origin.x + panStart.x, origin.y + panStart.y);
+  const absolutePanStart = absolutePoint(origin, panStart);
+  const absolutePanEnd = absolutePoint(origin, panEnd);
+  await page.mouse.move(absolutePanStart.x, absolutePanStart.y);
   await page.mouse.down({ button: "left" });
-  await page.mouse.move(origin.x + panEnd.x, origin.y + panEnd.y, { steps: 12 });
+  await page.mouse.move(absolutePanEnd.x, absolutePanEnd.y, { steps: 12 });
   await page.mouse.up({ button: "left" });
   await page.waitForTimeout(500);
 
@@ -111,30 +126,35 @@ test("uses left click select, left drag pan, and right drag box select", async (
   expect(afterPan.node.x - beforePan.node.x).toBeCloseTo(expectedShift.x, 0);
   expect(afterPan.node.y - beforePan.node.y).toBeCloseTo(expectedShift.y, 0);
 
-  await canvas.click({ button: "right", position: beforePan.node });
+  background = backgroundPoint(afterPan.node, width, height);
+  await clickGraphPoint(page, origin, background, "right");
   await expect(page.getByRole("menu", { name: "canvas actions" })).toBeVisible();
   await page.keyboard.press("Escape");
 
-  await canvas.click({ button: "right", position: afterPan.node });
+  const currentNode = await graphSnapshot(canvas);
+  await clickGraphPoint(page, origin, currentNode.node, "right");
   await expect(page.getByRole("menu", { name: "node actions" })).toBeVisible();
   await expect(selectionHeading).toContainText("1");
   await page.keyboard.press("Escape");
 
-  background = backgroundPoint(afterPan.node, width, height);
-  await canvas.click({ position: background });
+  const nodeBeforeBox = await graphSnapshot(canvas);
+  background = backgroundPoint(nodeBeforeBox.node, width, height);
+  await clickGraphPoint(page, origin, background);
   await expect(selectionHeading).toContainText("0");
 
   const boxStart = {
-    x: Math.max(5, afterPan.node.x - 70),
-    y: Math.max(5, afterPan.node.y - 70)
+    x: Math.max(5, nodeBeforeBox.node.x - 70),
+    y: Math.max(5, nodeBeforeBox.node.y - 70)
   };
   const boxEnd = {
-    x: Math.min(width - 5, afterPan.node.x + 70),
-    y: Math.min(height - 5, afterPan.node.y + 70)
+    x: Math.min(width - 5, nodeBeforeBox.node.x + 70),
+    y: Math.min(height - 5, nodeBeforeBox.node.y + 70)
   };
-  await page.mouse.move(origin.x + boxStart.x, origin.y + boxStart.y);
+  const absoluteBoxStart = absolutePoint(origin, boxStart);
+  const absoluteBoxEnd = absolutePoint(origin, boxEnd);
+  await page.mouse.move(absoluteBoxStart.x, absoluteBoxStart.y);
   await page.mouse.down({ button: "right" });
-  await page.mouse.move(origin.x + boxEnd.x, origin.y + boxEnd.y, { steps: 10 });
+  await page.mouse.move(absoluteBoxEnd.x, absoluteBoxEnd.y, { steps: 10 });
   await page.mouse.up({ button: "right" });
 
   await expect(selectionHeading).toContainText("1");
