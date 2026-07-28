@@ -4,6 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 
 const context = vi.hoisted(() => ({ current: null }));
 vi.mock("../../store", () => ({ useQuasar: () => context.current }));
+vi.mock("../../lib/operations", () => ({
+  operation: {
+    save: (document) => ({ type: "save-document", document })
+  }
+}));
 
 import CompactResearchNodeEditor, { parseResearchNodeIds } from "./CompactResearchNodeEditor";
 
