@@ -21,6 +21,19 @@ function keyFingerprint(value) {
   return (state >>> 0).toString(16).padStart(8, "0");
 }
 
+function writeLog(logger, level, message, details) {
+  const sink = logger?.[level] || logger?.log;
+  if (typeof sink === "function") sink.call(logger, message, details);
+}
+
+function errorDetails(error) {
+  return {
+    name: error?.name || "Error",
+    message: error?.message || String(error),
+    stack: error?.stack || ""
+  };
+}
+
 export function describeMelissaLicenseKey(value) {
   const licenseKey = normalizeMelissaLicenseKey(value);
   return {
@@ -56,42 +69,95 @@ function transmissionCodes(value) {
 
 export async function testMelissaPersonatorSearch(
   licenseKey,
-  { fetchImpl = fetchMelissaDirect, record = MELISSA_PERSONATOR_TEST_RECORD } = {}
+  {
+    fetchImpl = fetchMelissaDirect,
+    record = MELISSA_PERSONATOR_TEST_RECORD,
+    logger = console
+  } = {}
 ) {
   if (typeof fetchImpl !== "function") throw new Error("Browser fetch is unavailable");
 
   const url = buildMelissaPersonatorTestUrl(licenseKey, record);
-  const response = await fetchImpl(url.href, {
+  const endpoint = `${url.origin}${url.pathname}`;
+  const key = describeMelissaLicenseKey(licenseKey);
+  const startedAt = Date.now();
+
+  writeLog(logger, "info", "[Melissa Personator Test] request", {
     method: "GET",
-    headers: { accept: "application/json" },
-    credentials: "omit",
-    cache: "no-store"
+    endpoint,
+    sample: { ...record },
+    key
   });
-  const raw = await response.text();
-  let body;
+
   try {
-    body = raw ? JSON.parse(raw) : {};
-  } catch {
-    throw new Error(`Melissa returned non-JSON HTTP ${response.status}: ${raw.slice(0, 160)}`);
+    const response = await fetchImpl(url.href, {
+      method: "GET",
+      headers: { accept: "application/json" },
+      credentials: "omit",
+      cache: "no-store"
+    });
+    const raw = await response.text();
+    const responseMeta = {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      contentType: response.headers?.get?.("content-type") || "",
+      bodyCharacters: raw.length,
+      elapsedMs: Date.now() - startedAt
+    };
+
+    writeLog(logger, "info", "[Melissa Personator Test] response", responseMeta);
+
+    let body;
+    try {
+      body = raw ? JSON.parse(raw) : {};
+    } catch {
+      const error = new Error(
+        `Melissa returned non-JSON HTTP ${response.status}: ${raw.slice(0, 160)}`
+      );
+      error.response = { ...responseMeta, bodyPreview: raw.slice(0, 500) };
+      throw error;
+    }
+
+    writeLog(logger, "info", "[Melissa Personator Test] response body", body);
+
+    const transmissionResults = String(
+      body?.TransmissionResults || body?.TransmissionResult || ""
+    ).trim();
+    const errorCode = transmissionCodes(transmissionResults).find((code) =>
+      /^(?:GE|SE)\d{2}$/.test(code)
+    );
+    const records = Array.isArray(body?.Records) ? body.Records : [];
+    const result = {
+      ok: response.ok && !errorCode,
+      httpStatus: response.status,
+      transmissionResults: transmissionResults || "(missing)",
+      errorCode: errorCode || "",
+      totalRecords: Number(body?.TotalRecords ?? records.length) || 0,
+      version: String(body?.Version || ""),
+      key,
+      endpoint,
+      sample: { ...record }
+    };
+
+    writeLog(
+      logger,
+      result.ok ? "info" : "warn",
+      result.ok
+        ? "[Melissa Personator Test] credential accepted"
+        : "[Melissa Personator Test] credential rejected",
+      result
+    );
+
+    return result;
+  } catch (error) {
+    writeLog(logger, "error", "[Melissa Personator Test] failed", {
+      endpoint,
+      elapsedMs: Date.now() - startedAt,
+      key,
+      response: error?.response || null,
+      error: errorDetails(error)
+    });
+    throw error;
   }
-
-  const transmissionResults = String(
-    body?.TransmissionResults || body?.TransmissionResult || ""
-  ).trim();
-  const errorCode = transmissionCodes(transmissionResults).find((code) =>
-    /^(?:GE|SE)\d{2}$/.test(code)
-  );
-  const records = Array.isArray(body?.Records) ? body.Records : [];
-
-  return {
-    ok: response.ok && !errorCode,
-    httpStatus: response.status,
-    transmissionResults: transmissionResults || "(missing)",
-    errorCode: errorCode || "",
-    totalRecords: Number(body?.TotalRecords ?? records.length) || 0,
-    version: String(body?.Version || ""),
-    key: describeMelissaLicenseKey(licenseKey),
-    endpoint: `${url.origin}${url.pathname}`,
-    sample: { ...record }
-  };
 }
