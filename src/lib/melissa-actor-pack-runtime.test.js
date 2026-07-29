@@ -58,19 +58,22 @@ describe("Melissa runtime actor pack", () => {
 
   it("does not call Melissa when a target would auto-run the actor", async () => {
     const runtime = api();
-    const result = await implementation()({
-      selection: [
-        input({
-          _id: "starintel:target:auto-run",
-          dtype: "target",
-          title: "Automatic target",
-          data: {
-            actor: "quasar.actor.melissa-personator-search",
-            target: "Erica Porter"
-          }
-        })
-      ]
-    }, runtime);
+    const result = await implementation()(
+      {
+        selection: [
+          input({
+            _id: "starintel:target:auto-run",
+            dtype: "target",
+            title: "Automatic target",
+            data: {
+              actor: "quasar.actor.melissa-personator-search",
+              target: "Erica Porter"
+            }
+          })
+        ]
+      },
+      runtime
+    );
 
     expect(runtime.network.fetch).not.toHaveBeenCalled();
     expect(result.documents).toEqual([]);
