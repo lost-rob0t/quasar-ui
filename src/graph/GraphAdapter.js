@@ -143,7 +143,7 @@ function installViewportInput(cy, options) {
 
 function exposeDevelopmentGraph(cy) {
   const container = cy.container?.();
-  if (!import.meta.env.DEV || !container) return;
+  if ((!import.meta.env.DEV && import.meta.env.VITE_E2E !== "true") || !container) return;
 
   Object.defineProperty(container, "__quasarGraphAdapter", {
     configurable: true,
