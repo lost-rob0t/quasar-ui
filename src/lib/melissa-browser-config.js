@@ -38,10 +38,7 @@ const MELISSA_HOSTS = new Set([
   "globalip.melissadata.net"
 ]);
 
-const MELISSA_KEY_LABEL =
-  /^(?:melissa\s+)?(?:api\s+key|license\s+key(?:\s+using\s+credits)?|customer\s+id)\b(?:\s*[:=]\s*|\s+)/i;
-const MELISSA_COPY_LABEL = /^(?:copy|copied)\b\s*/i;
-const INVISIBLE_KEY_CHARACTERS = /[\u200b-\u200d\u2060\ufeff]/g;
+const INVISIBLE_KEY_CHARACTERS = /[\u200b-\u200d\u2060\ufeff]/gu;
 
 let originalFetch = null;
 let installed = false;
@@ -53,17 +50,17 @@ function finiteInteger(value, fallback, minimum, maximum) {
 }
 
 export function normalizeMelissaLicenseKey(value) {
-  let key = String(value ?? "")
-    .replace(INVISIBLE_KEY_CHARACTERS, "")
-    .trim();
-  key = key.replace(MELISSA_KEY_LABEL, "").replace(MELISSA_COPY_LABEL, "").trim();
-  if (
-    key.length >= 2 &&
-    ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'")))
-  ) {
-    key = key.slice(1, -1);
-  }
-  return key.replace(INVISIBLE_KEY_CHARACTERS, "").replace(/\s+/gu, "");
+  return String(value ?? "");
+}
+
+export function inspectMelissaLicenseKey(value) {
+  const key = normalizeMelissaLicenseKey(value);
+  return {
+    length: key.length,
+    leadingOrTrailingWhitespace: key !== key.trim(),
+    whitespaceCount: (key.match(/\s/gu) || []).length,
+    invisibleCount: (key.match(INVISIBLE_KEY_CHARACTERS) || []).length
+  };
 }
 
 export function normalizeMelissaConfig(value = {}) {
