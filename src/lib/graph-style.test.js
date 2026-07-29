@@ -25,8 +25,10 @@ describe("Cytoscape graph styling", () => {
   it("assigns centered SVG icons to document type nodes", () => {
     const baseNodeRule = GRAPH_STYLE.find((rule) => rule.selector === "node");
     const personRule = GRAPH_STYLE.find((rule) => rule.selector === "node[dtype = 'person']");
-    const researchRule = GRAPH_STYLE.find(
-      (rule) => rule.selector === "node[dtype = 'research-node']"
+    const researchSizingRule = GRAPH_STYLE.find(
+      (rule) =>
+        rule.selector === "node[dtype = 'research-node']" &&
+        rule.style["background-width"] === 24
     );
 
     expect(baseNodeRule?.style).toMatchObject({
@@ -36,7 +38,7 @@ describe("Cytoscape graph styling", () => {
       "background-repeat": "no-repeat"
     });
     expect(personRule?.style["background-image"]).toBe(documentTypeIcon("person"));
-    expect(researchRule?.style).toMatchObject({
+    expect(researchSizingRule?.style).toMatchObject({
       "background-width": 24,
       "background-height": 24
     });
