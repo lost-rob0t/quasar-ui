@@ -38,6 +38,7 @@ export const MELISSA_CONFIGURATION_FIELDS = Object.freeze([
   { key: "consumerOptions", label: "Consumer options", type: "text" },
   { key: "consumerColumns", label: "Consumer columns", type: "text" },
   { key: "personatorColumns", label: "Personator Search columns", type: "text" },
+  { key: "personatorOptions", label: "Personator Search options", type: "text" },
   { key: "addressOptions", label: "Global Address options", type: "text" },
   { key: "nameOptions", label: "Global Name options", type: "text" },
   { key: "phoneOptions", label: "Global Phone options", type: "text" },
