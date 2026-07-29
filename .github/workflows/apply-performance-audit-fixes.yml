@@ -1,0 +1,52 @@
+name: Apply performance audit fixes
+
+on:
+  push:
+    branches:
+      - agent/performance-audit-fixes
+    paths:
+      - scripts/apply-performance-audit-fixes.py
+      - .github/workflows/apply-performance-audit-fixes.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/performance-audit-fixes
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: npm
+      - run: python3 scripts/apply-performance-audit-fixes.py
+      - run: npm ci
+      - name: Format touched files
+        run: |
+          npx prettier --write \
+            src/components/GraphPage.jsx \
+            src/graph/graph-reconciler.js \
+            src/graph/graph-reconciler.test.js \
+            scripts/bench-graph-compare.mjs \
+            scripts/bench-graph-report.mjs \
+            .github/workflows/graph-performance.yml
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Generate reviewed branch baseline
+        run: npm run bench:graph:update
+      - name: Validate generated baseline
+        run: test -s benchmarks/baseline/graph-baseline.json
+      - name: Commit fixes and baseline
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Fix performance branch audit findings"
+          git push origin HEAD:agent/performance-audit-fixes
