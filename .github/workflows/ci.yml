@@ -22,6 +22,20 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Format Melissa reimplementation sources
+        run: |
+          npx prettier --write docs/MELISSA_ACTORS.md
+          npx prettier --write src/components/MelissaActorBridge.jsx
+          npx prettier --write src/lib/melissa-personator-search.js
+      - name: Upload formatted Melissa sources
+        uses: actions/upload-artifact@v7
+        with:
+          name: formatted-melissa-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            docs/MELISSA_ACTORS.md
+            src/components/MelissaActorBridge.jsx
+            src/lib/melissa-personator-search.js
+          retention-days: 1
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
