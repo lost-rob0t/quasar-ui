@@ -1,3 +1,4 @@
+import { isMelissaActor, loadActorConfiguration } from "./actor-configuration";
 import { normalizeActorManifest } from "./actors-core";
 import { browserActorManifestFromLegacy, createBrowserActorRuntime } from "./browser-actor-runtime";
 import { createOpaqueOriginBrowserActorRuntime } from "./opaque-origin-actor-runtime";
@@ -8,6 +9,19 @@ const MAX_ACTOR_DOCUMENTS = 1_024;
 const ACTOR_RESPONSE_LIMIT = 1_048_576;
 const FORBIDDEN_ACTOR_HEADER =
   /^(?:authorization|cookie|proxy-|sec-|host$|origin$|referer$|x-api-key$)/i;
+const MELISSA_HOSTS = new Set([
+  "personatorsearch.melissadata.net",
+  "search.melissadata.net",
+  "personator.melissadata.net",
+  "globalpersonator.melissadata.net",
+  "reversegeo.melissadata.net",
+  "property.melissadata.net",
+  "address.melissadata.net",
+  "globalname.melissadata.net",
+  "globalphone.melissadata.net",
+  "globalemail.melissadata.net",
+  "globalip.melissadata.net"
+]);
 
 function assertLiteralPublicHost(url) {
   const host = url.hostname.toLowerCase();
@@ -51,8 +65,28 @@ async function readBoundedActorBody(response, signal) {
   return bytes;
 }
 
-async function networkFetchService(payload, { signal }) {
-  const url = new URL(String(payload?.url || payload || ""));
+export function actorConfigurationForExecution(actor, trusted) {
+  if (isMelissaActor(actor) && !trusted) return {};
+  return loadActorConfiguration(actor);
+}
+
+export function configureMelissaActorUrl(url, actor, configuration, trusted) {
+  if (!trusted || !isMelissaActor(actor) || !MELISSA_HOSTS.has(url.hostname.toLowerCase())) {
+    return url;
+  }
+  const licenseKey = String(configuration?.licenseKey || "").trim();
+  if (!licenseKey) throw new Error("Configure a Melissa license key before running Melissa actors");
+  url.searchParams.set("id", licenseKey);
+  return url;
+}
+
+async function networkFetchService(payload, { signal, actor, configuration, trusted }) {
+  const url = configureMelissaActorUrl(
+    new URL(String(payload?.url || payload || "")),
+    actor,
+    configuration,
+    trusted
+  );
   if (url.protocol !== "https:") throw new Error("Actor network.fetch requires HTTPS");
   assertLiteralPublicHost(url);
   const options = payload?.options && typeof payload.options === "object" ? payload.options : {};
@@ -127,10 +161,18 @@ export async function runBrowserActor(
     throw new TypeError(`Actor timeout must be an integer from 1 to ${MAX_ACTOR_TIMEOUT_MS}`);
   }
 
+  const configuration = actorConfigurationForExecution(actor, trusted);
+  const executionContext = { ...context, configuration };
   const services = {
     "documents.get": documentGetService,
     "documents.query": documentQueryService,
-    "network.fetch": networkFetchService,
+    "network.fetch": (payload, serviceContext) =>
+      networkFetchService(payload, {
+        ...serviceContext,
+        actor,
+        configuration,
+        trusted
+      }),
     "browser.open": browserOpenService,
     "events.emit": eventEmitService
   };
@@ -152,7 +194,7 @@ export async function runBrowserActor(
         )
       }
     }),
-    context,
+    executionContext,
     {
       timeoutMs: timeout,
       signal,

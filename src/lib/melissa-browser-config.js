@@ -39,7 +39,8 @@ const MELISSA_HOSTS = new Set([
 ]);
 
 const MELISSA_KEY_LABEL =
-  /^(?:melissa\s+)?(?:api\s+key|license\s+key(?:\s+using\s+credits)?|customer\s+id)\s*(?::|=|\r?\n)\s*/i;
+  /^(?:melissa\s+)?(?:api\s+key|license\s+key(?:\s+using\s+credits)?|customer\s+id)\b(?:\s*[:=]\s*|\s+)/i;
+const MELISSA_COPY_LABEL = /^(?:copy|copied)\b\s*/i;
 const INVISIBLE_KEY_CHARACTERS = /[\u200b-\u200d\u2060\ufeff]/g;
 
 let originalFetch = null;
@@ -55,7 +56,7 @@ export function normalizeMelissaLicenseKey(value) {
   let key = String(value ?? "")
     .replace(INVISIBLE_KEY_CHARACTERS, "")
     .trim();
-  key = key.replace(MELISSA_KEY_LABEL, "").trim();
+  key = key.replace(MELISSA_KEY_LABEL, "").replace(MELISSA_COPY_LABEL, "").trim();
   if (
     key.length >= 2 &&
     ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'")))
