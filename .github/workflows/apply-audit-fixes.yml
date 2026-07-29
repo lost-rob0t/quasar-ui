@@ -18,7 +18,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: apply-audit-security-integrity-fixes
+  group: apply-audit-security-integrity-fixes-${{ github.event_name }}-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
