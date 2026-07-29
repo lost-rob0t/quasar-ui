@@ -37,11 +37,11 @@ text = replace_once(
   }''',
     '''  const positionsRef = useRef(workspace?.positions || {});
   const viewportRef = useRef(workspace?.viewport || null);
-  if (positionsRef.current !== workspace?.positions && workspace?.positions) {
-    positionsRef.current = workspace.positions;
-  }
-  if (viewportRef.current !== workspace?.viewport && workspace?.viewport) {
-    viewportRef.current = workspace.viewport;
+  const renderedWorkspaceRef = useRef(workspace);
+  if (renderedWorkspaceRef.current !== workspace) {
+    renderedWorkspaceRef.current = workspace;
+    positionsRef.current = workspace?.positions || {};
+    viewportRef.current = workspace?.viewport || null;
   }''',
     "live graph refs"
 )
@@ -51,7 +51,7 @@ text = replace_once(
   const visibleGraph = useMemo(() => filterGraph(graph, { query, dtype, dataset, predicate }), [graph, query, dtype, dataset, predicate]);''',
     '''  const graph = useMemo(
     () => buildGraph(graphDocuments, positionsRef.current),
-    [graphDocuments, workspace?.positions]
+    [activeGraph?.id, graphDocuments, workspace?.positions]
   );
   const visibleGraph = useMemo(() => filterGraph(graph, { query, dtype, dataset, predicate }), [graph, query, dtype, dataset, predicate]);
   const rendererTier = graphDetailLevel(visibleGraph.nodes.length, visibleGraph.edges.length);''',
