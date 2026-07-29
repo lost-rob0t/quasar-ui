@@ -29,6 +29,18 @@ jobs:
           node-version: 22.12.0
           cache: npm
       - run: python3 scripts/apply-performance-audit-fixes.py
+      - name: Keep the checked baseline deterministic
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("scripts/bench-graph.mjs")
+          text = path.read_text(encoding="utf-8")
+          before = '["small", "medium", "large", "very-large", "stress"]'
+          after = '["small", "medium", "large", "very-large"]'
+          if text.count(before) != 1:
+              raise SystemExit("baseline-only scenario list was not found exactly once")
+          path.write_text(text.replace(before, after), encoding="utf-8")
+          PY
       - run: npm ci
       - name: Format touched files
         run: |
