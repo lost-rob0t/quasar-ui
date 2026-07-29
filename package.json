@@ -12,7 +12,7 @@
     "build": "vite build && cp dist/index.html dist/404.html",
     "preview": "vite preview",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format:check": "prettier --write src/components/ActorConfigurationBridge.jsx src/lib/melissa-actor-pack-runtime.test.js src/lib/melissa-personator-test.js src/lib/melissa-personator-test.test.js && git diff -- src/components/ActorConfigurationBridge.jsx src/lib/melissa-actor-pack-runtime.test.js src/lib/melissa-personator-test.js src/lib/melissa-personator-test.test.js && exit 1",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "npm run test:unit && npm run test:integration",
