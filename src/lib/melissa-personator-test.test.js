@@ -44,7 +44,7 @@ describe("manual Personator Search credential test", () => {
       transmissionResults: "US01",
       totalRecords: 1,
       version: "test",
-      key: { length: 11, ending: "IT==" }
+      key: { length: 10, ending: "IT==" }
     });
     expect(result.key).not.toHaveProperty("value");
     expect(String(fetchImpl.mock.calls[0][0])).toContain("id=CR%2BED%2FIT%3D%3D");
