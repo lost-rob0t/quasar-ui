@@ -2,6 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 const host = "127.0.0.1";
 const port = 4173;
+const webServerCommand = process.env.CI
+  ? `npm run preview -- --host ${host} --port ${port}`
+  : `npm run dev -- --host ${host} --port ${port}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -20,7 +23,7 @@ export default defineConfig({
     }
   ],
   webServer: {
-    command: `npm run dev -- --host ${host} --port ${port}`,
+    command: webServerCommand,
     env: { VITE_BASE_PATH: "/" },
     url: `http://${host}:${port}/`,
     reuseExistingServer: !process.env.CI
