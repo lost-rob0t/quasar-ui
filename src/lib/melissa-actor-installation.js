@@ -1,4 +1,5 @@
 import {
+  MELISSA_ACTORS,
   MELISSA_ACTOR_PACK_VERSION,
   mergeMelissaActors
 } from "./melissa-actor-pack-runtime";
@@ -12,4 +13,4 @@ export function installMelissaActorPack(settings = {}) {
   };
 }
 
-export { MELISSA_ACTOR_PACK_VERSION };
+export { MELISSA_ACTORS, MELISSA_ACTOR_PACK_VERSION };
