@@ -1,6 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { saveMelissaConfig } from "./melissa-browser-config";
-import { runBrowserActor } from "./opaque-origin-actor-host";
+import {
+  actorConfigurationForExecution,
+  configureMelissaActorUrl
+} from "./opaque-origin-actor-host";
 
 class MemoryStorage {
   constructor() {
@@ -20,11 +23,9 @@ class MemoryStorage {
   }
 }
 
-let previousFetch;
 let previousStorage;
 
 beforeEach(() => {
-  previousFetch = globalThis.fetch;
   previousStorage = globalThis.localStorage;
   Object.defineProperty(globalThis, "localStorage", {
     configurable: true,
@@ -33,7 +34,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  globalThis.fetch = previousFetch;
   Object.defineProperty(globalThis, "localStorage", {
     configurable: true,
     value: previousStorage
@@ -41,45 +41,39 @@ afterEach(() => {
 });
 
 describe("browser actor host configuration", () => {
-  it("passes Melissa configuration to the actor and injects the exact credit key", async () => {
-    const fetchMock = vi.fn(
-      async () =>
-        new Response(JSON.stringify({ TransmissionResults: "US01", Records: [] }), {
-          status: 200,
-          headers: { "content-type": "application/json" }
-        })
-    );
-    globalThis.fetch = fetchMock;
+  it("loads Melissa configuration and injects the exact credit key", () => {
+    const actor = { id: "quasar.actor.melissa-runtime-test" };
     saveMelissaConfig({
       licenseKey: "License Key Using Credits: CR+ED/IT==",
       transmissionReference: "Quasar credit test"
     });
 
-    const result = await runBrowserActor(
-      {
-        id: "quasar.actor.melissa-runtime-test",
-        label: "Melissa runtime test",
-        version: 1,
-        capabilities: ["network.fetch"],
-        source: `async (context, api) => {
-          const response = await api.network.fetch({
-            url: "https://personatorsearch.melissadata.net/WEB/doPersonatorSearch?last=Porter&format=JSON",
-            responseType: "json"
-          });
-          return {
-            documents: [],
-            message: context.configuration.transmissionReference + ":" + response.status
-          };
-        }`
-      },
-      { selection: [], documents: [] },
-      { trusted: true }
+    const configuration = actorConfigurationForExecution(actor, true);
+    const url = configureMelissaActorUrl(
+      new URL(
+        "https://personatorsearch.melissadata.net/WEB/doPersonatorSearch?last=Porter&format=JSON"
+      ),
+      actor,
+      configuration,
+      true
     );
 
-    const requested = String(fetchMock.mock.calls[0][0]);
-    const url = new URL(requested);
+    expect(configuration.transmissionReference).toBe("Quasar credit test");
     expect(url.searchParams.get("id")).toBe("CR+ED/IT==");
-    expect(requested).toContain("id=CR%2BED%2FIT%3D%3D");
-    expect(result.message).toBe("Quasar credit test:200");
+    expect(url.href).toContain("id=CR%2BED%2FIT%3D%3D");
+  });
+
+  it("does not expose shared Melissa credentials to untrusted actors", () => {
+    const actor = { id: "quasar.actor.melissa-untrusted" };
+    saveMelissaConfig({ licenseKey: "SECRET" });
+
+    expect(actorConfigurationForExecution(actor, false)).toEqual({});
+    const url = configureMelissaActorUrl(
+      new URL("https://personatorsearch.melissadata.net/WEB/doPersonatorSearch?last=Porter"),
+      actor,
+      {},
+      false
+    );
+    expect(url.searchParams.has("id")).toBe(false);
   });
 });
