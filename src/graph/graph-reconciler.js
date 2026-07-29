@@ -51,7 +51,7 @@ function updateData(element, incomingData, keys) {
   }
 }
 
-export function diffGraphElements(cy, graph) {
+export function diffGraphElements(cy, graph, { applyIncomingPositions = true } = {}) {
   const incoming = incomingMaps(graph);
   const nodesToAdd = [];
   const nodesToUpdate = [];
@@ -74,7 +74,11 @@ export function diffGraphElements(cy, graph) {
       continue;
     }
     const dataKeys = changedDataKeys(current, element.data);
-    const positionChanged = element.position && !samePosition(current.position(), element.position);
+    const positionChanged = Boolean(
+      applyIncomingPositions
+      && element.position
+      && !samePosition(current.position(), element.position)
+    );
     if (dataKeys.length || positionChanged) {
       nodesToUpdate.push({ current, incoming: element, dataKeys, positionChanged });
     }
@@ -105,9 +109,12 @@ export function diffGraphElements(cy, graph) {
   };
 }
 
-export function reconcileGraphElements(cy, graph, { retainedNodes = new Map() } = {}) {
+export function reconcileGraphElements(cy, graph, {
+  retainedNodes = new Map(),
+  applyIncomingPositions = true
+} = {}) {
   const viewport = { pan: cy.pan(), zoom: cy.zoom() };
-  const diff = diffGraphElements(cy, graph);
+  const diff = diffGraphElements(cy, graph, { applyIncomingPositions });
   const restoredSelection = [];
 
   for (const node of diff.nodesToRemove) {
