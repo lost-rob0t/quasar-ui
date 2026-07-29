@@ -117,13 +117,13 @@ function MelissaFields({
       <div className="form-grid">{primary.map(renderField)}</div>
       <div className="actor-config-test">
         <p>
-          <strong>Place the key in the first field above.</strong> Copy the value from Melissa Account
-          → License Information → <strong>License Key Using Credits</strong>. Paste only the key value,
-          not the label.
+          <strong>Place the key in the first field above.</strong> Copy the value from Melissa
+          Account → License Information → <strong>License Key Using Credits</strong>. Paste only the
+          key value, not the label.
         </p>
         <p className="muted">
-          The test is manual. It sends Melissa&apos;s documented sample person and address directly to
-          Personator Search and may consume credits.
+          The test is manual. It sends Melissa&apos;s documented sample person and address directly
+          to Personator Search and may consume credits.
         </p>
         <button
           className="button"
@@ -131,11 +131,16 @@ function MelissaFields({
           onClick={onTest}
           disabled={testing || !String(form.licenseKey || "").trim()}
         >
-          <Play size={15} /> {testing ? "Testing Personator Search…" : "Save and test Personator Search"}
+          <Play size={15} />{" "}
+          {testing ? "Testing Personator Search…" : "Save and test Personator Search"}
         </button>
         {testResult && (
-          <div className={testResult.ok ? "actor-test-result" : "actor-test-result validation-error"}>
-            <strong>{testResult.ok ? "Personator credential accepted" : "Personator credential rejected"}</strong>
+          <div
+            className={testResult.ok ? "actor-test-result" : "actor-test-result validation-error"}
+          >
+            <strong>
+              {testResult.ok ? "Personator credential accepted" : "Personator credential rejected"}
+            </strong>
             <dl>
               <div>
                 <dt>HTTP</dt>
@@ -152,8 +157,8 @@ function MelissaFields({
               <div>
                 <dt>Saved key</dt>
                 <dd>
-                  {testResult.key.length} characters · ends in {testResult.key.ending || "(empty)"} ·
-                  fingerprint {testResult.key.fingerprint || "(empty)"}
+                  {testResult.key.length} characters · ends in {testResult.key.ending || "(empty)"}{" "}
+                  · fingerprint {testResult.key.fingerprint || "(empty)"}
                 </dd>
               </div>
             </dl>
