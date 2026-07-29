@@ -9,10 +9,7 @@ import {
   loadActorConfiguration,
   saveActorConfiguration
 } from "../lib/actor-configuration";
-import {
-  installMelissaActorPack,
-  MELISSA_ACTORS
-} from "../lib/melissa-actor-installation";
+import { installMelissaActorPack, MELISSA_ACTORS } from "../lib/melissa-actor-installation";
 import { useQuasar } from "../store";
 
 function actorSettingsPanel() {
