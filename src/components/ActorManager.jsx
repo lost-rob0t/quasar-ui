@@ -80,6 +80,9 @@ export default function ActorManager() {
     selectedId === NEW_ACTOR ? null : allActors.find((actor) => actor.id === selectedId) || null;
   const builtin = Boolean(selectedActor && isBuiltinActor(selectedActor));
   const editable = !builtin;
+  const canRunSelected = Boolean(
+    selectedActor && selectedIds.length && (builtin || settings.actorsEnabled)
+  );
   const filteredActors = allActors.filter((actor) => {
     const needle = query.trim().toLowerCase();
     if (!needle) return true;
@@ -275,11 +278,15 @@ export default function ActorManager() {
                 <button
                   className="button small"
                   type="button"
-                  disabled={!builtin || !selectedIds.length}
+                  disabled={!canRunSelected}
                   title={
-                    builtin
-                      ? "Run against the current graph selection"
-                      : "Custom actor execution is disabled until the opaque-origin sandbox ships"
+                    !selectedIds.length
+                      ? "Select one or more graph documents"
+                      : !builtin && !settings.actorsEnabled
+                        ? "Enable custom actor execution in Runtime"
+                        : builtin
+                          ? "Run trusted built-in actor against the current graph selection"
+                          : "Run custom actor in a disposable opaque-origin sandbox"
                   }
                   onClick={runSelectedActor}
                 >
@@ -373,10 +380,9 @@ export default function ActorManager() {
                   onChange={toggleCustomActors}
                 />
                 <span>
-                  <strong>Enable custom actor definitions</strong>
+                  <strong>Enable custom actor execution</strong>
                   <small>
-                    Custom manifests remain blocked from execution until the opaque-origin sandbox
-                    is available.
+                    Custom actors run inside a disposable sandboxed iframe with an opaque origin.
                   </small>
                 </span>
               </label>
@@ -385,8 +391,8 @@ export default function ActorManager() {
                 <div>
                   <strong>Execution boundary</strong>
                   <p>
-                    Quasar stores custom actor code locally, but only trusted built-ins can execute
-                    in the current runtime.
+                    Custom code cannot access Quasar&apos;s origin, DOM, storage, or network
+                    directly. Declared capabilities are mediated by Quasar.
                   </p>
                 </div>
               </div>
@@ -398,7 +404,11 @@ export default function ActorManager() {
                 <dt>Custom definitions</dt>
                 <dd>{customActors.length}</dd>
                 <dt>Runtime state</dt>
-                <dd>{settings.actorsEnabled ? "definitions enabled" : "definitions disabled"}</dd>
+                <dd>
+                  {settings.actorsEnabled
+                    ? "custom execution enabled"
+                    : "custom execution disabled"}
+                </dd>
               </dl>
             </div>
           )}
