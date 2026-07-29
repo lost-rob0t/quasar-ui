@@ -33,18 +33,90 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          path = Path("scripts/bench-graph.mjs")
-          text = path.read_text(encoding="utf-8")
-          before = '["small", "medium", "large", "very-large", "stress"]'
-          after = '["small", "medium", "large", "very-large"]'
-          if text.count(before) != 1:
-              raise SystemExit("baseline-only scenario list was not found exactly once")
-          path.write_text(text.replace(before, after), encoding="utf-8")
+
+          def replace_once(path, before, after, label):
+              file = Path(path)
+              text = file.read_text(encoding="utf-8")
+              if text.count(before) != 1:
+                  raise SystemExit(f"{label} was not found exactly once")
+              file.write_text(text.replace(before, after, 1), encoding="utf-8")
+
+          replace_once(
+              "scripts/bench-graph.mjs",
+              '["small", "medium", "large", "very-large", "stress"]',
+              '["small", "medium", "large", "very-large"]',
+              "baseline-only scenario list"
+          )
+          replace_once(
+              "scripts/bench-graph.mjs",
+              '''          includeIncremental: size !== "stress",
+                    graphSwitchIterations: size === "stress" ? 2 : isLarge ? 5 : 10''',
+              '''          includeIncremental: true,
+                    incrementalMode: "gated",
+                    graphSwitchIterations: isLarge ? 5 : 10''',
+              "baseline-only incremental policy"
+          )
+          replace_once(
+              "src/benchmark/graph-benchmark.js",
+              '''  includeIncremental = true,
+            interactionIterations = 10,''',
+              '''  includeIncremental = true,
+            incrementalMode = "full",
+            interactionIterations = 10,''',
+              "incremental mode parameter"
+          )
+          replace_once(
+              "src/benchmark/graph-benchmark.js",
+              '''  if (includeIncremental) {
+              metrics.incrementalDocuments = {};
+              metrics.incrementalElements = { add: {}, update: {}, remove: {} };
+              for (const count of [1, 10, 100]) {
+                metrics.incrementalDocuments[count] = await measureIncrementalDocuments(cy, fixture, strategy, count);
+                for (const operation of ["add", "update", "remove"]) {
+                  metrics.incrementalElements[operation][count] = await measureIncrementalElements(
+                    cy,
+                    graph,
+                    strategy,
+                    operation,
+                    count
+                  );
+                }
+              }
+            }''',
+              '''  if (includeIncremental) {
+              metrics.incrementalDocuments = {};
+              metrics.incrementalElements = { add: {}, update: {}, remove: {} };
+              if (incrementalMode === "gated") {
+                metrics.incrementalElements.update[100] = await measureIncrementalElements(
+                  cy,
+                  graph,
+                  strategy,
+                  "update",
+                  100
+                );
+              } else {
+                for (const count of [1, 10, 100]) {
+                  metrics.incrementalDocuments[count] = await measureIncrementalDocuments(cy, fixture, strategy, count);
+                  for (const operation of ["add", "update", "remove"]) {
+                    metrics.incrementalElements[operation][count] = await measureIncrementalElements(
+                      cy,
+                      graph,
+                      strategy,
+                      operation,
+                      count
+                    );
+                  }
+                }
+              }
+            }''',
+              "gated incremental measurement"
+          )
           PY
       - run: npm ci
       - name: Format touched files
         run: |
           npx prettier --write \
+            src/benchmark/graph-benchmark.js \
             src/components/GraphPage.jsx \
             src/graph/graph-reconciler.js \
             src/graph/graph-reconciler.test.js \
