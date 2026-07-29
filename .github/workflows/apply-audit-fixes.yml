@@ -47,6 +47,246 @@ jobs:
           path.write_text(text.replace(before, after), encoding="utf-8")
           PY
       - run: python3 scripts/apply-audit-fixes.py
+      - name: Update compatibility paths and security contracts
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, before, after, label):
+              file = Path(path)
+              text = file.read_text(encoding="utf-8")
+              count = text.count(before)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected one match, found {count}")
+              file.write_text(text.replace(before, after, 1), encoding="utf-8")
+
+          replace_once(
+              "src/lib/importer.js",
+              '''  const errors = [];
+            const reader = file.stream().pipeThrough(new TextDecoderStream()).getReader();''',
+              '''  const errors = [];
+            if (typeof file.stream !== "function" || typeof TextDecoderStream === "undefined") {
+              const text = await file.text();
+              for (const [index, rawLine] of text.split(/\\r?\\n/).entries()) {
+                const line = index + 1;
+                if (rawLine.length > limits.maxRecordBytes) {
+                  throw new RangeError(`Record ${line} exceeds the import record limit`);
+                }
+                if (!rawLine.trim()) continue;
+                try {
+                  documents.push(JSON.parse(rawLine));
+                  origins.push({ file: sourceName, line, record: documents.length });
+                } catch (error) {
+                  if (errors.length < limits.maxErrors) {
+                    errors.push({ file: sourceName, line, message: error.message });
+                  }
+                }
+                if (documents.length > limits.maxDocuments) {
+                  throw new RangeError("Import document limit exceeded");
+                }
+              }
+              return { documents, origins, errors };
+            }
+            const reader = file.stream().pipeThrough(new TextDecoderStream()).getReader();''',
+              "JSONL stream fallback"
+          )
+
+          replace_once(
+              "src/lib/importer.js",
+              '''    if (buffer.trim()) {
+              line += 1;
+              documents.push(JSON.parse(buffer));
+              origins.push({ file: sourceName, line, record: documents.length });
+            }''',
+              '''    if (buffer.trim()) {
+              line += 1;
+              try {
+                documents.push(JSON.parse(buffer));
+                origins.push({ file: sourceName, line, record: documents.length });
+              } catch (error) {
+                if (errors.length < limits.maxErrors) {
+                  errors.push({ file: sourceName, line, message: error.message });
+                }
+              }
+            }''',
+              "JSONL trailing record error"
+          )
+
+          Path("src/lib/agent-secrets.test.js").write_text(r'''import { beforeEach, describe, expect, it } from "vitest";
+          import {
+            deleteProviderSecret,
+            getProviderSecret,
+            hasProviderSecret,
+            setProviderSecret
+          } from "./agent-secrets";
+
+          function memoryStorage() {
+            const values = new Map();
+            return {
+              clear: () => values.clear(),
+              getItem: (key) => values.has(key) ? values.get(key) : null,
+              removeItem: (key) => values.delete(key),
+              setItem: (key, value) => values.set(key, String(value))
+            };
+          }
+
+          describe("agent secrets", () => {
+            beforeEach(() => {
+              Object.defineProperty(globalThis, "localStorage", {
+                configurable: true,
+                value: memoryStorage()
+              });
+              Object.defineProperty(globalThis, "sessionStorage", {
+                configurable: true,
+                value: memoryStorage()
+              });
+              for (const id of ["openrouter", "openai", "anthropic"]) deleteProviderSecret(id);
+            });
+
+            it("stores provider keys only for the browser session", () => {
+              const provider = {
+                type: "openrouter",
+                baseUrl: "https://openrouter.ai/api/v1"
+              };
+              setProviderSecret("openrouter", "secret-value", provider);
+
+              const stored = JSON.parse(sessionStorage.getItem("quasar:provider-secret:openrouter"));
+              expect(stored.value).toBe("secret-value");
+              expect(localStorage.getItem("quasar:provider-secret:openrouter")).toBeNull();
+              expect(getProviderSecret("openrouter", provider)).toBe("secret-value");
+              expect(hasProviderSecret("openrouter", provider)).toBe(true);
+            });
+
+            it("does not release a key to a changed endpoint", () => {
+              const reviewed = { type: "openai", baseUrl: "https://api.openai.com/v1" };
+              setProviderSecret("openai", "scoped-key", reviewed);
+
+              expect(getProviderSecret("openai", reviewed)).toBe("scoped-key");
+              expect(getProviderSecret("openai", {
+                type: "openai",
+                baseUrl: "https://attacker.example/v1"
+              })).toBe("");
+            });
+
+            it("purges legacy persistent copies", () => {
+              localStorage.setItem("quasar:provider-secret:openai", "legacy-key");
+              expect(getProviderSecret("openai")).toBe("");
+              expect(localStorage.getItem("quasar:provider-secret:openai")).toBeNull();
+            });
+
+            it("deletes keys from both stores", () => {
+              localStorage.setItem("quasar:provider-secret:anthropic", "local-key");
+              sessionStorage.setItem("quasar:provider-secret:anthropic", "session-key");
+
+              deleteProviderSecret("anthropic");
+
+              expect(hasProviderSecret("anthropic")).toBe(false);
+              expect(localStorage.getItem("quasar:provider-secret:anthropic")).toBeNull();
+              expect(sessionStorage.getItem("quasar:provider-secret:anthropic")).toBeNull();
+            });
+          });
+          ''', encoding="utf-8")
+
+          Path("src/lib/agent-web.test.js").write_text(r'''import { afterEach, describe, expect, it, vi } from "vitest";
+          import { braveWebSearch, fetchUrlContent, scrapeWebsite } from "./agent-web";
+
+          const gatewayUrl = "https://gateway.example/api/v1/web/fetch";
+
+          afterEach(() => vi.restoreAllMocks());
+
+          describe("agent web tools", () => {
+            it("normalizes Brave Search results", async () => {
+              vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({
+                web: { results: [{ title: "Example", url: "https://example.org/x", description: "Result" }] }
+              }), { status: 200, headers: { "content-type": "application/json" } }));
+              const result = await braveWebSearch("test", { apiKey: "secret", count: 1 });
+              expect(result.results).toEqual([expect.objectContaining({ title: "Example", url: "https://example.org/x" })]);
+              expect(fetch.mock.calls[0][1].headers["X-Subscription-Token"]).toBe("secret");
+            });
+
+            it("reads bounded content returned by the trusted gateway", async () => {
+              vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({
+                finalUrl: "https://example.org/page",
+                contentType: "text/html",
+                bytes: 42,
+                title: "Page",
+                text: "Hello world",
+                links: []
+              }), { status: 200, headers: { "content-type": "application/json" } }));
+
+              const result = await fetchUrlContent("https://example.org/page", { gatewayUrl });
+              expect(result.title).toBe("Page");
+              expect(result.text).toContain("Hello world");
+              expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({
+                url: "https://example.org/page"
+              });
+            });
+
+            it("blocks literal private-network URLs before contacting the gateway", async () => {
+              const request = vi.spyOn(globalThis, "fetch");
+              await expect(fetchUrlContent("http://127.0.0.1/admin", { gatewayUrl })).rejects.toThrow("Private network");
+              expect(request).not.toHaveBeenCalled();
+            });
+
+            it("crawls bounded same-origin gateway results", async () => {
+              vi.spyOn(globalThis, "fetch").mockImplementation(async (_gateway, options) => {
+                const request = JSON.parse(options.body);
+                if (request.url.endsWith("/start")) {
+                  return new Response(JSON.stringify({
+                    finalUrl: request.url,
+                    contentType: "text/html",
+                    bytes: 80,
+                    title: "Start",
+                    text: "Start",
+                    links: ["https://example.org/next", "https://elsewhere.test/nope"]
+                  }), { status: 200, headers: { "content-type": "application/json" } });
+                }
+                return new Response(JSON.stringify({
+                  finalUrl: request.url,
+                  contentType: "text/html",
+                  bytes: 20,
+                  title: "Next",
+                  text: "Done",
+                  links: []
+                }), { status: 200, headers: { "content-type": "application/json" } });
+              });
+
+              const result = await scrapeWebsite("https://example.org/start", {
+                maxPages: 5,
+                maxDepth: 1,
+                gatewayUrl
+              });
+              expect(result.pages.map((page) => page.title)).toEqual(["Start", "Next"]);
+              expect(fetch).toHaveBeenCalledTimes(2);
+            });
+          });
+          ''', encoding="utf-8")
+
+          replace_once(
+              "src/lib/document-batch.test.js",
+              '''    const report = await commitDocumentBatch(database, [
+                canonicalDocument(survivorId),
+                canonicalDocument(failedId)
+              ]);
+
+              expect(report.saved).toEqual([{ index: 0, id: survivorId, rev: `1-${survivorId}` }]);
+              expect(report.errors.some((error) => error.phase === "rollback")).toBe(true);
+              expect(database.documents.has(survivorId)).toBe(true);''',
+              '''    await expect(commitDocumentBatch(database, [
+                canonicalDocument(survivorId),
+                canonicalDocument(failedId)
+              ])).rejects.toMatchObject({
+                code: "PARTIAL_BATCH_COMMIT",
+                report: {
+                  saved: [{ index: 0, id: survivorId, rev: `1-${survivorId}` }],
+                  rollbackAttempted: true
+                }
+              });
+
+              expect(database.documents.has(survivorId)).toBe(true);''',
+              "partial batch test contract"
+          )
+          PY
       - run: npm ci
       - name: Format maintained repository
         run: npx prettier --write .
