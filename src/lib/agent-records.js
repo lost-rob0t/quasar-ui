@@ -64,8 +64,18 @@ export const DEFAULT_ROLES = Object.freeze([
   {
     id: "researcher",
     name: "Researcher",
-    instructions: "Investigate the scoped target. Separate sourced facts, claims, inference, hypotheses, user conclusions, and unverified leads. Preserve provenance.",
-    permissions: ["documents.read", "documents.create", "documents.edit", "graph.read", "graph.edit", "targets.read", "sources.external", "actors.run"],
+    instructions:
+      "Investigate the scoped target. Separate sourced facts, claims, inference, hypotheses, user conclusions, and unverified leads. Preserve provenance.",
+    permissions: [
+      "documents.read",
+      "documents.create",
+      "documents.edit",
+      "graph.read",
+      "graph.edit",
+      "targets.read",
+      "sources.external",
+      "actors.run"
+    ],
     actions: ["inspect", "research", "create", "relate", "verify"],
     accepts: ["*"],
     outputs: ["source", "claim", "relation", "person", "org", "event", "location"],
@@ -77,7 +87,8 @@ export const DEFAULT_ROLES = Object.freeze([
   {
     id: "graph-analyst",
     name: "Graph analyst",
-    instructions: "Inspect graph structure and propose precise, reversible graph operations. Explain evidence for relations.",
+    instructions:
+      "Inspect graph structure and propose precise, reversible graph operations. Explain evidence for relations.",
     permissions: ["documents.read", "graph.read", "graph.edit", "targets.read", "sources.external"],
     actions: ["inspect", "relate", "merge", "layout", "focus"],
     accepts: ["*"],
@@ -90,7 +101,8 @@ export const DEFAULT_ROLES = Object.freeze([
   {
     id: "actor-builder",
     name: "Actor builder",
-    instructions: "Create Quasar actors as declarative transforms. Validate and test them before saving. Never access PouchDB, Cytoscape, application state, or secrets directly.",
+    instructions:
+      "Create Quasar actors as declarative transforms. Validate and test them before saving. Never access PouchDB, Cytoscape, application state, or secrets directly.",
     permissions: ["documents.read", "actors.run", "actors.create", "actors.edit"],
     actions: ["inspect", "create_actor", "test_actor", "repair_actor"],
     accepts: ["*"],
@@ -103,7 +115,8 @@ export const DEFAULT_ROLES = Object.freeze([
   {
     id: "supervisor",
     name: "Supervisor",
-    instructions: "Drive a bounded run, measure progress, stop on loops or budget limits, and request approval when required.",
+    instructions:
+      "Drive a bounded run, measure progress, stop on loops or budget limits, and request approval when required.",
     permissions: ["documents.read", "graph.read", "actors.run", "targets.read"],
     actions: ["inspect", "plan", "delegate", "pause", "stop", "recover"],
     accepts: ["*"],
@@ -116,7 +129,8 @@ export const DEFAULT_ROLES = Object.freeze([
   {
     id: "recovery",
     name: "Recovery agent",
-    instructions: "Inspect the failed step, choose one bounded recovery action, and avoid unchanged retries.",
+    instructions:
+      "Inspect the failed step, choose one bounded recovery action, and avoid unchanged retries.",
     permissions: ["documents.read", "graph.read", "actors.run", "targets.read"],
     actions: ["inspect", "retry", "restore", "shrink-context", "fallback-model", "pause", "stop"],
     accepts: ["*"],
@@ -129,7 +143,6 @@ export const DEFAULT_ROLES = Object.freeze([
 ]);
 
 const PREFIX = "agent-system:";
-const INDEX_ID = `${PREFIX}index`;
 const AGENT_PACK_SECTIONS = Object.freeze({
   roles: AGENT_RECORD_TYPES.role,
   agents: AGENT_RECORD_TYPES.agent,
@@ -148,7 +161,8 @@ const IMPORT_ORDER = Object.freeze([
   AGENT_RECORD_TYPES.mcpServer,
   AGENT_RECORD_TYPES.agent
 ]);
-const SECRET_FIELD = /^(?:api[-_]?key|secret|access[-_]?token|refresh[-_]?token|authorization|password)$/i;
+const SECRET_FIELD =
+  /^(?:api[-_]?key|secret|access[-_]?token|refresh[-_]?token|authorization|password)$/i;
 
 function now() {
   return new Date().toISOString();
@@ -157,7 +171,8 @@ function now() {
 function cleanId(value, label = "ID") {
   const id = String(value || "").trim();
   if (!id) throw new TypeError(`${label} is required`);
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/.test(id)) throw new TypeError(`${label} contains invalid characters`);
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/.test(id))
+    throw new TypeError(`${label} contains invalid characters`);
   return id;
 }
 
@@ -184,7 +199,8 @@ function assertSecretFree(value, path = "payload") {
     return;
   }
   for (const [name, item] of Object.entries(value)) {
-    if (SECRET_FIELD.test(name)) throw new TypeError(`Imported config cannot contain secrets: ${path}.${name}`);
+    if (SECRET_FIELD.test(name))
+      throw new TypeError(`Imported config cannot contain secrets: ${path}.${name}`);
     assertSecretFree(item, `${path}.${name}`);
   }
 }
@@ -219,8 +235,10 @@ export function normalizeAgentRecord(record, expectedType) {
     throw new TypeError("Agent record must be an object");
   }
   const type = String(record.recordType || expectedType || "");
-  if (!Object.values(AGENT_RECORD_TYPES).includes(type)) throw new TypeError(`Unknown agent record type: ${type || "<missing>"}`);
-  if (expectedType && type !== expectedType) throw new TypeError(`Expected ${expectedType}, received ${type}`);
+  if (!Object.values(AGENT_RECORD_TYPES).includes(type))
+    throw new TypeError(`Unknown agent record type: ${type || "<missing>"}`);
+  if (expectedType && type !== expectedType)
+    throw new TypeError(`Expected ${expectedType}, received ${type}`);
   const id = cleanId(record.id);
   return {
     ...clone(record),
@@ -234,30 +252,39 @@ export function normalizeAgentRecord(record, expectedType) {
 }
 
 export function normalizeRole(input) {
-  const role = normalizeAgentRecord({
-    ...input,
-    id: input.id,
-    recordType: AGENT_RECORD_TYPES.role
-  }, AGENT_RECORD_TYPES.role);
+  const role = normalizeAgentRecord(
+    {
+      ...input,
+      id: input.id,
+      recordType: AGENT_RECORD_TYPES.role
+    },
+    AGENT_RECORD_TYPES.role
+  );
   role.name = String(input.name || "").trim();
   role.instructions = String(input.instructions || "").trim();
   role.permissions = [...new Set((input.permissions || []).map(String))];
   role.actions = [...new Set((input.actions || []).map(String))];
   role.accepts = [...new Set((input.accepts || ["*"]).map(String))];
   role.outputs = [...new Set((input.outputs || []).map(String))];
-  role.permissionProfileVersion = Number(input.permissionProfileVersion || DEFAULT_PERMISSION_PROFILE_VERSION);
+  role.permissionProfileVersion = Number(
+    input.permissionProfileVersion || DEFAULT_PERMISSION_PROFILE_VERSION
+  );
   if (!role.name) throw new TypeError("Role name is required");
   for (const permission of role.permissions) {
-    if (!AGENT_PERMISSIONS.includes(permission)) throw new TypeError(`Unknown permission: ${permission}`);
+    if (!AGENT_PERMISSIONS.includes(permission))
+      throw new TypeError(`Unknown permission: ${permission}`);
   }
   return role;
 }
 
 export function normalizeAgent(input) {
-  const agent = normalizeAgentRecord({
-    ...input,
-    recordType: AGENT_RECORD_TYPES.agent
-  }, AGENT_RECORD_TYPES.agent);
+  const agent = normalizeAgentRecord(
+    {
+      ...input,
+      recordType: AGENT_RECORD_TYPES.agent
+    },
+    AGENT_RECORD_TYPES.agent
+  );
   agent.name = String(input.name || "").trim();
   agent.description = String(input.description || "").trim();
   agent.roleId = cleanId(input.roleId || "researcher", "Role ID");
@@ -265,7 +292,9 @@ export function normalizeAgent(input) {
   agent.providerId = cleanId(input.providerId || "openrouter", "Provider ID");
   agent.modelId = String(input.modelId || "").trim();
   agent.permissions = [...new Set((input.permissions || []).map(String))];
-  agent.permissionProfileVersion = Number(input.permissionProfileVersion || DEFAULT_PERMISSION_PROFILE_VERSION);
+  agent.permissionProfileVersion = Number(
+    input.permissionProfileVersion || DEFAULT_PERMISSION_PROFILE_VERSION
+  );
   agent.datasetAccess = [...new Set((input.datasetAccess || ["*"]).map(String))];
   agent.graphAccess = [...new Set((input.graphAccess || ["*"]).map(String))];
   agent.targetAccess = [...new Set((input.targetAccess || ["*"]).map(String))];
@@ -312,30 +341,15 @@ export function normalizeAgent(input) {
   if (!agent.name) throw new TypeError("Agent name is required");
   if (!agent.modelId) throw new TypeError("Model is required");
   for (const permission of agent.permissions) {
-    if (!AGENT_PERMISSIONS.includes(permission)) throw new TypeError(`Unknown permission: ${permission}`);
+    if (!AGENT_PERMISSIONS.includes(permission))
+      throw new TypeError(`Unknown permission: ${permission}`);
   }
   return agent;
-}
-
-async function updateIndex(record) {
-  const index = await getState(INDEX_ID, {
-    _id: INDEX_ID,
-    schemaVersion: AGENT_SCHEMA_VERSION,
-    records: {}
-  });
-  const records = { ...(index.records || {}) };
-  records[record._id] = {
-    id: record.id,
-    recordType: record.recordType,
-    updatedAt: record.updatedAt
-  };
-  await putState(INDEX_ID, { schemaVersion: AGENT_SCHEMA_VERSION, records });
 }
 
 export async function saveAgentRecord(input, expectedType) {
   const record = normalizeAgentRecord(input, expectedType);
   const stored = await putState(record._id, stripPouchFields(record));
-  await updateIndex(stored);
   return stripPouchFields(stored);
 }
 
@@ -353,15 +367,15 @@ export async function getAgentRecord(type, id) {
 }
 
 export async function listAgentRecords(type) {
-  const index = await getState(INDEX_ID, { records: {} });
-  const ids = Object.entries(index.records || {})
-    .filter(([, item]) => !type || item.recordType === type)
-    .map(([id]) => id);
-  if (!ids.length) return [];
-  const result = await stateDb.allDocs({ keys: ids, include_docs: true });
+  const result = await stateDb.allDocs({
+    startkey: PREFIX,
+    endkey: `${PREFIX}\ufff0`,
+    include_docs: true
+  });
   return result.rows
     .map((row) => row.doc)
     .filter(Boolean)
+    .filter((record) => !type || record.recordType === type)
     .map(stripPouchFields)
     .sort((left, right) => String(right.updatedAt).localeCompare(String(left.updatedAt)));
 }
@@ -371,10 +385,6 @@ export async function removeAgentRecord(type, id) {
   const current = await getState(key, null);
   if (!current) return false;
   await stateDb.remove(current);
-  const index = await getState(INDEX_ID, { records: {} });
-  const records = { ...(index.records || {}) };
-  delete records[key];
-  await putState(INDEX_ID, { schemaVersion: AGENT_SCHEMA_VERSION, records });
   return true;
 }
 
@@ -390,7 +400,12 @@ export async function ensureDefaultRoles() {
     if (Number(saved.permissionProfileVersion || 0) < DEFAULT_PERMISSION_PROFILE_VERSION) {
       await saveRole({
         ...saved,
-        permissions: [...new Set([...(saved.permissions || []), ...(DEFAULT_PERMISSION_UPGRADES[role.id] || [])])],
+        permissions: [
+          ...new Set([
+            ...(saved.permissions || []),
+            ...(DEFAULT_PERMISSION_UPGRADES[role.id] || [])
+          ])
+        ],
         permissionProfileVersion: DEFAULT_PERMISSION_PROFILE_VERSION
       });
     }
@@ -398,7 +413,11 @@ export async function ensureDefaultRoles() {
   const agents = await listAgentRecords(AGENT_RECORD_TYPES.agent);
   for (const agent of agents) {
     const permissions = DEFAULT_PERMISSION_UPGRADES[agent.roleId];
-    if (!permissions || Number(agent.permissionProfileVersion || 0) >= DEFAULT_PERMISSION_PROFILE_VERSION) continue;
+    if (
+      !permissions ||
+      Number(agent.permissionProfileVersion || 0) >= DEFAULT_PERMISSION_PROFILE_VERSION
+    )
+      continue;
     await saveAgent({
       ...agent,
       permissions: [...new Set([...(agent.permissions || []), ...permissions])],
@@ -422,11 +441,14 @@ export function normalizeAgentSystemImport(payload) {
     };
   } else if (payload?.format === AGENT_PACK_FORMAT) {
     if (Number(payload.version || 0) !== AGENT_PACK_VERSION) {
-      throw new TypeError(`Unsupported Quasar agent pack version: ${payload.version || "<missing>"}`);
+      throw new TypeError(
+        `Unsupported Quasar agent pack version: ${payload.version || "<missing>"}`
+      );
     }
     records = Object.entries(AGENT_PACK_SECTIONS).flatMap(([section, recordType]) => {
       const items = payload[section] || [];
-      if (!Array.isArray(items)) throw new TypeError(`Agent pack field must be an array: ${section}`);
+      if (!Array.isArray(items))
+        throw new TypeError(`Agent pack field must be an array: ${section}`);
       return items.map((item) => ({
         ...item,
         recordType,
@@ -448,7 +470,8 @@ export function normalizeAgentSystemImport(payload) {
   const normalized = records.map((input) => {
     const record = normalizeImportedRecord(input);
     const key = `${record.recordType}:${record.id}`;
-    if (seen.has(key)) throw new TypeError(`Duplicate imported record: ${record.id} (${record.recordType})`);
+    if (seen.has(key))
+      throw new TypeError(`Duplicate imported record: ${record.id} (${record.recordType})`);
     seen.add(key);
     return record;
   });
@@ -489,7 +512,11 @@ export async function exportAgentSystemRecords({ includeRuns = false } = {}) {
     secretsIncluded: false,
     records: records.map(({ secret, apiKey, ...record }) => {
       if (record.recordType !== AGENT_RECORD_TYPES.mcpServer) return record;
-      const headers = Object.fromEntries(Object.entries(record.headers || {}).filter(([name]) => !/authorization|api[-_]?key|token|secret/i.test(name)));
+      const headers = Object.fromEntries(
+        Object.entries(record.headers || {}).filter(
+          ([name]) => !/authorization|api[-_]?key|token|secret/i.test(name)
+        )
+      );
       return { ...record, headers };
     })
   };
@@ -498,15 +525,21 @@ export async function exportAgentSystemRecords({ includeRuns = false } = {}) {
 export async function importAgentSystemRecords(payload, { replace = false, conflictMode } = {}) {
   const imported = normalizeAgentSystemImport(payload);
   const mode = conflictMode || (replace ? "replace" : "error");
-  if (!["error", "skip", "replace"].includes(mode)) throw new TypeError(`Unknown import conflict mode: ${mode}`);
+  if (!["error", "skip", "replace"].includes(mode))
+    throw new TypeError(`Unknown import conflict mode: ${mode}`);
 
-  const importedRoleIds = new Set(imported.records
-    .filter((record) => record.recordType === AGENT_RECORD_TYPES.role)
-    .map((record) => record.id));
-  for (const agent of imported.records.filter((record) => record.recordType === AGENT_RECORD_TYPES.agent)) {
+  const importedRoleIds = new Set(
+    imported.records
+      .filter((record) => record.recordType === AGENT_RECORD_TYPES.role)
+      .map((record) => record.id)
+  );
+  for (const agent of imported.records.filter(
+    (record) => record.recordType === AGENT_RECORD_TYPES.agent
+  )) {
     if (importedRoleIds.has(agent.roleId)) continue;
     const existingRole = await getState(recordId(AGENT_RECORD_TYPES.role, agent.roleId), null);
-    if (!existingRole) throw new TypeError(`Agent ${agent.id} references unknown role: ${agent.roleId}`);
+    if (!existingRole)
+      throw new TypeError(`Agent ${agent.id} references unknown role: ${agent.roleId}`);
   }
 
   const conflicts = [];
@@ -540,7 +573,9 @@ export async function importAgentSystemRecords(payload, { replace = false, confl
     };
   }
 
-  staged.sort((left, right) => IMPORT_ORDER.indexOf(left.recordType) - IMPORT_ORDER.indexOf(right.recordType));
+  staged.sort(
+    (left, right) => IMPORT_ORDER.indexOf(left.recordType) - IMPORT_ORDER.indexOf(right.recordType)
+  );
   for (const record of staged) await saveAgentRecord(record, record.recordType);
   return {
     applied: staged.length,

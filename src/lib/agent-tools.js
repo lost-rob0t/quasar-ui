@@ -12,16 +12,24 @@ function boundedInteger(value, fallback, minimum, maximum) {
 }
 
 function text(value) {
-  return String(value || "").trim().toLowerCase();
+  return String(value || "")
+    .trim()
+    .toLowerCase();
 }
 
 function documentMatches(document, query) {
   if (query.ids?.length && !query.ids.includes(document._id)) return false;
   if (query.objectTypes?.length && !query.objectTypes.includes(document.dtype)) return false;
   if (query.datasets?.length && !query.datasets.includes(document.dataset)) return false;
-  if (query.targetIds?.length && !query.targetIds.some((id) => document._id === id || document.related_ids?.includes(id))) return false;
+  if (
+    query.targetIds?.length &&
+    !query.targetIds.some((id) => document._id === id || document.related_ids?.includes(id))
+  )
+    return false;
   if (query.verificationStates?.length) {
-    const state = document.verification?.status || (document.verification?.verified ? "verified" : "unverified");
+    const state =
+      document.verification?.status ||
+      (document.verification?.verified ? "verified" : "unverified");
     if (!query.verificationStates.includes(state)) return false;
   }
   const needle = text(query.text);
@@ -44,16 +52,19 @@ function documentSummary(document) {
     dataset: document.dataset,
     title: document.title || document.data?.name || document._id,
     summary: document.summary || "",
-    verificationState: document.verification?.status || (document.verification?.verified ? "verified" : "unverified"),
+    verificationState:
+      document.verification?.status ||
+      (document.verification?.verified ? "verified" : "unverified"),
     sourceCount: document.sources?.length || 0,
-    relation: document.dtype === "relation"
-      ? {
-        source: document.data?.subject || document.data?.source || null,
-        predicate: document.data?.predicate || document.data?.relation_type || null,
-        target: document.data?.object || document.data?.target || null,
-        directed: document.data?.directed !== false
-      }
-      : null
+    relation:
+      document.dtype === "relation"
+        ? {
+            source: document.data?.subject || document.data?.source || null,
+            predicate: document.data?.predicate || document.data?.relation_type || null,
+            target: document.data?.object || document.data?.target || null,
+            directed: document.data?.directed !== false
+          }
+        : null
   };
 }
 
@@ -104,7 +115,8 @@ export function createAgentToolRegistry(environment) {
 
   define({
     name: "query_database",
-    description: "Query the scoped StarIntel document database. Returns bounded document summaries.",
+    description:
+      "Query the scoped StarIntel document database. Returns bounded document summaries.",
     permission: "documents.read",
     parameters: {
       type: "object",
@@ -137,7 +149,8 @@ export function createAgentToolRegistry(environment) {
 
   define({
     name: "query_graph",
-    description: "Query the active graph by nodes, neighbors, predicate, path, dataset, or object type.",
+    description:
+      "Query the active graph by nodes, neighbors, predicate, path, dataset, or object type.",
     permission: "graph.read",
     parameters: {
       type: "object",
@@ -158,13 +171,12 @@ export function createAgentToolRegistry(environment) {
       const graph = buildGraph(documents, environment.getPositions?.() || {});
       if (args.pathFrom && args.pathTo) {
         return {
-          paths: findPaths(graph, args.pathFrom, args.pathTo, 5, MAX_GRAPH_DEPTH)
-            .map((path) => ({
-              nodeIds: path.nodes,
-              relationIds: path.edges.map((edge) => edge.data.relationId).filter(Boolean),
-              predicates: path.edges.map((edge) => edge.data.predicate),
-              cost: path.cost
-            }))
+          paths: findPaths(graph, args.pathFrom, args.pathTo, 5, MAX_GRAPH_DEPTH).map((path) => ({
+            nodeIds: path.nodes,
+            relationIds: path.edges.map((edge) => edge.data.relationId).filter(Boolean),
+            predicates: path.edges.map((edge) => edge.data.predicate),
+            cost: path.cost
+          }))
         };
       }
       const depth = boundedInteger(args.depth, 1, 0, MAX_GRAPH_DEPTH);
@@ -216,7 +228,8 @@ export function createAgentToolRegistry(environment) {
     },
     async execute(args, context) {
       const allowed = new Set(context.agent.actorAccess || ["*"]);
-      if (!allowed.has("*") && !allowed.has(args.actorId)) throw new Error(`Actor access denied: ${args.actorId}`);
+      if (!allowed.has("*") && !allowed.has(args.actorId))
+        throw new Error(`Actor access denied: ${args.actorId}`);
       return environment.runActor(args.actorId, args.selectionIds || context.selectionIds || []);
     }
   });
@@ -297,7 +310,8 @@ export function createAgentToolRegistry(environment) {
 
   define({
     name: "build_graph",
-    description: "Create and populate a named custom graph from document IDs or a bounded database query.",
+    description:
+      "Create and populate a named custom graph from document IDs or a bounded database query.",
     permission: "graph.edit",
     parameters: {
       type: "object",
@@ -325,7 +339,8 @@ export function createAgentToolRegistry(environment) {
 
   define({
     name: "propose_graph_operations",
-    description: "Validate and preview declared graph operations. Applying the preview is a separate approved action.",
+    description:
+      "Validate and preview declared graph operations. Applying the preview is a separate approved action.",
     permission: "graph.edit",
     parameters: {
       type: "object",
@@ -380,7 +395,8 @@ export function createAgentToolRegistry(environment) {
 
   define({
     name: "validate_actor",
-    description: "Validate generated actor source and test it against scoped sample documents without saving it.",
+    description:
+      "Validate generated actor source and test it against scoped sample documents without saving it.",
     permission: "actors.create",
     parameters: {
       type: "object",
@@ -392,7 +408,11 @@ export function createAgentToolRegistry(environment) {
       additionalProperties: false
     },
     async execute(args, context) {
-      return environment.validateActor(args.actor, args.sampleDocumentIds || context.selectionIds || [], context);
+      return environment.validateActor(
+        args.actor,
+        args.sampleDocumentIds || context.selectionIds || [],
+        context
+      );
     }
   });
 

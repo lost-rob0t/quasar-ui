@@ -27,8 +27,9 @@ function configuredLimit(policy, key) {
 export function addUsage(current, delta) {
   const result = { ...zeroUsage(), ...(current || {}) };
   for (const key of Object.keys(result)) {
-    result[key] = finiteNonNegative(result[key], `Usage ${key}`)
-      + finiteNonNegative(delta?.[key] || 0, `Usage delta ${key}`);
+    result[key] =
+      finiteNonNegative(result[key], `Usage ${key}`) +
+      finiteNonNegative(delta?.[key] || 0, `Usage delta ${key}`);
   }
   return result;
 }
@@ -45,7 +46,9 @@ export function calculateCost(usage, pricing) {
   const outputRate = Number(pricing?.outputPerMillionUsd);
   const cachedRate = Number(pricing?.cachedInputPerMillionUsd ?? pricing?.inputPerMillionUsd);
   const hasUsage = billableInput > 0 || cachedTokens > 0 || outputTokens > 0;
-  const ratesKnown = [inputRate, outputRate, cachedRate].every((rate) => Number.isFinite(rate) && rate >= 0);
+  const ratesKnown = [inputRate, outputRate, cachedRate].every(
+    (rate) => Number.isFinite(rate) && rate >= 0
+  );
 
   if (hasUsage && !ratesKnown) {
     throw new Error("Model pricing is required before a cost-budgeted run can continue");
@@ -56,9 +59,9 @@ export function calculateCost(usage, pricing) {
   }
 
   return (
-    (billableInput / 1_000_000) * (inputRate || 0)
-    + (cachedTokens / 1_000_000) * (cachedRate || 0)
-    + (outputTokens / 1_000_000) * (outputRate || 0)
+    (billableInput / 1_000_000) * (inputRate || 0) +
+    (cachedTokens / 1_000_000) * (cachedRate || 0) +
+    (outputTokens / 1_000_000) * (outputRate || 0)
   );
 }
 
@@ -83,12 +86,18 @@ export function budgetState(policy, usage, projected = {}) {
 
     const ratio = finiteNonNegative(next[usageKey] || 0, `Usage ${usageKey}`) / limit;
     highestRatio = Math.max(highestRatio, ratio);
-    if (ratio >= 1) return { state: "hard-stop", reason: `${label} limit reached`, ratio, usage: next };
+    if (ratio >= 1)
+      return { state: "hard-stop", reason: `${label} limit reached`, ratio, usage: next };
   }
 
   const softLimit = finiteNonNegative(policy?.softLimitRatio ?? 0.8, "Soft limit ratio");
   if (highestRatio >= softLimit) {
-    return { state: "warning", reason: "Soft budget limit reached", ratio: highestRatio, usage: next };
+    return {
+      state: "warning",
+      reason: "Soft budget limit reached",
+      ratio: highestRatio,
+      usage: next
+    };
   }
   return { state: "ok", reason: "", ratio: highestRatio, usage: next };
 }

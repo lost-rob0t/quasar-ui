@@ -30,13 +30,14 @@ export function researchNodeOutputIds(document) {
 }
 
 export function researchNodeScope(document) {
-  if (!isResearchNode(document)) return {
-    inputs: [],
-    outputs: [],
-    dependencies: [],
-    children: [],
-    actors: []
-  };
+  if (!isResearchNode(document))
+    return {
+      inputs: [],
+      outputs: [],
+      dependencies: [],
+      children: [],
+      actors: []
+    };
   return {
     inputs: uniqueIds([...(document.data?.input_ids || []), ...(document.data?.target_ids || [])]),
     outputs: researchNodeOutputIds(document),

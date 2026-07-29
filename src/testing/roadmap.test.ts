@@ -40,15 +40,10 @@ describe("deployment roadmap", () => {
   });
 
   it("documents every issue and the immutable deployment constraints", async () => {
-    const document = await readFile(
-      new URL("../../docs/ROADMAP.md", import.meta.url),
-      "utf8"
-    );
+    const document = await readFile(new URL("../../docs/ROADMAP.md", import.meta.url), "utf8");
 
     for (const issueNumber of issueNumbers) {
-      expect(document).toContain(
-        `https://github.com/lost-rob0t/quasar-ui/issues/${issueNumber}`
-      );
+      expect(document).toContain(`https://github.com/lost-rob0t/quasar-ui/issues/${issueNumber}`);
     }
 
     for (const requiredDecision of [

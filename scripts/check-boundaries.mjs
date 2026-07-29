@@ -16,7 +16,15 @@ const ZONES = [
 ];
 
 const ALLOWED_DEPENDENCIES = {
-  app: new Set(["core", "storage", "graph", "actions", "projections", "integrations", "components"]),
+  app: new Set([
+    "core",
+    "storage",
+    "graph",
+    "actions",
+    "projections",
+    "integrations",
+    "components"
+  ]),
   core: new Set(),
   storage: new Set(["core"]),
   graph: new Set(["core"]),
@@ -52,7 +60,9 @@ function zoneFor(sourcePath) {
 
 function resolvedImportPath(fromPath, specifier) {
   if (!specifier.startsWith(".")) return null;
-  return normalizeSourcePath(path.posix.normalize(path.posix.join(path.posix.dirname(fromPath), specifier)));
+  return normalizeSourcePath(
+    path.posix.normalize(path.posix.join(path.posix.dirname(fromPath), specifier))
+  );
 }
 
 export function validateImport(fromPath, specifier) {

@@ -48,8 +48,15 @@ export function normalizeMelissaConfig(value = {}) {
   const input = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   return {
     licenseKey: String(input.licenseKey || "").trim(),
-    transmissionReference: String(input.transmissionReference || DEFAULT_MELISSA_CONFIG.transmissionReference).trim().slice(0, 128),
-    defaultCountry: String(input.defaultCountry || DEFAULT_MELISSA_CONFIG.defaultCountry).trim().toUpperCase().slice(0, 3),
+    transmissionReference: String(
+      input.transmissionReference || DEFAULT_MELISSA_CONFIG.transmissionReference
+    )
+      .trim()
+      .slice(0, 128),
+    defaultCountry: String(input.defaultCountry || DEFAULT_MELISSA_CONFIG.defaultCountry)
+      .trim()
+      .toUpperCase()
+      .slice(0, 3),
     consumerAction: ["Check", "Verify", "Append", "Move"].includes(input.consumerAction)
       ? input.consumerAction
       : DEFAULT_MELISSA_CONFIG.consumerAction,
@@ -61,8 +68,18 @@ export function normalizeMelissaConfig(value = {}) {
     personatorColumns: String(input.personatorColumns || "").trim(),
     maxRecords: finiteInteger(input.maxRecords, DEFAULT_MELISSA_CONFIG.maxRecords, 1, 100),
     matchLevel: finiteInteger(input.matchLevel, DEFAULT_MELISSA_CONFIG.matchLevel, 1, 10),
-    reverseDistance: finiteInteger(input.reverseDistance, DEFAULT_MELISSA_CONFIG.reverseDistance, 1, 100),
-    reverseRecords: finiteInteger(input.reverseRecords, DEFAULT_MELISSA_CONFIG.reverseRecords, 1, 100),
+    reverseDistance: finiteInteger(
+      input.reverseDistance,
+      DEFAULT_MELISSA_CONFIG.reverseDistance,
+      1,
+      100
+    ),
+    reverseRecords: finiteInteger(
+      input.reverseRecords,
+      DEFAULT_MELISSA_CONFIG.reverseRecords,
+      1,
+      100
+    ),
     addressOptions: String(input.addressOptions || "").trim(),
     nameOptions: String(input.nameOptions || "").trim(),
     phoneOptions: String(input.phoneOptions || "").trim(),
@@ -112,7 +129,15 @@ function configureMelissaUrl(url, config) {
   add(url, "t", config.transmissionReference);
 
   const path = url.pathname.toLowerCase();
-  if (["personator.melissadata.net", "globalpersonator.melissadata.net", "address.melissadata.net", "globalname.melissadata.net", "globalphone.melissadata.net"].includes(url.hostname)) {
+  if (
+    [
+      "personator.melissadata.net",
+      "globalpersonator.melissadata.net",
+      "address.melissadata.net",
+      "globalname.melissadata.net",
+      "globalphone.melissadata.net"
+    ].includes(url.hostname)
+  ) {
     add(url, "ctry", config.defaultCountry);
   } else if (url.hostname === "property.melissadata.net") {
     add(url, "country", config.defaultCountry);

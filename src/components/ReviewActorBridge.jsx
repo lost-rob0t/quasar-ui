@@ -8,9 +8,7 @@ export default function ReviewActorBridge() {
 
   useEffect(() => {
     if (!settings || installingRef.current) return;
-    const installed = (settings.actors || []).some(
-      (actor) => actor?.id === REVIEW_ACTOR_ID
-    );
+    const installed = (settings.actors || []).some((actor) => actor?.id === REVIEW_ACTOR_ID);
     if (installed) return;
 
     installingRef.current = true;

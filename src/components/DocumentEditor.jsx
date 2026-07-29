@@ -43,7 +43,8 @@ function structuredValue(value, type) {
   try {
     const parsed = JSON.parse(value || (type === "array" ? "[]" : "{}"));
     if (type === "array" && Array.isArray(parsed)) return parsed;
-    if (type === "object" && parsed && !Array.isArray(parsed) && typeof parsed === "object") return parsed;
+    if (type === "object" && parsed && !Array.isArray(parsed) && typeof parsed === "object")
+      return parsed;
   } catch {
     // Invalid legacy JSON is replaced by the first structured edit.
   }
@@ -62,8 +63,12 @@ function inputType(fieldSchema = {}) {
 function isLongString(name, fieldSchema = {}) {
   const resolved = effectiveFieldSchema(fieldSchema);
   if (resolved.type !== "string") return false;
-  return /(description|summary|content|body|notes?|statement|definition|reason|text)$/i.test(name)
-    || /long text|markdown|multiline/i.test(`${resolved.description || ""} ${fieldSchema.description || ""}`);
+  return (
+    /(description|summary|content|body|notes?|statement|definition|reason|text)$/i.test(name) ||
+    /long text|markdown|multiline/i.test(
+      `${resolved.description || ""} ${fieldSchema.description || ""}`
+    )
+  );
 }
 
 function ScalarValueInput({ name = "value", fieldSchema, value, onChange, referenceOptions = [] }) {
@@ -74,14 +79,22 @@ function ScalarValueInput({ name = "value", fieldSchema, value, onChange, refere
     return (
       <select value={value ?? ""} onChange={(event) => onChange(event.target.value)}>
         <option value="">Select…</option>
-        {enumValues.map((item) => <option key={String(item)} value={String(item)}>{String(item)}</option>)}
+        {enumValues.map((item) => (
+          <option key={String(item)} value={String(item)}>
+            {String(item)}
+          </option>
+        ))}
       </select>
     );
   }
   if (resolved.type === "boolean") {
     return (
       <label className="checkbox schema-boolean-input">
-        <input type="checkbox" checked={value === true || value === "true"} onChange={(event) => onChange(event.target.checked)} />
+        <input
+          type="checkbox"
+          checked={value === true || value === "true"}
+          onChange={(event) => onChange(event.target.checked)}
+        />
         <span>{value === true || value === "true" ? "True" : "False"}</span>
       </label>
     );
@@ -89,9 +102,10 @@ function ScalarValueInput({ name = "value", fieldSchema, value, onChange, refere
   if (isLongString(name, fieldSchema)) {
     return <textarea value={value ?? ""} onChange={(event) => onChange(event.target.value)} />;
   }
-  const listId = referenceOptions.length && type.includes("reference")
-    ? `reference-options-${String(name).replace(/[^a-zA-Z0-9_-]/g, "-")}`
-    : undefined;
+  const listId =
+    referenceOptions.length && type.includes("reference")
+      ? `reference-options-${String(name).replace(/[^a-zA-Z0-9_-]/g, "-")}`
+      : undefined;
   return (
     <>
       <input
@@ -100,14 +114,20 @@ function ScalarValueInput({ name = "value", fieldSchema, value, onChange, refere
         value={value ?? ""}
         list={listId}
         onChange={(event) => {
-          if (resolved.type === "integer") onChange(event.target.value === "" ? "" : Number.parseInt(event.target.value, 10));
-          else if (resolved.type === "number") onChange(event.target.value === "" ? "" : Number(event.target.value));
+          if (resolved.type === "integer")
+            onChange(event.target.value === "" ? "" : Number.parseInt(event.target.value, 10));
+          else if (resolved.type === "number")
+            onChange(event.target.value === "" ? "" : Number(event.target.value));
           else onChange(event.target.value);
         }}
       />
       {listId && (
         <datalist id={listId}>
-          {referenceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          {referenceOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </datalist>
       )}
     </>
@@ -123,13 +143,24 @@ function StructuredValueEditor({ fieldSchema, value, onChange, referenceOptions 
     return (
       <div className="structured-list">
         {items.map((item, index) => (
-          <div className={itemType === "object" || itemType === "array" || !itemType ? "structured-item nested" : "structured-item"} key={index}>
-            {(itemType === "object" || itemType === "array" || !itemType) ? (
+          <div
+            className={
+              itemType === "object" || itemType === "array" || !itemType
+                ? "structured-item nested"
+                : "structured-item"
+            }
+            key={index}
+          >
+            {itemType === "object" || itemType === "array" || !itemType ? (
               <StructuredValueEditor
                 fieldSchema={itemSchema}
                 value={item}
                 referenceOptions={referenceOptions}
-                onChange={(next) => onChange(items.map((current, itemIndex) => itemIndex === index ? next : current))}
+                onChange={(next) =>
+                  onChange(
+                    items.map((current, itemIndex) => (itemIndex === index ? next : current))
+                  )
+                }
               />
             ) : (
               <ScalarValueInput
@@ -137,14 +168,31 @@ function StructuredValueEditor({ fieldSchema, value, onChange, referenceOptions 
                 fieldSchema={itemSchema}
                 value={item}
                 referenceOptions={referenceOptions}
-                onChange={(next) => onChange(items.map((current, itemIndex) => itemIndex === index ? next : current))}
+                onChange={(next) =>
+                  onChange(
+                    items.map((current, itemIndex) => (itemIndex === index ? next : current))
+                  )
+                }
               />
             )}
-            <button className="icon-button danger structured-remove" type="button" aria-label={`Remove item ${index + 1}`} onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}><X size={14} /></button>
+            <button
+              className="icon-button danger structured-remove"
+              type="button"
+              aria-label={`Remove item ${index + 1}`}
+              onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}
+            >
+              <X size={14} />
+            </button>
           </div>
         ))}
         {!items.length && <small className="structured-empty">No values.</small>}
-        <button className="button small structured-add" type="button" onClick={() => onChange([...items, emptySchemaValue(itemSchema)])}><Plus size={14} /> Add value</button>
+        <button
+          className="button small structured-add"
+          type="button"
+          onClick={() => onChange([...items, emptySchemaValue(itemSchema)])}
+        >
+          <Plus size={14} /> Add value
+        </button>
       </div>
     );
   }
@@ -161,9 +209,12 @@ function StructuredValueEditor({ fieldSchema, value, onChange, referenceOptions 
           const childType = effectiveFieldSchema(childSchema).type;
           return (
             <label className="structured-property" key={name}>
-              <span>{humanizeSchemaField(name)}{required.has(name) ? " *" : ""}</span>
+              <span>
+                {humanizeSchemaField(name)}
+                {required.has(name) ? " *" : ""}
+              </span>
               <small>{fieldTypeHint(childSchema, required.has(name))}</small>
-              {(childType === "array" || childType === "object" || !childType) ? (
+              {childType === "array" || childType === "object" || !childType ? (
                 <StructuredValueEditor
                   fieldSchema={childSchema}
                   value={objectValue[name] ?? emptySchemaValue(childSchema)}
@@ -187,7 +238,8 @@ function StructuredValueEditor({ fieldSchema, value, onChange, referenceOptions 
   }
 
   const entries = Object.entries(objectValue);
-  const valueSchema = typeof resolved.additionalProperties === "object" ? resolved.additionalProperties : {};
+  const valueSchema =
+    typeof resolved.additionalProperties === "object" ? resolved.additionalProperties : {};
   return (
     <div className="structured-list">
       {entries.map(([key, entryValue], index) => (
@@ -210,25 +262,45 @@ function StructuredValueEditor({ fieldSchema, value, onChange, referenceOptions 
             referenceOptions={referenceOptions}
             onChange={(nextValue) => onChange({ ...objectValue, [key]: nextValue })}
           />
-          <button className="icon-button danger structured-remove" type="button" aria-label={`Remove ${key || "property"}`} onClick={() => {
-            const next = { ...objectValue };
-            delete next[key];
-            onChange(next);
-          }}><X size={14} /></button>
+          <button
+            className="icon-button danger structured-remove"
+            type="button"
+            aria-label={`Remove ${key || "property"}`}
+            onClick={() => {
+              const next = { ...objectValue };
+              delete next[key];
+              onChange(next);
+            }}
+          >
+            <X size={14} />
+          </button>
         </div>
       ))}
       {!entries.length && <small className="structured-empty">No properties.</small>}
-      <button className="button small structured-add" type="button" onClick={() => {
-        let index = entries.length + 1;
-        let key = `property_${index}`;
-        while (key in objectValue) key = `property_${++index}`;
-        onChange({ ...objectValue, [key]: emptySchemaValue(valueSchema) });
-      }}><Plus size={14} /> Add property</button>
+      <button
+        className="button small structured-add"
+        type="button"
+        onClick={() => {
+          let index = entries.length + 1;
+          let key = `property_${index}`;
+          while (key in objectValue) key = `property_${++index}`;
+          onChange({ ...objectValue, [key]: emptySchemaValue(valueSchema) });
+        }}
+      >
+        <Plus size={14} /> Add property
+      </button>
     </div>
   );
 }
 
-export function SchemaField({ name, fieldSchema, required = false, value, onChange, referenceOptions = [] }) {
+export function SchemaField({
+  name,
+  fieldSchema,
+  required = false,
+  value,
+  onChange,
+  referenceOptions = []
+}) {
   const resolved = effectiveFieldSchema(fieldSchema);
   const labelId = `schema-field-${String(name).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
   const label = fieldSchema.title || resolved.title || humanizeSchemaField(name);
@@ -237,7 +309,10 @@ export function SchemaField({ name, fieldSchema, required = false, value, onChan
   if (resolved.type === "object" || resolved.type === "array" || !resolved.type) {
     return (
       <div className="field full dtype-data-field" role="group" aria-labelledby={labelId}>
-        <span id={labelId}>{label}{required ? " *" : ""}</span>
+        <span id={labelId}>
+          {label}
+          {required ? " *" : ""}
+        </span>
         <small>{hint}</small>
         <StructuredValueEditor
           fieldSchema={fieldSchema}
@@ -251,9 +326,18 @@ export function SchemaField({ name, fieldSchema, required = false, value, onChan
 
   return (
     <label className={`field${isLongString(name, fieldSchema) ? " full" : ""}`}>
-      <span>{label}{required ? " *" : ""}</span>
+      <span>
+        {label}
+        {required ? " *" : ""}
+      </span>
       <small>{hint}</small>
-      <ScalarValueInput name={name} fieldSchema={fieldSchema} value={value} onChange={onChange} referenceOptions={referenceOptions} />
+      <ScalarValueInput
+        name={name}
+        fieldSchema={fieldSchema}
+        value={value}
+        onChange={onChange}
+        referenceOptions={referenceOptions}
+      />
     </label>
   );
 }
@@ -278,7 +362,10 @@ function plainDocument(dtype, form, data, base = {}) {
     summary: form.summary,
     description: form.description,
     status: form.status,
-    tags: form.tags.split(",").map((tag) => tag.trim()).filter(Boolean),
+    tags: form.tags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean),
     sources: parseJson(form.sources, "Sources", []),
     evidence: parseJson(form.evidence, "Evidence", []),
     data
@@ -289,14 +376,8 @@ export default function DocumentEditor({ mode }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const {
-    documents,
-    execute,
-    setNotice,
-    workspace,
-    addDocumentsToActiveGraph,
-    runTargetActors
-  } = useQuasar();
+  const { documents, execute, setNotice, workspace, addDocumentsToActiveGraph, runTargetActors } =
+    useQuasar();
   const existing = mode === "edit" ? documents.find((document) => document._id === id) : null;
   const draftToken = params.get("draft");
   const initialDraft = useMemo(() => readDraft(draftToken), [draftToken]);
@@ -327,7 +408,10 @@ export default function DocumentEditor({ mode }) {
 
   const currentDataSchema = useMemo(() => dataSchemaForDtype(form.dtype), [form.dtype]);
   const descriptors = useMemo(() => dataFieldDescriptorsForDtype(form.dtype), [form.dtype]);
-  const descriptorByName = useMemo(() => new Map(descriptors.map((descriptor) => [descriptor.name, descriptor])), [descriptors]);
+  const descriptorByName = useMemo(
+    () => new Map(descriptors.map((descriptor) => [descriptor.name, descriptor])),
+    [descriptors]
+  );
   const allFields = useMemo(() => dataFieldsForDtype(form.dtype), [form.dtype]);
   const essentialFields = useMemo(() => essentialDataFieldsForDtype(form.dtype), [form.dtype]);
   const essentialFieldSet = useMemo(() => new Set(essentialFields), [essentialFields]);
@@ -337,37 +421,62 @@ export default function DocumentEditor({ mode }) {
   );
   const visibleAddedFieldSet = useMemo(() => new Set(visibleAddedFields), [visibleAddedFields]);
   const availableFields = useMemo(
-    () => allFields.filter((name) => !essentialFieldSet.has(name) && !visibleAddedFieldSet.has(name)),
+    () =>
+      allFields.filter((name) => !essentialFieldSet.has(name) && !visibleAddedFieldSet.has(name)),
     [allFields, essentialFieldSet, visibleAddedFieldSet]
   );
   const matchingAvailableFields = useMemo(() => {
     const query = fieldPickerQuery.trim().toLowerCase();
-    return availableFields.filter((name) => {
-      if (!query) return true;
-      const descriptor = descriptorByName.get(name);
-      return `${name} ${descriptor?.label || ""} ${descriptor?.helpText || ""}`.toLowerCase().includes(query);
-    }).slice(0, 60);
+    return availableFields
+      .filter((name) => {
+        if (!query) return true;
+        const descriptor = descriptorByName.get(name);
+        return `${name} ${descriptor?.label || ""} ${descriptor?.helpText || ""}`
+          .toLowerCase()
+          .includes(query);
+      })
+      .slice(0, 60);
   }, [availableFields, descriptorByName, fieldPickerQuery]);
-  const renderedFields = useMemo(() => [...essentialFields, ...visibleAddedFields], [essentialFields, visibleAddedFields]);
-  const requiredFields = useMemo(() => new Set(currentDataSchema.required || []), [currentDataSchema]);
+  const renderedFields = useMemo(
+    () => [...essentialFields, ...visibleAddedFields],
+    [essentialFields, visibleAddedFields]
+  );
+  const requiredFields = useMemo(
+    () => new Set(currentDataSchema.required || []),
+    [currentDataSchema]
+  );
   const objectType = dtypeLabel(form.dtype);
-  const referenceOptions = useMemo(() => documents.map((document) => ({ value: document._id, label: `${documentLabel(document)} · ${document.dtype}` })), [documents]);
+  const referenceOptions = useMemo(
+    () =>
+      documents.map((document) => ({
+        value: document._id,
+        label: `${documentLabel(document)} · ${document.dtype}`
+      })),
+    [documents]
+  );
 
   useEffect(() => {
     const source = baseDocument?.dtype === form.dtype ? baseDocument.data || {} : {};
     const properties = dataSchemaForDtype(form.dtype).properties || {};
     const schemaFields = dataFieldsForDtype(form.dtype);
     const commonFields = new Set(essentialDataFieldsForDtype(form.dtype));
-    setDataValues(Object.fromEntries(schemaFields.map((name) => [
-      name,
-      name in source ? formatSchemaValue(source[name], properties[name]) : ""
-    ])));
-    setAddedFields(Object.keys(source).filter((name) => schemaFields.includes(name) && !commonFields.has(name)));
+    setDataValues(
+      Object.fromEntries(
+        schemaFields.map((name) => [
+          name,
+          name in source ? formatSchemaValue(source[name], properties[name]) : ""
+        ])
+      )
+    );
+    setAddedFields(
+      Object.keys(source).filter((name) => schemaFields.includes(name) && !commonFields.has(name))
+    );
     setFieldPickerQuery("");
     setFieldPickerOpen(false);
   }, [baseDocument, form.dtype]);
 
-  const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
+  const update = (key) => (event) =>
+    setForm((current) => ({ ...current, [key]: event.target.value }));
   const updateData = (name, value) => setDataValues((current) => ({ ...current, [name]: value }));
 
   function addField(name) {
@@ -434,7 +543,12 @@ export default function DocumentEditor({ mode }) {
 
   function generateEmpty() {
     const current = String(form.raw || "").trim();
-    if (current && current !== "{}" && !window.confirm("Replace current JSON?\n\nThis will discard the current editor contents.")) return;
+    if (
+      current &&
+      current !== "{}" &&
+      !window.confirm("Replace current JSON?\n\nThis will discard the current editor contents.")
+    )
+      return;
     const generated = generateEmptyDocument(form.dtype);
     const raw = JSON.stringify(generated.document, null, 2);
     setForm((value) => ({ ...value, raw }));
@@ -445,7 +559,8 @@ export default function DocumentEditor({ mode }) {
     } catch (error) {
       setRawValidation(error.message);
     }
-    if (generated.warnings.length) setNotice({ kind: "warning", message: generated.warnings.join(" ") });
+    if (generated.warnings.length)
+      setNotice({ kind: "warning", message: generated.warnings.join(" ") });
   }
 
   async function submit(event) {
@@ -468,7 +583,9 @@ export default function DocumentEditor({ mode }) {
       if (params.get("returnTo") === "graph") {
         if (!existing) {
           const hasPosition = params.has("x") && params.has("y");
-          const position = hasPosition ? { x: Number(params.get("x")), y: Number(params.get("y")) } : null;
+          const position = hasPosition
+            ? { x: Number(params.get("x")), y: Number(params.get("y")) }
+            : null;
           const changes = { selectedIds: [document._id] };
           if (position && Number.isFinite(position.x) && Number.isFinite(position.y)) {
             changes.positions = { ...(workspace?.positions || {}), [document._id]: position };
@@ -490,45 +607,81 @@ export default function DocumentEditor({ mode }) {
   }
 
   if (mode === "edit" && !existing && !initialDraft) {
-    return <section className="empty-state"><h1>Document not found</h1><code>{id}</code></section>;
+    return (
+      <section className="empty-state">
+        <h1>Document not found</h1>
+        <code>{id}</code>
+      </section>
+    );
   }
 
-  const renderFields = (names) => names.map((name) => {
-    const descriptor = descriptorByName.get(name);
-    const removable = visibleAddedFieldSet.has(name);
-    return (
-      <div className="editor-schema-field" key={name}>
-        <SchemaField
-          name={name}
-          fieldSchema={descriptor?.schema || currentDataSchema.properties?.[name] || {}}
-          required={requiredFields.has(name)}
-          value={dataValues[name] ?? ""}
-          referenceOptions={referenceOptions}
-          onChange={(value) => updateData(name, value)}
-        />
-        {removable && <button className="icon-button danger editor-field-remove" type="button" aria-label={`Remove ${name}`} onClick={() => removeField(name)}><Trash2 size={13} /></button>}
-      </div>
-    );
-  });
+  const renderFields = (names) =>
+    names.map((name) => {
+      const descriptor = descriptorByName.get(name);
+      const removable = visibleAddedFieldSet.has(name);
+      return (
+        <div className="editor-schema-field" key={name}>
+          <SchemaField
+            name={name}
+            fieldSchema={descriptor?.schema || currentDataSchema.properties?.[name] || {}}
+            required={requiredFields.has(name)}
+            value={dataValues[name] ?? ""}
+            referenceOptions={referenceOptions}
+            onChange={(value) => updateData(name, value)}
+          />
+          {removable && (
+            <button
+              className="icon-button danger editor-field-remove"
+              type="button"
+              aria-label={`Remove ${name}`}
+              onClick={() => removeField(name)}
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
+      );
+    });
 
   return (
     <section className="simple-document-editor full-document-editor">
       <div className="page-heading simple-editor-heading">
         <div>
           <span className="eyebrow">{mode === "edit" ? "Edit" : "Create"}</span>
-          <h1>{mode === "edit" ? `Edit ${documentLabel(existing || initialDraft)}` : `New ${objectType}`}</h1>
+          <h1>
+            {mode === "edit"
+              ? `Edit ${documentLabel(existing || initialDraft)}`
+              : `New ${objectType}`}
+          </h1>
           <p>Full document editor.</p>
         </div>
         <div className="button-row">
-          <button className="button small" type="button" onClick={toggleRawMode}><Braces size={14} /> {rawMode ? "Basic" : "Inspect JSON"}</button>
-          {rawMode && <button className="button small" type="button" onClick={generateEmpty}>Generate empty document</button>}
+          <button className="button small" type="button" onClick={toggleRawMode}>
+            <Braces size={14} /> {rawMode ? "Basic" : "Inspect JSON"}
+          </button>
+          {rawMode && (
+            <button className="button small" type="button" onClick={generateEmpty}>
+              Generate empty document
+            </button>
+          )}
         </div>
       </div>
 
       <form className="editor-form simple-editor-form" onSubmit={submit}>
         {rawMode ? (
           <section className="simple-editor-section">
-            <label className="field full"><span>Complete document JSON</span><small>object · all schema keys available</small><textarea className="code-editor tall" value={form.raw} onChange={(event) => { setForm((current) => ({ ...current, raw: event.target.value })); setRawValidation(""); }} /></label>
+            <label className="field full">
+              <span>Complete document JSON</span>
+              <small>object · all schema keys available</small>
+              <textarea
+                className="code-editor tall"
+                value={form.raw}
+                onChange={(event) => {
+                  setForm((current) => ({ ...current, raw: event.target.value }));
+                  setRawValidation("");
+                }}
+              />
+            </label>
             {rawValidation && <p className="validation-error">{rawValidation}</p>}
           </section>
         ) : (
@@ -539,16 +692,31 @@ export default function DocumentEditor({ mode }) {
                   <label className="field">
                     <span>Object type</span>
                     <small>enum · required</small>
-                    <select value={form.dtype} onChange={(event) => {
-                      const next = event.target.value;
-                      setBaseDocument((current) => ({ ...current, dtype: next, data: current.dtype === next ? current.data : {} }));
-                      setForm((current) => ({ ...current, dtype: next }));
-                    }}>
-                      {dtypes.map((name) => <option key={name} value={name}>{dtypeLabel(name)}</option>)}
+                    <select
+                      value={form.dtype}
+                      onChange={(event) => {
+                        const next = event.target.value;
+                        setBaseDocument((current) => ({
+                          ...current,
+                          dtype: next,
+                          data: current.dtype === next ? current.data : {}
+                        }));
+                        setForm((current) => ({ ...current, dtype: next }));
+                      }}
+                    >
+                      {dtypes.map((name) => (
+                        <option key={name} value={name}>
+                          {dtypeLabel(name)}
+                        </option>
+                      ))}
                     </select>
                   </label>
                 )}
-                <label className="field"><span>Dataset</span><small>string · required</small><input required value={form.dataset} onChange={update("dataset")} /></label>
+                <label className="field">
+                  <span>Dataset</span>
+                  <small>string · required</small>
+                  <input required value={form.dataset} onChange={update("dataset")} />
+                </label>
               </div>
             </section>
 
@@ -558,12 +726,25 @@ export default function DocumentEditor({ mode }) {
                 <span className={`dtype dtype-${form.dtype}`}>{form.dtype}</span>
               </div>
               <div className="form-grid dtype-field-grid">{renderFields(renderedFields)}</div>
-              {!essentialFields.length && <p className="muted">No essential fields are defined for this object type.</p>}
+              {!essentialFields.length && (
+                <p className="muted">No essential fields are defined for this object type.</p>
+              )}
               {availableFields.length > 0 && (
-                <div className="field-picker" onBlur={(event) => {
-                  if (!event.currentTarget.contains(event.relatedTarget)) setFieldPickerOpen(false);
-                }}>
-                  <button className="button small" type="button" aria-expanded={fieldPickerOpen} onClick={() => setFieldPickerOpen((value) => !value)}><Plus size={14} /> Add field</button>
+                <div
+                  className="field-picker"
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget))
+                      setFieldPickerOpen(false);
+                  }}
+                >
+                  <button
+                    className="button small"
+                    type="button"
+                    aria-expanded={fieldPickerOpen}
+                    onClick={() => setFieldPickerOpen((value) => !value)}
+                  >
+                    <Plus size={14} /> Add field
+                  </button>
                   {fieldPickerOpen && (
                     <div className="field-picker-options" id="schema-field-options" role="listbox">
                       <label className="field-picker-search">
@@ -588,48 +769,109 @@ export default function DocumentEditor({ mode }) {
                       {matchingAvailableFields.map((name) => {
                         const descriptor = descriptorByName.get(name);
                         return (
-                          <button key={name} type="button" role="option" aria-selected="false" onClick={() => addField(name)}>
+                          <button
+                            key={name}
+                            type="button"
+                            role="option"
+                            aria-selected="false"
+                            onClick={() => addField(name)}
+                          >
                             <code>{name}</code>
-                            <small>{fieldTypeHint(descriptor?.schema || {}, descriptor?.required)}</small>
+                            <small>
+                              {fieldTypeHint(descriptor?.schema || {}, descriptor?.required)}
+                            </small>
                           </button>
                         );
                       })}
-                      {!matchingAvailableFields.length && <span className="field-picker-empty">No matching fields</span>}
+                      {!matchingAvailableFields.length && (
+                        <span className="field-picker-empty">No matching fields</span>
+                      )}
                     </div>
                   )}
                 </div>
               )}
             </section>
 
-            <button className="button small advanced-editor-toggle" type="button" aria-expanded={advanced} onClick={() => setAdvanced((value) => !value)}>
+            <button
+              className="button small advanced-editor-toggle"
+              type="button"
+              aria-expanded={advanced}
+              onClick={() => setAdvanced((value) => !value)}
+            >
               {advanced ? "Basic" : "Advanced"}
             </button>
 
             {advanced && (
               <section className="simple-editor-section advanced-editor-section">
-                <div className="simple-editor-section-heading"><h2>Advanced</h2></div>
+                <div className="simple-editor-section-heading">
+                  <h2>Advanced</h2>
+                </div>
                 <h3>Document metadata</h3>
                 <div className="form-grid details-field-grid">
-                  <label className="field full"><span>Title</span><small>string · optional</small><input value={form.title} onChange={update("title")} /></label>
-                  <label className="field"><span>Document ID</span><small>string · optional until save</small><input value={form.id} onChange={update("id")} disabled={Boolean(existing)} /></label>
-                  <label className="field"><span>Status</span><small>string · optional</small><input value={form.status} onChange={update("status")} /></label>
-                  <label className="field full"><span>Summary</span><small>string · long text · optional</small><textarea value={form.summary} onChange={update("summary")} /></label>
-                  <label className="field full"><span>Description</span><small>string · long text · optional</small><textarea value={form.description} onChange={update("description")} /></label>
-                  <label className="field full"><span>Tags</span><small>string[] · comma separated</small><input value={form.tags} onChange={update("tags")} /></label>
+                  <label className="field full">
+                    <span>Title</span>
+                    <small>string · optional</small>
+                    <input value={form.title} onChange={update("title")} />
+                  </label>
+                  <label className="field">
+                    <span>Document ID</span>
+                    <small>string · optional until save</small>
+                    <input value={form.id} onChange={update("id")} disabled={Boolean(existing)} />
+                  </label>
+                  <label className="field">
+                    <span>Status</span>
+                    <small>string · optional</small>
+                    <input value={form.status} onChange={update("status")} />
+                  </label>
+                  <label className="field full">
+                    <span>Summary</span>
+                    <small>string · long text · optional</small>
+                    <textarea value={form.summary} onChange={update("summary")} />
+                  </label>
+                  <label className="field full">
+                    <span>Description</span>
+                    <small>string · long text · optional</small>
+                    <textarea value={form.description} onChange={update("description")} />
+                  </label>
+                  <label className="field full">
+                    <span>Tags</span>
+                    <small>string[] · comma separated</small>
+                    <input value={form.tags} onChange={update("tags")} />
+                  </label>
                 </div>
 
                 <h3>Sources and evidence</h3>
                 <div className="form-grid dtype-field-grid details-field-grid">
-                  <SchemaField name="sources" fieldSchema={schema.properties?.sources || { type: "array", items: { type: "string" } }} value={form.sources} referenceOptions={referenceOptions} onChange={(value) => setForm((current) => ({ ...current, sources: value }))} />
-                  <SchemaField name="evidence" fieldSchema={schema.properties?.evidence || { type: "array", items: { type: "string" } }} value={form.evidence} referenceOptions={referenceOptions} onChange={(value) => setForm((current) => ({ ...current, evidence: value }))} />
+                  <SchemaField
+                    name="sources"
+                    fieldSchema={
+                      schema.properties?.sources || { type: "array", items: { type: "string" } }
+                    }
+                    value={form.sources}
+                    referenceOptions={referenceOptions}
+                    onChange={(value) => setForm((current) => ({ ...current, sources: value }))}
+                  />
+                  <SchemaField
+                    name="evidence"
+                    fieldSchema={
+                      schema.properties?.evidence || { type: "array", items: { type: "string" } }
+                    }
+                    value={form.evidence}
+                    referenceOptions={referenceOptions}
+                    onChange={(value) => setForm((current) => ({ ...current, evidence: value }))}
+                  />
                 </div>
               </section>
             )}
           </>
         )}
         <div className="form-actions editor-save-bar">
-          <button type="button" className="button" onClick={() => navigate(-1)}>Cancel</button>
-          <button className="button primary" disabled={saving}><Save size={16} /> {saving ? "Validating…" : "Save"}</button>
+          <button type="button" className="button" onClick={() => navigate(-1)}>
+            Cancel
+          </button>
+          <button className="button primary" disabled={saving}>
+            <Save size={16} /> {saving ? "Validating…" : "Save"}
+          </button>
         </div>
       </form>
     </section>

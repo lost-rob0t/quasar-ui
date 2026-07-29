@@ -55,7 +55,9 @@ describe("batch operation history", () => {
       throw new Error("expected saveDocumentBatch to reject");
     } catch (error) {
       expect(error.report.saved[0].id).toBe(document._id);
-      expect(error.applied.inverse.operations).toEqual([{ type: "remove-document", id: document._id }]);
+      expect(error.applied.inverse.operations).toEqual([
+        { type: "remove-document", id: document._id }
+      ]);
     }
   });
 });

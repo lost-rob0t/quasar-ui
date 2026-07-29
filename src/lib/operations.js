@@ -51,11 +51,11 @@ export async function applyOperation(command) {
   throw new TypeError(`Unknown operation type: ${command.type}`);
 }
 
-export async function saveDocumentBatch(documents, label = "Save documents", {
-  replace = true,
-  atomic = true,
-  origins = []
-} = {}) {
+export async function saveDocumentBatch(
+  documents,
+  label = "Save documents",
+  { replace = true, atomic = true, origins = [] } = {}
+) {
   const preflight = validateDocumentBatch(documents, { origins });
   if (atomic && preflight.errors.length) {
     const report = { saved: [], skipped: [], errors: preflight.errors, atomic, rolledBack: 0 };
@@ -77,10 +77,12 @@ export async function saveDocumentBatch(documents, label = "Save documents", {
   });
   const savedIds = new Set(report.saved.map((item) => item.id));
   const savedDocuments = normalizedDocuments.filter((document) => savedIds.has(document._id));
-  const inverse = savedDocuments.map((document) => {
-    const old = previous.get(document._id);
-    return old ? operation.save(old) : operation.remove(document._id);
-  }).reverse();
+  const inverse = savedDocuments
+    .map((document) => {
+      const old = previous.get(document._id);
+      return old ? operation.save(old) : operation.remove(document._id);
+    })
+    .reverse();
   const applied = {
     result: report,
     savedDocuments,

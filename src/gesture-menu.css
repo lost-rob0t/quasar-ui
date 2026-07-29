@@ -21,7 +21,7 @@
 
   .editor-save-bar,
   .simple-editor-form > .editor-save-bar {
-    bottom: calc(.75rem + env(safe-area-inset-bottom));
+    bottom: calc(0.75rem + env(safe-area-inset-bottom));
   }
 
   .graph-relation-editor {
@@ -80,7 +80,7 @@
     width: 100%;
     max-height: min(72dvh, 620px);
     overflow-y: auto;
-    padding: .55rem .8rem max(1rem, env(safe-area-inset-bottom));
+    padding: 0.55rem 0.8rem max(1rem, env(safe-area-inset-bottom));
     border: 1px solid var(--line);
     border-right: 0;
     border-bottom: 0;
@@ -100,11 +100,11 @@
 
   .mobile-gesture-sheet > header > strong {
     display: flex;
-    gap: .45rem;
+    gap: 0.45rem;
     align-items: center;
     justify-content: center;
-    font-size: .82rem;
-    letter-spacing: .08em;
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
   }
 
@@ -116,8 +116,8 @@
   .mobile-gesture-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: .55rem;
-    padding: .6rem 0;
+    gap: 0.55rem;
+    padding: 0.6rem 0;
   }
 
   .mobile-gesture-link {
@@ -125,13 +125,13 @@
     min-height: 76px;
     place-items: center;
     align-content: center;
-    gap: .38rem;
-    padding: .6rem .35rem;
+    gap: 0.38rem;
+    padding: 0.6rem 0.35rem;
     border: 1px solid var(--line);
     border-radius: 12px;
     background: var(--surface);
     color: var(--muted);
-    font-size: .72rem;
+    font-size: 0.72rem;
     text-decoration: none;
   }
 

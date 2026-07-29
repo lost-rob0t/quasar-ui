@@ -45,7 +45,9 @@ describe("graph local corpus status", () => {
 
     const html = renderToStaticMarkup(
       <MemoryRouter initialEntries={["/graph"]}>
-        <Routes><Route path="/graph" element={<GraphPage />} /></Routes>
+        <Routes>
+          <Route path="/graph" element={<GraphPage />} />
+        </Routes>
       </MemoryRouter>
     );
 
@@ -57,9 +59,7 @@ describe("graph local corpus status", () => {
   });
 
   it("reveals why newly-created unreviewed nodes are hidden", () => {
-    const documents = [
-      document("starintel:entity:manual", "entity", { name: "Manual" }, false)
-    ];
+    const documents = [document("starintel:entity:manual", "entity", { name: "Manual" }, false)];
     context.current = {
       documents,
       workspace: { positions: {}, layout: "cose" },
@@ -75,7 +75,9 @@ describe("graph local corpus status", () => {
 
     const html = renderToStaticMarkup(
       <MemoryRouter initialEntries={["/graph"]}>
-        <Routes><Route path="/graph" element={<GraphPage />} /></Routes>
+        <Routes>
+          <Route path="/graph" element={<GraphPage />} />
+        </Routes>
       </MemoryRouter>
     );
 
@@ -88,12 +90,17 @@ describe("graph local corpus status", () => {
     const documents = [
       document("starintel:org:reviewed", "org", { name: "Reviewed" }, true),
       document("starintel:org:imported", "org", { name: "Imported" }, false),
-      document("starintel:relation:imported", "relation", {
-        subject: "starintel:org:reviewed",
-        predicate: "related-to",
-        object: "starintel:org:imported",
-        directed: true
-      }, false)
+      document(
+        "starintel:relation:imported",
+        "relation",
+        {
+          subject: "starintel:org:reviewed",
+          predicate: "related-to",
+          object: "starintel:org:imported",
+          directed: true
+        },
+        false
+      )
     ];
     context.current = {
       documents,
@@ -109,15 +116,21 @@ describe("graph local corpus status", () => {
     };
 
     const html = renderToStaticMarkup(
-      <MemoryRouter initialEntries={[{
-        pathname: "/graph",
-        state: {
-          importedIds: ["starintel:org:imported", "starintel:relation:imported"],
-          revealUnreviewed: true,
-          source: "local-import"
-        }
-      }]}>
-        <Routes><Route path="/graph" element={<GraphPage />} /></Routes>
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: "/graph",
+            state: {
+              importedIds: ["starintel:org:imported", "starintel:relation:imported"],
+              revealUnreviewed: true,
+              source: "local-import"
+            }
+          }
+        ]}
+      >
+        <Routes>
+          <Route path="/graph" element={<GraphPage />} />
+        </Routes>
       </MemoryRouter>
     );
 
@@ -131,30 +144,35 @@ describe("graph local corpus status", () => {
 
   it("shows research node state and execution scope in the inspector", () => {
     const researchNode = {
-      ...document("starintel:research-node:map", "research-node", {
-        objective: "Map the network",
-        status: "paused",
-        input_ids: ["starintel:org:input"],
-        target_ids: [],
-        actor_ids: ["actor:search"],
-        actor_selection_rules: [],
-        output_ids: ["starintel:org:output"],
-        artifact_ids: [],
-        child_ids: [],
-        dependency_ids: [],
-        run_ids: [],
-        current_actor_id: "",
-        current_run_id: "",
-        limits: {},
-        stop: {},
-        counters: {},
-        history: [],
-        created_at: stamp,
-        started_at: null,
-        completed_at: null,
-        last_error: "",
-        paused_reason: "operator"
-      }, true),
+      ...document(
+        "starintel:research-node:map",
+        "research-node",
+        {
+          objective: "Map the network",
+          status: "paused",
+          input_ids: ["starintel:org:input"],
+          target_ids: [],
+          actor_ids: ["actor:search"],
+          actor_selection_rules: [],
+          output_ids: ["starintel:org:output"],
+          artifact_ids: [],
+          child_ids: [],
+          dependency_ids: [],
+          run_ids: [],
+          current_actor_id: "",
+          current_run_id: "",
+          limits: {},
+          stop: {},
+          counters: {},
+          history: [],
+          created_at: stamp,
+          started_at: null,
+          completed_at: null,
+          last_error: "",
+          paused_reason: "operator"
+        },
+        true
+      ),
       status: "paused",
       summary: "Map the network"
     };
@@ -173,7 +191,9 @@ describe("graph local corpus status", () => {
 
     const html = renderToStaticMarkup(
       <MemoryRouter initialEntries={["/graph"]}>
-        <Routes><Route path="/graph" element={<GraphPage />} /></Routes>
+        <Routes>
+          <Route path="/graph" element={<GraphPage />} />
+        </Routes>
       </MemoryRouter>
     );
 
@@ -187,7 +207,10 @@ describe("graph local corpus status", () => {
   it("renders named graphs as a persistent workbench list", () => {
     const documents = [
       { ...document("starintel:org:first", "org", { name: "First" }, true), dataset: "alpha" },
-      { ...document("starintel:person:second", "person", { name: "Second" }, true), dataset: "beta" }
+      {
+        ...document("starintel:person:second", "person", { name: "Second" }, true),
+        dataset: "beta"
+      }
     ];
     const allGraph = {
       id: "all-documents",
@@ -235,7 +258,9 @@ describe("graph local corpus status", () => {
 
     const html = renderToStaticMarkup(
       <MemoryRouter initialEntries={["/graph"]}>
-        <Routes><Route path="/graph" element={<GraphPage />} /></Routes>
+        <Routes>
+          <Route path="/graph" element={<GraphPage />} />
+        </Routes>
       </MemoryRouter>
     );
 

@@ -34,7 +34,9 @@ function Distribution({ title, values, tone = "reviewed" }) {
         {entries.map(([label, value]) => (
           <div key={label}>
             <span title={label}>{label}</span>
-            <div className="bar"><i style={{ width: `${(value / max) * 100}%` }} /></div>
+            <div className="bar">
+              <i style={{ width: `${(value / max) * 100}%` }} />
+            </div>
             <strong>{value.toLocaleString()}</strong>
           </div>
         ))}
@@ -58,10 +60,21 @@ function ReviewSummary({ stats }) {
         <i style={{ width: `${stats.reviewPercent}%` }} />
       </div>
       <div className="review-summary-counts">
-        <div><CheckCircle2 size={18} /><span>Reviewed</span><strong>{stats.reviewedDocuments.toLocaleString()}</strong></div>
-        <div><TriangleAlert size={18} /><span>Unreviewed</span><strong>{stats.unreviewedDocuments.toLocaleString()}</strong></div>
+        <div>
+          <CheckCircle2 size={18} />
+          <span>Reviewed</span>
+          <strong>{stats.reviewedDocuments.toLocaleString()}</strong>
+        </div>
+        <div>
+          <TriangleAlert size={18} />
+          <span>Unreviewed</span>
+          <strong>{stats.unreviewedDocuments.toLocaleString()}</strong>
+        </div>
       </div>
-      <p>Primary metrics and the default graph use reviewed records only. Unreviewed records remain separate until explicitly enabled.</p>
+      <p>
+        Primary metrics and the default graph use reviewed records only. Unreviewed records remain
+        separate until explicitly enabled.
+      </p>
     </section>
   );
 }
@@ -74,7 +87,10 @@ export default function StatsPage() {
     () => buildGraph(reviewGroups.reviewed, workspace?.positions || {}),
     [reviewGroups.reviewed, workspace?.positions]
   );
-  const baseStats = useMemo(() => graphStatistics(documents, reviewedGraph), [documents, reviewedGraph]);
+  const baseStats = useMemo(
+    () => graphStatistics(documents, reviewedGraph),
+    [documents, reviewedGraph]
+  );
 
   useEffect(() => {
     let active = true;
@@ -82,19 +98,24 @@ export default function StatsPage() {
       queryViewCounts("starintel-core-v1", "review_count"),
       queryViewCounts("starintel-core-v1", "review_dtype_count"),
       queryViewCounts("starintel-core-v1", "review_dataset_count")
-    ]).then(([review, dtype, dataset]) => {
-      if (!active) return;
-      setViewCounts({ review, dtype, dataset });
-    }).catch(() => active && setViewCounts(null));
-    return () => { active = false; };
+    ])
+      .then(([review, dtype, dataset]) => {
+        if (!active) return;
+        setViewCounts({ review, dtype, dataset });
+      })
+      .catch(() => active && setViewCounts(null));
+    return () => {
+      active = false;
+    };
   }, [documents, queryViewCounts]);
 
   const stats = useMemo(() => {
     if (!viewCounts) return baseStats;
     const review = Object.fromEntries(viewCounts.review.map(({ key, count }) => [key, count]));
-    const byReview = (rows, reviewStatus) => Object.fromEntries(rows
-      .filter(({ key }) => key?.[0] === reviewStatus)
-      .map(({ key, count }) => [key[1], count]));
+    const byReview = (rows, reviewStatus) =>
+      Object.fromEntries(
+        rows.filter(({ key }) => key?.[0] === reviewStatus).map(({ key, count }) => [key[1], count])
+      );
     const reviewedDocuments = review.reviewed || 0;
     const unreviewedDocuments = review.unreviewed || 0;
     const total = reviewedDocuments + unreviewedDocuments;
@@ -113,15 +134,23 @@ export default function StatsPage() {
     return (
       <section className="dashboard-empty-page">
         <div className="page-heading">
-          <div><span className="eyebrow">Corpus telemetry</span><h1>Statistics dashboard</h1><p>Reviewed and unreviewed StarIntel records are counted separately.</p></div>
+          <div>
+            <span className="eyebrow">Corpus telemetry</span>
+            <h1>Statistics dashboard</h1>
+            <p>Reviewed and unreviewed StarIntel records are counted separately.</p>
+          </div>
         </div>
         <section className="empty-state dashboard-empty">
           <Network size={42} />
           <h2>No documents loaded</h2>
           <p>Import a corpus to populate reviewed metrics and the graph explorer.</p>
           <div className="button-row">
-            <Link className="button primary" to="/import">Import documents</Link>
-            <Link className="button" to="/graph">Open empty graph</Link>
+            <Link className="button primary" to="/import">
+              Import documents
+            </Link>
+            <Link className="button" to="/graph">
+              Open empty graph
+            </Link>
           </div>
         </section>
       </section>
@@ -134,18 +163,28 @@ export default function StatsPage() {
         <div>
           <span className="eyebrow">Corpus telemetry</span>
           <h1>Statistics dashboard</h1>
-          <p>Reviewed records drive the primary totals. Unreviewed records are visible as a separate queue and never folded into verified metrics.</p>
+          <p>
+            Reviewed records drive the primary totals. Unreviewed records are visible as a separate
+            queue and never folded into verified metrics.
+          </p>
         </div>
       </div>
 
       <div className="dashboard-hero-grid">
         <Link className="graph-entry-card" to="/graph">
-          <div className="graph-entry-icon"><Network size={42} /></div>
+          <div className="graph-entry-icon">
+            <Network size={42} />
+          </div>
           <div>
             <span className="eyebrow">Full explorer</span>
             <h2>Explore the Graph</h2>
-            <p>Search the complete relationship network, filter by dataset, document type, predicate, and review status, then inspect nodes in context.</p>
-            <span className="graph-entry-action">Open graph explorer <ArrowRight size={18} /></span>
+            <p>
+              Search the complete relationship network, filter by dataset, document type, predicate,
+              and review status, then inspect nodes in context.
+            </p>
+            <span className="graph-entry-action">
+              Open graph explorer <ArrowRight size={18} />
+            </span>
           </div>
         </Link>
         <ReviewSummary stats={stats} />
@@ -160,11 +199,24 @@ export default function StatsPage() {
           <span>Unreviewed records excluded</span>
         </div>
         <div className="stats-grid reviewed-stats-grid">
-          <StatCard label="Reviewed documents" value={stats.reviewedDocuments} Icon={CheckCircle2} />
-          <StatCard label="Reviewed entities" value={stats.reviewedEntities} Icon={GitBranch} detail="Entity, person, and organization records" />
+          <StatCard
+            label="Reviewed documents"
+            value={stats.reviewedDocuments}
+            Icon={CheckCircle2}
+          />
+          <StatCard
+            label="Reviewed entities"
+            value={stats.reviewedEntities}
+            Icon={GitBranch}
+            detail="Entity, person, and organization records"
+          />
           <StatCard label="Reviewed relations" value={stats.reviewedRelations} Icon={Link2} />
           <StatCard label="Reviewed events" value={stats.reviewedEvents} Icon={FileText} />
-          <StatCard label="Reviewed targets" value={stats.reviewedInvestigationTargets} Icon={Target} />
+          <StatCard
+            label="Reviewed targets"
+            value={stats.reviewedInvestigationTargets}
+            Icon={Target}
+          />
         </div>
         <div className="dashboard-grid">
           <Distribution title="Reviewed documents by dtype" values={stats.reviewedByDtype} />
@@ -188,7 +240,11 @@ export default function StatsPage() {
             tone="unreviewed"
             detail="Enable explicitly in the graph review-status filter"
           />
-          <Distribution title="Unreviewed documents by dtype" values={stats.unreviewedByDtype} tone="unreviewed" />
+          <Distribution
+            title="Unreviewed documents by dtype"
+            values={stats.unreviewedByDtype}
+            tone="unreviewed"
+          />
         </div>
       </section>
 
@@ -198,7 +254,10 @@ export default function StatsPage() {
           {stats.topConnected.map((item, index) => (
             <div key={item.id}>
               <span>{index + 1}</span>
-              <div><strong>{item.label}</strong><code>{item.id}</code></div>
+              <div>
+                <strong>{item.label}</strong>
+                <code>{item.id}</code>
+              </div>
               <b>{item.count}</b>
             </div>
           ))}

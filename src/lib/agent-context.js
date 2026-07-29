@@ -32,12 +32,13 @@ export function buildAgentContext(input, customLimits = {}) {
   const targetIds = new Set(input.targetIds || []);
   const activeDataset = input.dataset || "";
   const relevant = documents
-    .filter((document) => (
-      selectedIds.has(document._id)
-      || targetIds.has(document._id)
-      || targetIds.has(document.data?.target_id)
-      || (activeDataset && document.dataset === activeDataset && document.dtype === "relation")
-    ))
+    .filter(
+      (document) =>
+        selectedIds.has(document._id) ||
+        targetIds.has(document._id) ||
+        targetIds.has(document.data?.target_id) ||
+        (activeDataset && document.dataset === activeDataset && document.dtype === "relation")
+    )
     .sort((left, right) => {
       const leftPriority = selectedIds.has(left._id) ? 0 : targetIds.has(left._id) ? 1 : 2;
       const rightPriority = selectedIds.has(right._id) ? 0 : targetIds.has(right._id) ? 1 : 2;
@@ -59,11 +60,11 @@ export function buildAgentContext(input, customLimits = {}) {
     dataset: activeDataset || null,
     graph: input.graph
       ? {
-        id: input.graph.id,
-        name: input.graph.name,
-        documentCount: input.graph.documentIds?.length ?? documents.length,
-        layout: input.graph.layout
-      }
+          id: input.graph.id,
+          name: input.graph.name,
+          documentCount: input.graph.documentIds?.length ?? documents.length,
+          layout: input.graph.layout
+        }
       : null,
     filters: input.filters || {},
     documents: bounded,
@@ -89,5 +90,7 @@ export function systemPromptForAgent(agent, role, context) {
     role?.instructions || "",
     agent.systemPrompt || "",
     `Structured context:\n${JSON.stringify(context)}`
-  ].filter(Boolean).join("\n\n");
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }

@@ -9,7 +9,7 @@ import {
 
 function fakeCacheStorage(initial = {}) {
   const entries = new Map(Object.entries(initial));
-  const key = (request) => typeof request === "string" ? request : request.url;
+  const key = (request) => (typeof request === "string" ? request : request.url);
   const cache = {
     put: vi.fn(async (request, response) => {
       entries.set(key(request), response);
@@ -30,9 +30,11 @@ describe("service worker runtime cache", () => {
       [request.url]: new Response("stale validator bundle"),
       "./index.html": new Response("stale shell")
     });
-    const fetchRequest = vi.fn().mockResolvedValue(new Response("fresh shell", {
-      headers: { "content-type": "text/html" }
-    }));
+    const fetchRequest = vi.fn().mockResolvedValue(
+      new Response("fresh shell", {
+        headers: { "content-type": "text/html" }
+      })
+    );
 
     const response = await networkFirstNavigation(request, { cacheStorage, fetchRequest });
     expect(await response.text()).toBe("fresh shell");
@@ -79,8 +81,12 @@ describe("service worker runtime cache", () => {
   });
 
   it("rejects private and no-store responses from Cache Storage", () => {
-    expect(mayStoreResponse(new Response("x", { headers: { "cache-control": "private" } }))).toBe(false);
-    expect(mayStoreResponse(new Response("x", { headers: { "cache-control": "no-store" } }))).toBe(false);
+    expect(mayStoreResponse(new Response("x", { headers: { "cache-control": "private" } }))).toBe(
+      false
+    );
+    expect(mayStoreResponse(new Response("x", { headers: { "cache-control": "no-store" } }))).toBe(
+      false
+    );
     expect(mayStoreResponse(new Response("x"))).toBe(true);
   });
 });

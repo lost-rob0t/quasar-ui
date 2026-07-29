@@ -34,10 +34,12 @@ describe("browser actor manifests", () => {
   });
 
   it("denies unknown capabilities", () => {
-    expect(() => normalizeBrowserActorManifest({
-      ...manifest,
-      capabilities: ["pouchdb.raw"]
-    })).toThrow("Unsupported actor capability");
+    expect(() =>
+      normalizeBrowserActorManifest({
+        ...manifest,
+        capabilities: ["pouchdb.raw"]
+      })
+    ).toThrow("Unsupported actor capability");
   });
 
   it("adapts existing Quasar actor manifests", () => {
@@ -54,9 +56,12 @@ describe("browser actor manifests", () => {
 
   it("checks selection and accepted object types", () => {
     expect(actorContextApplicability(manifest, { selection: [] }).applicable).toBe(false);
-    expect(actorContextApplicability(manifest, { selection: [{ dtype: "org" }] }).reason)
-      .toBe("Does not accept org documents.");
-    expect(actorContextApplicability(manifest, { selection: [{ dtype: "person" }] }).applicable).toBe(true);
+    expect(actorContextApplicability(manifest, { selection: [{ dtype: "org" }] }).reason).toBe(
+      "Does not accept org documents."
+    );
+    expect(
+      actorContextApplicability(manifest, { selection: [{ dtype: "person" }] }).applicable
+    ).toBe(true);
   });
 
   it("builds a parseable dedicated-worker program", () => {
@@ -69,13 +74,18 @@ describe("browser actor manifests", () => {
 
 describe("browser actor results", () => {
   it("normalizes the full result envelope", () => {
-    expect(normalizeBrowserActorResult({
-      documents: [{ _id: "one" }],
-      operations: [{ op: "remove_document", id: "two" }],
-      artifacts: [{ name: "report.json" }],
-      message: "done",
-      metrics: { requests: 2 }
-    }, manifest)).toEqual({
+    expect(
+      normalizeBrowserActorResult(
+        {
+          documents: [{ _id: "one" }],
+          operations: [{ op: "remove_document", id: "two" }],
+          artifacts: [{ name: "report.json" }],
+          message: "done",
+          metrics: { requests: 2 }
+        },
+        manifest
+      )
+    ).toEqual({
       documents: [{ _id: "one" }],
       operations: [{ op: "remove_document", id: "two" }],
       artifacts: [{ name: "report.json" }],
@@ -89,7 +99,8 @@ describe("browser actor results", () => {
       ...manifest,
       limits: { maxDocuments: 1 }
     };
-    expect(() => normalizeBrowserActorResult({ documents: [{}, {}] }, bounded))
-      .toThrow("more than 1 documents");
+    expect(() => normalizeBrowserActorResult({ documents: [{}, {}] }, bounded)).toThrow(
+      "more than 1 documents"
+    );
   });
 });

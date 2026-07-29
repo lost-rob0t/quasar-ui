@@ -1,7 +1,9 @@
 import { assertDocument } from "starintel_doc";
 
 function serverUrl(configuration, path = "") {
-  const base = String(configuration?.serverUrl || "").trim().replace(/\/+$/, "");
+  const base = String(configuration?.serverUrl || "")
+    .trim()
+    .replace(/\/+$/, "");
   if (!base) throw new Error("StarIntel server URL is required");
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
@@ -63,7 +65,8 @@ export async function probeStarIntelServer(configuration) {
 
 export async function submitTargetToServer(configuration, target) {
   const document = assertDocument(target);
-  if (document.dtype !== "target") throw new Error("Only target documents can be submitted as targets");
+  if (document.dtype !== "target")
+    throw new Error("Only target documents can be submitted as targets");
   const actor = document.data?.actor;
   if (!actor) throw new Error("Target actor is required");
   try {

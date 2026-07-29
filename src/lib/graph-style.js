@@ -30,14 +30,41 @@ export const GRAPH_STYLE = [
       "border-width": 4
     }
   },
-  { selector: "node[dtype = 'research-node'][researchStatus = 'running']", style: { "border-color": "#22c55e" } },
-  { selector: "node[dtype = 'research-node'][researchStatus = 'paused']", style: { "border-color": "#f59e0b", "border-style": "dashed" } },
-  { selector: "node[dtype = 'research-node'][researchStatus = 'blocked']", style: { "border-color": "#f59e0b", "border-style": "double" } },
-  { selector: "node[dtype = 'research-node'][researchStatus = 'completed']", style: { "border-color": "#38bdf8" } },
-  { selector: "node[dtype = 'research-node'][researchStatus = 'failed']", style: { "border-color": "#ef4444", "border-style": "dashed" } },
-  { selector: "node[dtype = 'research-node'][researchStatus = 'killed']", style: { opacity: 0.58, "border-style": "dotted" } },
+  {
+    selector: "node[dtype = 'research-node'][researchStatus = 'running']",
+    style: { "border-color": "#22c55e" }
+  },
+  {
+    selector: "node[dtype = 'research-node'][researchStatus = 'paused']",
+    style: { "border-color": "#f59e0b", "border-style": "dashed" }
+  },
+  {
+    selector: "node[dtype = 'research-node'][researchStatus = 'blocked']",
+    style: { "border-color": "#f59e0b", "border-style": "double" }
+  },
+  {
+    selector: "node[dtype = 'research-node'][researchStatus = 'completed']",
+    style: { "border-color": "#38bdf8" }
+  },
+  {
+    selector: "node[dtype = 'research-node'][researchStatus = 'failed']",
+    style: { "border-color": "#ef4444", "border-style": "dashed" }
+  },
+  {
+    selector: "node[dtype = 'research-node'][researchStatus = 'killed']",
+    style: { opacity: 0.58, "border-style": "dotted" }
+  },
   { selector: "node[?unresolved]", style: { "border-style": "dashed", opacity: 0.72 } },
-  { selector: "node:selected", style: { "border-color": "#f8fafc", "border-width": 4, "underlay-color": "#38bdf8", "underlay-opacity": 0.18, "underlay-padding": 10 } },
+  {
+    selector: "node:selected",
+    style: {
+      "border-color": "#f8fafc",
+      "border-width": 4,
+      "underlay-color": "#38bdf8",
+      "underlay-opacity": 0.18,
+      "underlay-padding": 10
+    }
+  },
   { selector: "node.path", style: { "border-color": "#f59e0b", "border-width": 5 } },
   {
     selector: "edge",
@@ -58,8 +85,14 @@ export const GRAPH_STYLE = [
     }
   },
   { selector: "edge[!directed]", style: { "target-arrow-shape": "none" } },
-  { selector: "edge:selected", style: { width: 3, "line-color": "#38bdf8", "target-arrow-color": "#38bdf8" } },
-  { selector: "edge.path", style: { width: 4, "line-color": "#f59e0b", "target-arrow-color": "#f59e0b", "z-index": 20 } },
+  {
+    selector: "edge:selected",
+    style: { width: 3, "line-color": "#38bdf8", "target-arrow-color": "#38bdf8" }
+  },
+  {
+    selector: "edge.path",
+    style: { width: 4, "line-color": "#f59e0b", "target-arrow-color": "#f59e0b", "z-index": 20 }
+  },
   {
     selector: ".eh-handle",
     style: {
@@ -104,9 +137,11 @@ export function themedGraphStyle(root = document.documentElement) {
   const tokens = getComputedStyle(root);
   return GRAPH_STYLE.map((rule) => ({
     ...rule,
-    style: Object.fromEntries(Object.entries(rule.style).map(([property, value]) => {
-      const token = THEME_COLOR[value];
-      return [property, token ? tokens.getPropertyValue(token).trim() || value : value];
-    }))
+    style: Object.fromEntries(
+      Object.entries(rule.style).map(([property, value]) => {
+        const token = THEME_COLOR[value];
+        return [property, token ? tokens.getPropertyValue(token).trim() || value : value];
+      })
+    )
   }));
 }

@@ -93,7 +93,8 @@ function number(value, fallback, minimum, label) {
 
 function state(value) {
   const normalized = String(value || "draft").trim();
-  if (!STATE_SET.has(normalized)) throw new TypeError(`Unsupported research node state: ${normalized}`);
+  if (!STATE_SET.has(normalized))
+    throw new TypeError(`Unsupported research node state: ${normalized}`);
   return normalized;
 }
 
@@ -104,12 +105,42 @@ function field(value, camel, snake) {
 function normalizeLimits(value = {}, fallback = DEFAULT_LIMITS) {
   objectValue(value, "Research node limits");
   return {
-    max_depth: integer(field(value, "maxDepth", "max_depth"), fallback.max_depth, 1, "Research node max_depth"),
-    max_actor_runs: integer(field(value, "maxActorRuns", "max_actor_runs"), fallback.max_actor_runs, 1, "Research node max_actor_runs"),
-    max_requests: integer(field(value, "maxRequests", "max_requests"), fallback.max_requests, 1, "Research node max_requests"),
-    max_elapsed_ms: integer(field(value, "maxElapsedMs", "max_elapsed_ms"), fallback.max_elapsed_ms, 1, "Research node max_elapsed_ms"),
-    max_repeated_state: integer(field(value, "maxRepeatedState", "max_repeated_state"), fallback.max_repeated_state, 1, "Research node max_repeated_state"),
-    max_cost: number(field(value, "maxCost", "max_cost"), fallback.max_cost, 0, "Research node max_cost"),
+    max_depth: integer(
+      field(value, "maxDepth", "max_depth"),
+      fallback.max_depth,
+      1,
+      "Research node max_depth"
+    ),
+    max_actor_runs: integer(
+      field(value, "maxActorRuns", "max_actor_runs"),
+      fallback.max_actor_runs,
+      1,
+      "Research node max_actor_runs"
+    ),
+    max_requests: integer(
+      field(value, "maxRequests", "max_requests"),
+      fallback.max_requests,
+      1,
+      "Research node max_requests"
+    ),
+    max_elapsed_ms: integer(
+      field(value, "maxElapsedMs", "max_elapsed_ms"),
+      fallback.max_elapsed_ms,
+      1,
+      "Research node max_elapsed_ms"
+    ),
+    max_repeated_state: integer(
+      field(value, "maxRepeatedState", "max_repeated_state"),
+      fallback.max_repeated_state,
+      1,
+      "Research node max_repeated_state"
+    ),
+    max_cost: number(
+      field(value, "maxCost", "max_cost"),
+      fallback.max_cost,
+      0,
+      "Research node max_cost"
+    ),
     currency: String(value.currency ?? fallback.currency ?? "USD").trim()
   };
 }
@@ -117,10 +148,16 @@ function normalizeLimits(value = {}, fallback = DEFAULT_LIMITS) {
 function normalizeStop(value = {}, fallback = DEFAULT_STOP) {
   objectValue(value, "Research node stop conditions");
   return {
-    when_actor_queue_empty: field(value, "whenActorQueueEmpty", "when_actor_queue_empty") ?? fallback.when_actor_queue_empty,
-    when_no_new_documents: field(value, "whenNoNewDocuments", "when_no_new_documents") ?? fallback.when_no_new_documents,
-    when_objective_satisfied: field(value, "whenObjectiveSatisfied", "when_objective_satisfied") ?? fallback.when_objective_satisfied,
-    halt_on_actor_failure: field(value, "haltOnActorFailure", "halt_on_actor_failure") ?? fallback.halt_on_actor_failure
+    when_actor_queue_empty:
+      field(value, "whenActorQueueEmpty", "when_actor_queue_empty") ??
+      fallback.when_actor_queue_empty,
+    when_no_new_documents:
+      field(value, "whenNoNewDocuments", "when_no_new_documents") ?? fallback.when_no_new_documents,
+    when_objective_satisfied:
+      field(value, "whenObjectiveSatisfied", "when_objective_satisfied") ??
+      fallback.when_objective_satisfied,
+    halt_on_actor_failure:
+      field(value, "haltOnActorFailure", "halt_on_actor_failure") ?? fallback.halt_on_actor_failure
   };
 }
 
@@ -128,19 +165,33 @@ function normalizeCounters(value = {}, fallback = DEFAULT_COUNTERS) {
   objectValue(value, "Research node counters");
   return {
     depth: integer(value.depth, fallback.depth, 0, "Research node depth"),
-    actor_runs: integer(field(value, "actorRuns", "actor_runs"), fallback.actor_runs, 0, "Research node actor_runs"),
+    actor_runs: integer(
+      field(value, "actorRuns", "actor_runs"),
+      fallback.actor_runs,
+      0,
+      "Research node actor_runs"
+    ),
     requests: integer(value.requests, fallback.requests, 0, "Research node requests"),
-    repeated_state: integer(field(value, "repeatedState", "repeated_state"), fallback.repeated_state, 0, "Research node repeated_state"),
-    elapsed_ms: integer(field(value, "elapsedMs", "elapsed_ms"), fallback.elapsed_ms, 0, "Research node elapsed_ms"),
+    repeated_state: integer(
+      field(value, "repeatedState", "repeated_state"),
+      fallback.repeated_state,
+      0,
+      "Research node repeated_state"
+    ),
+    elapsed_ms: integer(
+      field(value, "elapsedMs", "elapsed_ms"),
+      fallback.elapsed_ms,
+      0,
+      "Research node elapsed_ms"
+    ),
     cost: number(value.cost, fallback.cost, 0, "Research node cost")
   };
 }
 
 function normalizeHistoryEntry(value) {
   objectValue(value, "Research node history entry");
-  const from = value.from === null || value.from === undefined || value.from === ""
-    ? null
-    : state(value.from);
+  const from =
+    value.from === null || value.from === undefined || value.from === "" ? null : state(value.from);
   return {
     from,
     to: state(value.to),
@@ -170,9 +221,17 @@ function normalizeData(value) {
   if (!objective) throw new TypeError("Research node objective is required");
   const status = state(data.status);
   const createdAt = nullableTimestamp(data.created_at) || new Date().toISOString();
-  const history = Array.isArray(data.history) && data.history.length
-    ? normalizeHistory(data.history)
-    : [normalizeHistoryEntry({ from: null, to: status, at: createdAt, message: "Research node created" })];
+  const history =
+    Array.isArray(data.history) && data.history.length
+      ? normalizeHistory(data.history)
+      : [
+          normalizeHistoryEntry({
+            from: null,
+            to: status,
+            at: createdAt,
+            message: "Research node created"
+          })
+        ];
 
   return {
     objective,
@@ -181,7 +240,10 @@ function normalizeData(value) {
     input_ids: stringList(data.input_ids),
     target_ids: stringList(data.target_ids),
     actor_ids: stringList(data.actor_ids),
-    actor_selection_rules: objectList(data.actor_selection_rules, "Research node actor selection rules"),
+    actor_selection_rules: objectList(
+      data.actor_selection_rules,
+      "Research node actor selection rules"
+    ),
     output_ids: stringList(data.output_ids),
     artifact_ids: stringList(data.artifact_ids),
     child_ids: stringList(data.child_ids),
@@ -232,7 +294,9 @@ export function createResearchNode(input = {}) {
     limits: input.limits || {},
     stop: input.stop || {},
     counters: input.counters || {},
-    history: input.history || [{ from: null, to: initialState, at: createdAt, message: "Research node created" }],
+    history: input.history || [
+      { from: null, to: initialState, at: createdAt, message: "Research node created" }
+    ],
     created_at: createdAt,
     started_at: input.startedAt,
     completed_at: input.completedAt,
@@ -288,8 +352,12 @@ export function transitionResearchNode(document, nextState, options = {}) {
   data.child_ids = stringList([...(data.child_ids || []), ...childIds]);
   data.run_ids = stringList([...(data.run_ids || []), ...runIds, data.current_run_id]);
   data.counters = normalizeCounters(options.counters || {}, data.counters);
-  data.last_error = options.error === undefined ? data.last_error : String(options.error || "").trim();
-  data.paused_reason = options.pausedReason === undefined ? data.paused_reason : String(options.pausedReason || "").trim();
+  data.last_error =
+    options.error === undefined ? data.last_error : String(options.error || "").trim();
+  data.paused_reason =
+    options.pausedReason === undefined
+      ? data.paused_reason
+      : String(options.pausedReason || "").trim();
   if (["queued", "running"].includes(to)) data.completed_at = null;
   if (to === "running" && !data.started_at) data.started_at = at;
   if (["completed", "failed", "killed"].includes(to)) data.completed_at = at;

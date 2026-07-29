@@ -1,9 +1,7 @@
 export const REVIEW_ACTOR_ID = "quasar.actor.mark-reviewed";
 
 export function markReviewedActor(context) {
-  const selection = Array.isArray(context.selection)
-    ? context.selection.slice(0, 32)
-    : [];
+  const selection = Array.isArray(context.selection) ? context.selection.slice(0, 32) : [];
   const stamp = new Date().toISOString();
 
   return {
@@ -48,10 +46,7 @@ export const REVIEW_ACTOR = Object.freeze({
 });
 
 export function mergeReviewActor(actors = []) {
-  return [
-    ...(actors || []).filter((actor) => actor?.id !== REVIEW_ACTOR_ID),
-    REVIEW_ACTOR
-  ];
+  return [...(actors || []).filter((actor) => actor?.id !== REVIEW_ACTOR_ID), REVIEW_ACTOR];
 }
 
 export function removeReviewActor(actors = []) {

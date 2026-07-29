@@ -39,8 +39,18 @@ const documents = [
 beforeEach(() => {
   useQuasar.mockReturnValue({
     documents,
-    graphs: [{ id: "case-alpha", name: "Case Alpha", documentIds: documents.map((document) => document._id) }],
-    activeGraph: { id: "case-alpha", name: "Case Alpha", documentIds: documents.map((document) => document._id) },
+    graphs: [
+      {
+        id: "case-alpha",
+        name: "Case Alpha",
+        documentIds: documents.map((document) => document._id)
+      }
+    ],
+    activeGraph: {
+      id: "case-alpha",
+      name: "Case Alpha",
+      documentIds: documents.map((document) => document._id)
+    },
     switchGraph: vi.fn(),
     createGraph: vi.fn(),
     syncStatus: { state: "ready" }

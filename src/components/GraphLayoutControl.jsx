@@ -28,7 +28,9 @@ function findContextHost() {
 
   for (const menu of menus) {
     const buttons = [...menu.querySelectorAll(':scope > button[role="menuitem"]')];
-    const legacyButtons = buttons.filter((button) => LEGACY_CONTEXT_LAYOUTS.has(button.textContent.trim()));
+    const legacyButtons = buttons.filter((button) =>
+      LEGACY_CONTEXT_LAYOUTS.has(button.textContent.trim())
+    );
     if (legacyButtons.length !== LEGACY_CONTEXT_LAYOUTS.size) continue;
 
     const existing = menu.querySelector("[data-maltego-context-layout-host]");
@@ -38,7 +40,9 @@ function findContextHost() {
     host.className = "maltego-context-layout-host";
     host.dataset.maltegoContextLayoutHost = "true";
     legacyButtons[0].before(host);
-    legacyButtons.forEach((button) => { button.dataset.maltegoLegacyLayout = "true"; });
+    legacyButtons.forEach((button) => {
+      button.dataset.maltegoLegacyLayout = "true";
+    });
     return host;
   }
 
@@ -46,9 +50,11 @@ function findContextHost() {
 }
 
 function dispatchLayout(layout) {
-  window.dispatchEvent(new CustomEvent("quasar:agent-graph-command", {
-    detail: { op: "apply_layout", layout }
-  }));
+  window.dispatchEvent(
+    new CustomEvent("quasar:agent-graph-command", {
+      detail: { op: "apply_layout", layout }
+    })
+  );
 }
 
 export default function GraphLayoutControl() {
@@ -86,41 +92,47 @@ export default function GraphLayoutControl() {
 
   const layout = normalizeMaltegoLayout(workspace?.layout);
   const closeContextMenu = () => {
-    document.querySelector(".graph-stage")?.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    document
+      .querySelector(".graph-stage")
+      ?.dispatchEvent(new Event("pointerdown", { bubbles: true }));
   };
 
   return (
     <>
-      {toolbarHost && createPortal(
-        <select
-          className="maltego-layout-select"
-          aria-label="Maltego graph layout"
-          title="Maltego graph layout"
-          value={layout}
-          onChange={(event) => dispatchLayout(event.target.value)}
-        >
-          {MALTEGO_LAYOUTS.map((candidate) => (
-            <option key={candidate.id} value={candidate.id}>{candidate.label}</option>
-          ))}
-        </select>,
-        toolbarHost
-      )}
-      {contextHost && createPortal(
-        MALTEGO_LAYOUTS.map((candidate) => (
-          <button
-            role="menuitem"
-            type="button"
-            key={candidate.id}
-            onClick={() => {
-              dispatchLayout(candidate.id);
-              closeContextMenu();
-            }}
+      {toolbarHost &&
+        createPortal(
+          <select
+            className="maltego-layout-select"
+            aria-label="Maltego graph layout"
+            title="Maltego graph layout"
+            value={layout}
+            onChange={(event) => dispatchLayout(event.target.value)}
           >
-            <Grid2X2 size={15} /> {candidate.label}
-          </button>
-        )),
-        contextHost
-      )}
+            {MALTEGO_LAYOUTS.map((candidate) => (
+              <option key={candidate.id} value={candidate.id}>
+                {candidate.label}
+              </option>
+            ))}
+          </select>,
+          toolbarHost
+        )}
+      {contextHost &&
+        createPortal(
+          MALTEGO_LAYOUTS.map((candidate) => (
+            <button
+              role="menuitem"
+              type="button"
+              key={candidate.id}
+              onClick={() => {
+                dispatchLayout(candidate.id);
+                closeContextMenu();
+              }}
+            >
+              <Grid2X2 size={15} /> {candidate.label}
+            </button>
+          )),
+          contextHost
+        )}
     </>
   );
 }

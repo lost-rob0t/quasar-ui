@@ -7,11 +7,7 @@
       color-mix(in srgb, var(--accent) 28%, transparent),
       transparent 18rem
     ),
-    linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--panel-2) 72%, var(--accent)),
-      var(--panel) 68%
-    );
+    linear-gradient(145deg, color-mix(in srgb, var(--panel-2) 72%, var(--accent)), var(--panel) 68%);
   color: var(--text);
   box-shadow:
     0 24px 70px color-mix(in srgb, var(--bg-deep) 55%, transparent),

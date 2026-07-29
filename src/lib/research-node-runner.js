@@ -43,7 +43,8 @@ export function createResearchNodeRunner({
   saveNode,
   onStatus = () => {},
   now = () => Date.now(),
-  createRunId = () => `run:research:${globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)}`
+  createRunId = () =>
+    `run:research:${globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)}`
 }) {
   if (typeof resolveActor !== "function") throw new TypeError("resolveActor is required");
   if (typeof resolveDocument !== "function") throw new TypeError("resolveDocument is required");
@@ -100,8 +101,7 @@ export function createResearchNodeRunner({
     };
     active.set(normalized._id, record);
     onStatus({ id: normalized._id, state: "queued", actorId: "", runId: "" });
-    record.promise = execute(normalized, mode, record)
-      .finally(() => active.delete(normalized._id));
+    record.promise = execute(normalized, mode, record).finally(() => active.delete(normalized._id));
     return record.promise;
   }
 
@@ -115,9 +115,10 @@ export function createResearchNodeRunner({
       : node.data.counters;
     const elapsed = () => baseCounters.elapsed_ms + Math.max(0, now() - startedAt);
     const resumable = ["paused", "blocked", "failed"].includes(node.data.status);
-    const currentIndex = resumable && node.data.current_actor_id
-      ? plan.actorIds.indexOf(node.data.current_actor_id)
-      : -1;
+    const currentIndex =
+      resumable && node.data.current_actor_id
+        ? plan.actorIds.indexOf(node.data.current_actor_id)
+        : -1;
     let actorIndex = mode === "run" ? 0 : Math.max(0, currentIndex);
     let selection = unique([...plan.inputIds, ...plan.targetIds, ...node.data.output_ids])
       .map((id) => resolveDocument(id))
@@ -145,8 +146,7 @@ export function createResearchNodeRunner({
       const blockedDependency = plan.dependencyIds
         ?.map((id) => resolveDocument(id))
         .find((dependency) => dependency?.data?.status !== "completed");
-      const missingDependency = plan.dependencyIds
-        ?.find((id) => !resolveDocument(id));
+      const missingDependency = plan.dependencyIds?.find((id) => !resolveDocument(id));
       if (missingDependency || blockedDependency) {
         const dependencyId = missingDependency || blockedDependency._id;
         return move(node, "blocked", {
@@ -232,8 +232,11 @@ export function createResearchNodeRunner({
             .filter((document) => document?._id);
           if (nextSelection.length) selection = nextSelection;
 
-          if (plan.stop.when_objective_satisfied
-            && (result?.metrics?.objective_satisfied === true || result?.metrics?.objectiveSatisfied === true)) {
+          if (
+            plan.stop.when_objective_satisfied &&
+            (result?.metrics?.objective_satisfied === true ||
+              result?.metrics?.objectiveSatisfied === true)
+          ) {
             return move(node, "completed", { message: "Objective satisfied." });
           }
           if (plan.stop.when_no_new_documents && !newOutputs.length) {
@@ -283,7 +286,10 @@ export function createResearchNodeRunner({
         return settleRequested(node, record);
       }
       if (node.data.status === "running") {
-        return move(node, "failed", { message: "Research execution failed.", error: error.message });
+        return move(node, "failed", {
+          message: "Research execution failed.",
+          error: error.message
+        });
       }
       throw error;
     }
@@ -303,7 +309,8 @@ export function createResearchNodeRunner({
       return start(document, "run");
     },
     resume(document) {
-      if (document?.data?.status !== "paused") throw new Error("Only paused research nodes can resume.");
+      if (document?.data?.status !== "paused")
+        throw new Error("Only paused research nodes can resume.");
       return start(document, "resume");
     },
     retry(document) {

@@ -16,7 +16,9 @@ const LEGACY_LAYOUTS = Object.freeze({
 });
 
 export function normalizeMaltegoLayout(layout) {
-  const value = String(layout || "").trim().toLowerCase();
+  const value = String(layout || "")
+    .trim()
+    .toLowerCase();
   if (MALTEGO_LAYOUTS.some((candidate) => candidate.id === value)) return value;
   return LEGACY_LAYOUTS[value] || "organic";
 }
@@ -29,22 +31,23 @@ function asNumber(value, fallback = 0) {
 function nodeWeight(node) {
   const document = node.data("document") || {};
   return asNumber(
-    document.weight
-      ?? document.data?.weight
-      ?? document.assessment?.weight
-      ?? node.data("weight"),
+    document.weight ?? document.data?.weight ?? document.assessment?.weight ?? node.data("weight"),
     0
   );
 }
 
 function compareNodes(left, right) {
-  const typeOrder = String(left.data("dtype") || "").localeCompare(String(right.data("dtype") || ""));
+  const typeOrder = String(left.data("dtype") || "").localeCompare(
+    String(right.data("dtype") || "")
+  );
   if (typeOrder) return typeOrder;
 
   const weightOrder = nodeWeight(right) - nodeWeight(left);
   if (weightOrder) return weightOrder;
 
-  return String(left.data("label") || left.id()).localeCompare(String(right.data("label") || right.id()));
+  return String(left.data("label") || left.id()).localeCompare(
+    String(right.data("label") || right.id())
+  );
 }
 
 function layoutElements(cy, options) {
@@ -62,7 +65,9 @@ function hierarchyRoots(elements) {
   if (!nodes.length) return nodes;
 
   const incoming = new Map(nodes.map((node) => [node.id(), 0]));
-  edges.forEach((edge) => incoming.set(edge.target().id(), (incoming.get(edge.target().id()) || 0) + 1));
+  edges.forEach((edge) =>
+    incoming.set(edge.target().id(), (incoming.get(edge.target().id()) || 0) + 1)
+  );
 
   const roots = nodes.filter((node) => (incoming.get(node.id()) || 0) === 0);
   if (roots.length) return roots;
@@ -96,11 +101,14 @@ function hierarchyDepths(elements) {
   }
 
   let disconnectedDepth = Math.max(0, ...[...depth.values()].filter(Number.isFinite)) + 1;
-  nodes.toArray().sort(compareNodes).forEach((node) => {
-    if (Number.isFinite(depth.get(node.id()))) return;
-    depth.set(node.id(), disconnectedDepth);
-    disconnectedDepth += 1;
-  });
+  nodes
+    .toArray()
+    .sort(compareNodes)
+    .forEach((node) => {
+      if (Number.isFinite(depth.get(node.id()))) return;
+      depth.set(node.id(), disconnectedDepth);
+      disconnectedDepth += 1;
+    });
 
   return depth;
 }

@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  importSpecifiers,
-  validateImport
-} from "../../scripts/check-boundaries.mjs";
+import { importSpecifiers, validateImport } from "../../scripts/check-boundaries.mjs";
 
 describe("package import boundaries", () => {
   it("keeps core independent from UI, renderer, storage, and network runtimes", () => {

@@ -53,7 +53,9 @@ async function validateAndSave(candidates, options) {
 
 describe("browser imports", () => {
   it("parses JSONL", async () => {
-    const result = await collectImportDocuments([file("records.jsonl", `${JSON.stringify(document)}\n`)]);
+    const result = await collectImportDocuments([
+      file("records.jsonl", `${JSON.stringify(document)}\n`)
+    ]);
     expect(result.documents).toHaveLength(1);
     expect(result.documents[0]._id).toBe(document._id);
     expect(result.origins[0]).toEqual({ file: "records.jsonl", line: 1, record: 1 });
@@ -61,11 +63,15 @@ describe("browser imports", () => {
 
   it("parses JSON, NDJSON, and CSV with stable source locations", async () => {
     const json = await collectImportDocuments([file("records.json", JSON.stringify([document]))]);
-    const ndjson = await collectImportDocuments([file("records.ndjson", `${JSON.stringify(document)}\n`)]);
-    const csv = await collectImportDocuments([file(
-      "records.csv",
-      `_id,dataset,dtype,title,data\n${document._id},test,org,Test,"{""name"":""Test""}"\n`
-    )]);
+    const ndjson = await collectImportDocuments([
+      file("records.ndjson", `${JSON.stringify(document)}\n`)
+    ]);
+    const csv = await collectImportDocuments([
+      file(
+        "records.csv",
+        `_id,dataset,dtype,title,data\n${document._id},test,org,Test,"{""name"":""Test""}"\n`
+      )
+    ]);
 
     expect(json.origins[0]).toEqual({ file: "records.json", record: 1 });
     expect(ndjson.origins[0]).toEqual({ file: "records.ndjson", line: 1, record: 1 });
@@ -80,10 +86,13 @@ describe("browser imports", () => {
       dtype: "dataset-manifest",
       data: { manifest_type: "dataset", name: "test", files: [{ path: "records.jsonl" }] }
     };
-    const result = await collectImportDocuments([
-      file("manifest.json", JSON.stringify(manifest)),
-      file("records.jsonl", `${JSON.stringify(document)}\n`)
-    ], { resolveManifestReferences: true });
+    const result = await collectImportDocuments(
+      [
+        file("manifest.json", JSON.stringify(manifest)),
+        file("records.jsonl", `${JSON.stringify(document)}\n`)
+      ],
+      { resolveManifestReferences: true }
+    );
     expect(result.documents.map((item) => item._id)).toContain(manifest._id);
     expect(result.documents.map((item) => item._id)).toContain(document._id);
     expect(result.errors).toHaveLength(0);
@@ -101,7 +110,10 @@ describe("browser imports", () => {
       }
     };
     const result = await collectImportDocuments([
-      file("starintel-complete-corpus.jsonl", `${JSON.stringify(manifest)}\n${JSON.stringify(document)}\n`)
+      file(
+        "starintel-complete-corpus.jsonl",
+        `${JSON.stringify(manifest)}\n${JSON.stringify(document)}\n`
+      )
     ]);
 
     expect(result.documents.map((item) => item._id)).toEqual([manifest._id, document._id]);
@@ -119,10 +131,13 @@ describe("browser imports", () => {
         files: [{ path: "records.jsonl" }, { path: "README.md" }]
       }
     };
-    const result = await collectImportDocuments([
-      file("manifest.json", JSON.stringify(manifest)),
-      file("records.jsonl", `${JSON.stringify(document)}\n`)
-    ], { resolveManifestReferences: true });
+    const result = await collectImportDocuments(
+      [
+        file("manifest.json", JSON.stringify(manifest)),
+        file("records.jsonl", `${JSON.stringify(document)}\n`)
+      ],
+      { resolveManifestReferences: true }
+    );
 
     expect(result.errors).toEqual([
       { file: "manifest.json", message: "manifest reference not supplied: README.md" }
@@ -137,9 +152,10 @@ describe("browser imports", () => {
 
   it("rejects an atomic import before saving when any line fails to parse", async () => {
     const saveBatch = vi.fn();
-    const promise = importFiles([
-      file("records.jsonl", `${JSON.stringify(document)}\n{not-json}\n`)
-    ], saveBatch);
+    const promise = importFiles(
+      [file("records.jsonl", `${JSON.stringify(document)}\n{not-json}\n`)],
+      saveBatch
+    );
 
     await expect(promise).rejects.toMatchObject({
       report: {
@@ -156,18 +172,17 @@ describe("browser imports", () => {
       skipped: [],
       errors: []
     });
-    const result = await importFiles([
-      file("records.json", JSON.stringify(document))
-    ], saveBatch);
+    const result = await importFiles([file("records.json", JSON.stringify(document))], saveBatch);
 
     expect(result.importedIds).toEqual([document._id]);
     expect(saveBatch.mock.calls[0][1].origins).toEqual([{ file: "records.json", record: 1 }]);
   });
 
   it("accepts the canonical relation shape rejected by the stale deployed validator", async () => {
-    const result = await importFiles([
-      file("relation.json", JSON.stringify(relation))
-    ], validateAndSave);
+    const result = await importFiles(
+      [file("relation.json", JSON.stringify(relation))],
+      validateAndSave
+    );
 
     expect(result.errors).toEqual([]);
     expect(result.importedIds).toEqual([relation._id]);
@@ -192,9 +207,10 @@ describe("browser imports", () => {
       }
     };
     const records = [endpointA, endpointB, relation, reverseRelation];
-    const result = await importFiles([
-      file("relations.jsonl", `${records.map((record) => JSON.stringify(record)).join("\n")}\n`)
-    ], validateAndSave);
+    const result = await importFiles(
+      [file("relations.jsonl", `${records.map((record) => JSON.stringify(record)).join("\n")}\n`)],
+      validateAndSave
+    );
 
     expect(result.errors).toEqual([]);
     expect(result.saved).toHaveLength(4);

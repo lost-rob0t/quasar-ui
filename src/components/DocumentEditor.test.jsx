@@ -19,7 +19,9 @@ function renderEditor(url) {
   });
   return renderToStaticMarkup(
     <MemoryRouter initialEntries={[url]}>
-      <Routes><Route path="/documents/new" element={<DocumentEditor mode="create" />} /></Routes>
+      <Routes>
+        <Route path="/documents/new" element={<DocumentEditor mode="create" />} />
+      </Routes>
     </MemoryRouter>
   );
 }
@@ -82,12 +84,61 @@ describe("schema field controls", () => {
   });
 
   it("uses date, datetime, number, URL, enum, and long-text controls", () => {
-    expect(renderToStaticMarkup(<SchemaField name="started" fieldSchema={{ type: "string", format: "date" }} value="" onChange={vi.fn()} />)).toContain('type="date"');
-    expect(renderToStaticMarkup(<SchemaField name="observed_at" fieldSchema={{ type: "string", format: "date-time" }} value="" onChange={vi.fn()} />)).toContain('type="datetime-local"');
-    expect(renderToStaticMarkup(<SchemaField name="count" fieldSchema={{ type: "integer" }} value="" onChange={vi.fn()} />)).toContain('step="1"');
-    expect(renderToStaticMarkup(<SchemaField name="url" fieldSchema={{ type: "string", format: "uri" }} value="" onChange={vi.fn()} />)).toContain('type="url"');
-    expect(renderToStaticMarkup(<SchemaField name="status" fieldSchema={{ type: "string", enum: ["open", "closed"] }} value="" onChange={vi.fn()} />)).toContain("<select");
-    expect(renderToStaticMarkup(<SchemaField name="description" fieldSchema={{ type: "string" }} value="" onChange={vi.fn()} />)).toContain("<textarea");
+    expect(
+      renderToStaticMarkup(
+        <SchemaField
+          name="started"
+          fieldSchema={{ type: "string", format: "date" }}
+          value=""
+          onChange={vi.fn()}
+        />
+      )
+    ).toContain('type="date"');
+    expect(
+      renderToStaticMarkup(
+        <SchemaField
+          name="observed_at"
+          fieldSchema={{ type: "string", format: "date-time" }}
+          value=""
+          onChange={vi.fn()}
+        />
+      )
+    ).toContain('type="datetime-local"');
+    expect(
+      renderToStaticMarkup(
+        <SchemaField name="count" fieldSchema={{ type: "integer" }} value="" onChange={vi.fn()} />
+      )
+    ).toContain('step="1"');
+    expect(
+      renderToStaticMarkup(
+        <SchemaField
+          name="url"
+          fieldSchema={{ type: "string", format: "uri" }}
+          value=""
+          onChange={vi.fn()}
+        />
+      )
+    ).toContain('type="url"');
+    expect(
+      renderToStaticMarkup(
+        <SchemaField
+          name="status"
+          fieldSchema={{ type: "string", enum: ["open", "closed"] }}
+          value=""
+          onChange={vi.fn()}
+        />
+      )
+    ).toContain("<select");
+    expect(
+      renderToStaticMarkup(
+        <SchemaField
+          name="description"
+          fieldSchema={{ type: "string" }}
+          value=""
+          onChange={vi.fn()}
+        />
+      )
+    ).toContain("<textarea");
   });
 
   it("shows only essential person fields by default", () => {

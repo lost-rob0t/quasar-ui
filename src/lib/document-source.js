@@ -1,9 +1,4 @@
-export function startDocumentSource({
-  load,
-  watch,
-  onDocuments,
-  onError = () => {}
-}) {
+export function startDocumentSource({ load, watch, onDocuments, onError = () => {} }) {
   let active = true;
   let request = 0;
 

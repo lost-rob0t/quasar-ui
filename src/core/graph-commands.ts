@@ -201,9 +201,7 @@ function validateIdentifier(
   path: string
 ): GraphCommandRejection | null {
   if (isStableIdentifier(value)) return null;
-  return reject(source, command, [
-    issue("invalid-command", path, "must be a stable identifier")
-  ]);
+  return reject(source, command, [issue("invalid-command", path, "must be a stable identifier")]);
 }
 
 function validateResult(
@@ -436,7 +434,9 @@ function applyMoveNodes(
     } else if (nodeIndex(source, id) < 0) {
       errors.push(issue("not-found", `positions.${id}`, `node ${id} does not exist`));
     } else if (!validPosition(position)) {
-      errors.push(issue("invalid-command", `positions.${id}`, "must contain finite x and y numbers"));
+      errors.push(
+        issue("invalid-command", `positions.${id}`, "must contain finite x and y numbers")
+      );
     }
   }
   if (errors.length) return reject(source, command, errors);
@@ -447,9 +447,7 @@ function applyMoveNodes(
   const positions = new Map(Object.entries(command.positions));
   graph.nodes = graph.nodes.map((node) => {
     const position = positions.get(node.id);
-    return position
-      ? { ...node, position: cloneValue(position), updatedAt: at }
-      : node;
+    return position ? { ...node, position: cloneValue(position), updatedAt: at } : node;
   });
   touchGraph(graph, at);
   const effects = emptyEffects();

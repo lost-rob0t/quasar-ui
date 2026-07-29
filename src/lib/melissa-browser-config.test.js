@@ -9,11 +9,21 @@ import {
 } from "./melissa-browser-config";
 
 class MemoryStorage {
-  constructor() { this.values = new Map(); }
-  getItem(key) { return this.values.has(key) ? this.values.get(key) : null; }
-  setItem(key, value) { this.values.set(key, String(value)); }
-  removeItem(key) { this.values.delete(key); }
-  clear() { this.values.clear(); }
+  constructor() {
+    this.values = new Map();
+  }
+  getItem(key) {
+    return this.values.has(key) ? this.values.get(key) : null;
+  }
+  setItem(key, value) {
+    this.values.set(key, String(value));
+  }
+  removeItem(key) {
+    this.values.delete(key);
+  }
+  clear() {
+    this.values.clear();
+  }
 }
 
 let previousFetch;
@@ -22,7 +32,10 @@ let previousStorage;
 beforeEach(() => {
   previousFetch = globalThis.fetch;
   previousStorage = globalThis.localStorage;
-  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: new MemoryStorage() });
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: new MemoryStorage()
+  });
   uninstallMelissaFetchInterceptor();
 });
 
@@ -66,7 +79,9 @@ describe("Melissa browser configuration", () => {
     });
     installMelissaFetchInterceptor();
 
-    await globalThis.fetch("https://search.melissadata.net/V5/WEB/contactsearch/docontactSearch?anyname=Ada");
+    await globalThis.fetch(
+      "https://search.melissadata.net/V5/WEB/contactsearch/docontactSearch?anyname=Ada"
+    );
     await globalThis.fetch("https://example.com/data.json");
 
     const melissaUrl = new URL(fetchMock.mock.calls[0][0]);
@@ -86,7 +101,9 @@ describe("Melissa browser configuration", () => {
     });
     installMelissaFetchInterceptor();
 
-    await globalThis.fetch("https://globalemail.melissadata.net/V4/WEB/GlobalEmail/doGlobalEmail?email=ada@example.com");
+    await globalThis.fetch(
+      "https://globalemail.melissadata.net/V4/WEB/GlobalEmail/doGlobalEmail?email=ada@example.com"
+    );
 
     const called = new URL(fetchMock.mock.calls[0][0]);
     expect(called.hostname).toBe("proxy.example");

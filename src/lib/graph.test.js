@@ -12,7 +12,13 @@ import {
 } from "./graph";
 
 const stamp = "2026-07-25T20:00:00.000Z";
-const base = (id, dtype, data, verification = { verified: true, status: "verified" }, dataset = "test") => ({
+const base = (
+  id,
+  dtype,
+  data,
+  verification = { verified: true, status: "verified" },
+  dataset = "test"
+) => ({
   _id: id,
   dataset,
   dtype,
@@ -31,8 +37,19 @@ const documents = [
   base("starintel:person:a", "person", { full_name: "A" }),
   base("starintel:org:b", "org", { name: "B" }),
   base("starintel:org:c", "org", { name: "C" }, { verified: true, status: "verified" }, "second"),
-  base("starintel:relation:a-b", "relation", { subject: "starintel:person:a", predicate: "founded", object: "starintel:org:b", confidence: 0.9 }),
-  base("starintel:relation:b-c", "relation", { subject: "starintel:org:b", predicate: "owns", object: "starintel:org:c", confidence: 0.8 }, { verified: true, status: "verified" }, "second")
+  base("starintel:relation:a-b", "relation", {
+    subject: "starintel:person:a",
+    predicate: "founded",
+    object: "starintel:org:b",
+    confidence: 0.9
+  }),
+  base(
+    "starintel:relation:b-c",
+    "relation",
+    { subject: "starintel:org:b", predicate: "owns", object: "starintel:org:c", confidence: 0.8 },
+    { verified: true, status: "verified" },
+    "second"
+  )
 ];
 
 const unreviewedEvent = base(
@@ -72,10 +89,29 @@ describe("StarIntel graph projection", () => {
 
   it("projects every relation direction as a boolean with directed as the legacy default", () => {
     const relations = [
-      base("starintel:relation:true", "relation", { subject: "starintel:person:a", predicate: "a", object: "starintel:org:b", directed: true }),
-      base("starintel:relation:false", "relation", { subject: "starintel:person:a", predicate: "b", object: "starintel:org:b", directed: false }),
-      base("starintel:relation:legacy-false", "relation", { subject: "starintel:person:a", predicate: "c", object: "starintel:org:b", directed: "false" }),
-      base("starintel:relation:missing", "relation", { subject: "starintel:person:a", predicate: "d", object: "starintel:org:b" })
+      base("starintel:relation:true", "relation", {
+        subject: "starintel:person:a",
+        predicate: "a",
+        object: "starintel:org:b",
+        directed: true
+      }),
+      base("starintel:relation:false", "relation", {
+        subject: "starintel:person:a",
+        predicate: "b",
+        object: "starintel:org:b",
+        directed: false
+      }),
+      base("starintel:relation:legacy-false", "relation", {
+        subject: "starintel:person:a",
+        predicate: "c",
+        object: "starintel:org:b",
+        directed: "false"
+      }),
+      base("starintel:relation:missing", "relation", {
+        subject: "starintel:person:a",
+        predicate: "d",
+        object: "starintel:org:b"
+      })
     ];
     const graph = buildGraph([...documents.slice(0, 3), ...relations]);
 
@@ -85,20 +121,22 @@ describe("StarIntel graph projection", () => {
   });
 
   it("retains unresolved relation endpoints", () => {
-    const graph = buildGraph([...documents, base("starintel:relation:missing", "relation", {
-      subject: "starintel:org:c",
-      predicate: "mentions",
-      object: "starintel:entity:missing"
-    })]);
-    expect(graph.nodes.find((node) => node.data.id === "starintel:entity:missing")?.data.unresolved).toBe(true);
+    const graph = buildGraph([
+      ...documents,
+      base("starintel:relation:missing", "relation", {
+        subject: "starintel:org:c",
+        predicate: "mentions",
+        object: "starintel:entity:missing"
+      })
+    ]);
+    expect(
+      graph.nodes.find((node) => node.data.id === "starintel:entity:missing")?.data.unresolved
+    ).toBe(true);
   });
 
   it("focuses imported nodes and the endpoints of imported relations", () => {
     const graph = buildGraph(documents);
-    expect(importedGraphNodeIds(graph, [
-      "starintel:relation:a-b",
-      "starintel:org:c"
-    ])).toEqual([
+    expect(importedGraphNodeIds(graph, ["starintel:relation:a-b", "starintel:org:c"])).toEqual([
       "starintel:org:c",
       "starintel:person:a",
       "starintel:org:b"
@@ -122,7 +160,10 @@ describe("StarIntel graph projection", () => {
 
     const byPredicate = filterGraph(graph, { predicate: "owns" });
     expect(byPredicate.edges).toHaveLength(1);
-    expect(byPredicate.nodes.map((node) => node.data.id).sort()).toEqual(["starintel:org:b", "starintel:org:c"]);
+    expect(byPredicate.nodes.map((node) => node.data.id).sort()).toEqual([
+      "starintel:org:b",
+      "starintel:org:c"
+    ]);
   });
 
   it("classifies reviewed records from canonical verification metadata", () => {

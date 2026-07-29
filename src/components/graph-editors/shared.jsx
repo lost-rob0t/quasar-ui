@@ -16,7 +16,9 @@ export function parseJson(text, label, fallback) {
 }
 
 function draftToken() {
-  return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return (
+    globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
 }
 
 export function saveEditorDraft(document, metadata = {}) {
@@ -29,10 +31,21 @@ export function saveEditorDraft(document, metadata = {}) {
 }
 
 function focusableElements(root) {
-  return [...root.querySelectorAll("button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])")];
+  return [
+    ...root.querySelectorAll(
+      "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"
+    )
+  ];
 }
 
-export function GraphModalShell({ title, position, onClose, dirty = false, children, className = "" }) {
+export function GraphModalShell({
+  title,
+  position,
+  onClose,
+  dirty = false,
+  children,
+  className = ""
+}) {
   const modalRef = useRef(null);
   const returnFocusRef = useRef(null);
 
@@ -77,17 +90,32 @@ export function GraphModalShell({ title, position, onClose, dirty = false, child
     };
   }, [dirty, onClose]);
 
-  const style = position?.rendered && position?.bounds ? {
-    "--graph-editor-left": `${Math.max(8, Math.min(position.rendered.x, position.bounds.width - 470))}px`,
-    "--graph-editor-top": `${Math.max(8, Math.min(position.rendered.y, position.bounds.height - 560))}px`
-  } : undefined;
+  const style =
+    position?.rendered && position?.bounds
+      ? {
+          "--graph-editor-left": `${Math.max(8, Math.min(position.rendered.x, position.bounds.width - 470))}px`,
+          "--graph-editor-top": `${Math.max(8, Math.min(position.rendered.y, position.bounds.height - 560))}px`
+        }
+      : undefined;
 
   return (
-    <div className="graph-editor-layer" onMouseDown={(event) => event.target === event.currentTarget && requestClose()}>
-      <section ref={modalRef} className={`graph-compact-editor ${className}`} style={style} role="dialog" aria-modal="true" aria-label={title}>
+    <div
+      className="graph-editor-layer"
+      onMouseDown={(event) => event.target === event.currentTarget && requestClose()}
+    >
+      <section
+        ref={modalRef}
+        className={`graph-compact-editor ${className}`}
+        style={style}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
         <header>
           <h2>{title}</h2>
-          <button className="icon-button" type="button" aria-label="Close" onClick={requestClose}><X size={17} /></button>
+          <button className="icon-button" type="button" aria-label="Close" onClick={requestClose}>
+            <X size={17} />
+          </button>
         </header>
         {typeof children === "function" ? children(requestClose) : children}
       </section>
@@ -95,7 +123,15 @@ export function GraphModalShell({ title, position, onClose, dirty = false, child
   );
 }
 
-export function DocumentSelect({ label, value, documents, objectTypes = [], required = false, error = "", onChange }) {
+export function DocumentSelect({
+  label,
+  value,
+  documents,
+  objectTypes = [],
+  required = false,
+  error = "",
+  onChange
+}) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const selected = documents.find((document) => document._id === value);
@@ -104,27 +140,62 @@ export function DocumentSelect({ label, value, documents, objectTypes = [], requ
     return documents
       .filter((document) => document.dtype !== "relation")
       .filter((document) => !objectTypes.length || objectTypes.includes(document.dtype))
-      .filter((document) => !needle || `${document._id} ${documentLabel(document)} ${document.dtype}`.toLowerCase().includes(needle))
+      .filter(
+        (document) =>
+          !needle ||
+          `${document._id} ${documentLabel(document)} ${document.dtype}`
+            .toLowerCase()
+            .includes(needle)
+      )
       .slice(0, 80);
   }, [documents, objectTypes, query]);
 
   return (
     <div className="field graph-document-select">
       <span>{label}</span>
-      <small>document reference{objectTypes.length ? ` · ${objectTypes.join(" or ")}` : ""}{required ? " · required" : " · optional"}</small>
-      <button type="button" className="graph-select-trigger" aria-expanded={open} aria-invalid={Boolean(error)} onClick={() => setOpen((current) => !current)}>
+      <small>
+        document reference{objectTypes.length ? ` · ${objectTypes.join(" or ")}` : ""}
+        {required ? " · required" : " · optional"}
+      </small>
+      <button
+        type="button"
+        className="graph-select-trigger"
+        aria-expanded={open}
+        aria-invalid={Boolean(error)}
+        onClick={() => setOpen((current) => !current)}
+      >
         <span>{selected ? documentLabel(selected) : "Select document"}</span>
         <code>{selected?._id || ""}</code>
       </button>
       {error && <p className="validation-error">{error}</p>}
       {open && (
         <div className="graph-select-popover">
-          <label className="graph-picker-search"><Search size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search documents" autoFocus /></label>
+          <label className="graph-picker-search">
+            <Search size={14} />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search documents"
+              autoFocus
+            />
+          </label>
           <div className="graph-picker-options" role="listbox">
             {matching.map((document) => (
-              <button key={document._id} type="button" role="option" aria-selected={document._id === value} onClick={() => { onChange(document._id); setOpen(false); setQuery(""); }}>
+              <button
+                key={document._id}
+                type="button"
+                role="option"
+                aria-selected={document._id === value}
+                onClick={() => {
+                  onChange(document._id);
+                  setOpen(false);
+                  setQuery("");
+                }}
+              >
                 <strong>{documentLabel(document)}</strong>
-                <small>{document.dtype} · {document._id}</small>
+                <small>
+                  {document.dtype} · {document._id}
+                </small>
               </button>
             ))}
             {!matching.length && <span className="graph-picker-empty">No matching documents</span>}
@@ -138,21 +209,55 @@ export function DocumentSelect({ label, value, documents, objectTypes = [], requ
 export function FieldPicker({ descriptors, added, onAdd }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const available = useMemo(() => descriptors.filter((descriptor) => !added.includes(descriptor.name)), [added, descriptors]);
+  const available = useMemo(
+    () => descriptors.filter((descriptor) => !added.includes(descriptor.name)),
+    [added, descriptors]
+  );
   const matching = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return available.filter((descriptor) => !needle || `${descriptor.name} ${descriptor.label} ${descriptor.helpText}`.toLowerCase().includes(needle)).slice(0, 60);
+    return available
+      .filter(
+        (descriptor) =>
+          !needle ||
+          `${descriptor.name} ${descriptor.label} ${descriptor.helpText}`
+            .toLowerCase()
+            .includes(needle)
+      )
+      .slice(0, 60);
   }, [available, query]);
   if (!available.length) return null;
   return (
     <div className="graph-field-picker">
-      <button className="button small" type="button" aria-expanded={open} onClick={() => setOpen((current) => !current)}><Plus size={14} /> Add field</button>
+      <button
+        className="button small"
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <Plus size={14} /> Add field
+      </button>
       {open && (
         <div className="graph-picker-popover">
-          <label className="graph-picker-search"><Search size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search fields" autoFocus /></label>
+          <label className="graph-picker-search">
+            <Search size={14} />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search fields"
+              autoFocus
+            />
+          </label>
           <div className="graph-picker-options" role="listbox">
             {matching.map((descriptor) => (
-              <button key={descriptor.name} type="button" onClick={() => { onAdd(descriptor.name); setOpen(false); setQuery(""); }}>
+              <button
+                key={descriptor.name}
+                type="button"
+                onClick={() => {
+                  onAdd(descriptor.name);
+                  setOpen(false);
+                  setQuery("");
+                }}
+              >
                 <code>{descriptor.name}</code>
                 <small>{fieldTypeHint(descriptor.schema, descriptor.required)}</small>
               </button>

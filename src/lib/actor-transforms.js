@@ -49,7 +49,8 @@ function normalizeOperation(value, index) {
     throw new TypeError(`Actor operation ${index} must be an object`);
   }
   const op = String(value.op || "").trim();
-  if (!OPERATION_SET.has(op)) throw new TypeError(`Unsupported actor operation: ${op || "<missing>"}`);
+  if (!OPERATION_SET.has(op))
+    throw new TypeError(`Unsupported actor operation: ${op || "<missing>"}`);
 
   if (["create_document", "update_document", "upsert_document", "create_relation"].includes(op)) {
     const document = normalizeDocument(value.document, index);
@@ -71,7 +72,8 @@ export function normalizeActorTransformResult(result) {
   const rawDocuments = result.documents === undefined ? [] : result.documents;
   const rawOperations = result.operations === undefined ? [] : result.operations;
   if (!Array.isArray(rawDocuments)) throw new TypeError("Actor result documents must be an array");
-  if (!Array.isArray(rawOperations)) throw new TypeError("Actor result operations must be an array");
+  if (!Array.isArray(rawOperations))
+    throw new TypeError("Actor result operations must be an array");
 
   const combined = [
     ...rawDocuments.map((document) => ({ op: "upsert_document", document })),
@@ -91,7 +93,9 @@ export function normalizeActorTransformResult(result) {
 export function actorWithTransformEnvelope(actor) {
   const configurationStatus = actorConfigurationStatus(actor);
   if (!configurationStatus.configured) {
-    throw new Error(`Configure ${configurationStatus.missing.join(", ")} before running ${actor.label || actor.id}`);
+    throw new Error(
+      `Configure ${configurationStatus.missing.join(", ")} before running ${actor.label || actor.id}`
+    );
   }
   const configuration = JSON.stringify(configurationStatus.configuration || {});
 
@@ -129,7 +133,11 @@ export function buildActorTransform(result, currentDocuments, label = "Actor tra
   };
 
   for (const transform of normalized.operations) {
-    if (["create_document", "update_document", "upsert_document", "create_relation"].includes(transform.op)) {
+    if (
+      ["create_document", "update_document", "upsert_document", "create_relation"].includes(
+        transform.op
+      )
+    ) {
       const existing = documents.get(transform.document._id);
       if (transform.op === "create_document" && existing) {
         throw new Error(`Actor cannot create existing document: ${transform.document._id}`);

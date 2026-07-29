@@ -15,23 +15,94 @@ export const validatorInfo = Object.freeze({
   profileVersion: SCHEMA_PROFILE_VERSION
 });
 
+export const IMPORT_LIMITS = Object.freeze({
+  maxFiles: 256,
+  maxTotalBytes: 1_073_741_824,
+  maxFileBytes: 536_870_912,
+  maxRecordBytes: 8_388_608,
+  maxDocuments: 1_000_000,
+  maxErrors: 1_000
+});
+
 function extension(name) {
-  return String(name || "").toLowerCase().split(".").pop();
+  return String(name || "")
+    .toLowerCase()
+    .split(".")
+    .pop();
 }
 
-function parseJsonLines(text, sourceName) {
+async function parseJsonLines(file, sourceName, limits) {
   const documents = [];
   const origins = [];
   const errors = [];
-  text.split(/\r?\n/).forEach((line, index) => {
-    if (!line.trim()) return;
-    try {
-      documents.push(JSON.parse(line));
-      origins.push({ file: sourceName, line: index + 1, record: index + 1 });
-    } catch (error) {
-      errors.push({ file: sourceName, line: index + 1, message: error.message });
+  if (typeof file.stream !== "function" || typeof TextDecoderStream === "undefined") {
+    const text = await file.text();
+    for (const [index, rawLine] of text.split(/\r?\n/).entries()) {
+      const line = index + 1;
+      if (rawLine.length > limits.maxRecordBytes) {
+        throw new RangeError(`Record ${line} exceeds the import record limit`);
+      }
+      if (!rawLine.trim()) continue;
+      try {
+        documents.push(JSON.parse(rawLine));
+        origins.push({ file: sourceName, line, record: documents.length });
+      } catch (error) {
+        if (errors.length < limits.maxErrors) {
+          errors.push({ file: sourceName, line, message: error.message });
+        }
+      }
+      if (documents.length > limits.maxDocuments) {
+        throw new RangeError("Import document limit exceeded");
+      }
     }
-  });
+    return { documents, origins, errors };
+  }
+  const reader = file.stream().pipeThrough(new TextDecoderStream()).getReader();
+  let buffer = "";
+  let line = 0;
+  try {
+    for (;;) {
+      const { value = "", done } = await reader.read();
+      buffer += value;
+      let boundary;
+      while ((boundary = buffer.indexOf("\n")) !== -1) {
+        const raw = buffer.slice(0, boundary).replace(/\r$/, "");
+        buffer = buffer.slice(boundary + 1);
+        line += 1;
+        if (raw.length > limits.maxRecordBytes)
+          throw new RangeError(`Record ${line} exceeds the import record limit`);
+        if (!raw.trim()) continue;
+        try {
+          documents.push(JSON.parse(raw));
+          origins.push({ file: sourceName, line, record: documents.length });
+        } catch (error) {
+          if (errors.length < limits.maxErrors)
+            errors.push({ file: sourceName, line, message: error.message });
+        }
+        if (documents.length > limits.maxDocuments)
+          throw new RangeError("Import document limit exceeded");
+        if (documents.length % 500 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+      if (buffer.length > limits.maxRecordBytes)
+        throw new RangeError(`Record ${line + 1} exceeds the import record limit`);
+      if (done) break;
+    }
+    if (buffer.trim()) {
+      line += 1;
+
+      try {
+        documents.push(JSON.parse(buffer));
+
+        origins.push({ file: sourceName, line, record: documents.length });
+      } catch (error) {
+        if (errors.length < limits.maxErrors) {
+          errors.push({ file: sourceName, line, message: error.message });
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
   return { documents, origins, errors };
 }
 
@@ -79,7 +150,12 @@ function parseCsv(text, sourceName) {
         title: raw.title || "",
         summary: raw.summary || "",
         description: raw.description || "",
-        tags: raw.tags ? raw.tags.split("|").map((tag) => tag.trim()).filter(Boolean) : [],
+        tags: raw.tags
+          ? raw.tags
+              .split("|")
+              .map((tag) => tag.trim())
+              .filter(Boolean)
+          : [],
         sources: raw.sources ? JSON.parse(raw.sources) : [],
         evidence: raw.evidence ? JSON.parse(raw.evidence) : [],
         data
@@ -99,10 +175,12 @@ function unwrapJson(value) {
   return value && typeof value === "object" ? [value] : [];
 }
 
-async function parseFile(file) {
-  const text = await file.text();
+async function parseFile(file, limits) {
   const kind = extension(file.name);
-  if (["jsonl", "ndjson"].includes(kind)) return parseJsonLines(text, file.name);
+  if (file.size > limits.maxFileBytes)
+    throw new RangeError(`${file.name} exceeds the import file limit`);
+  if (["jsonl", "ndjson"].includes(kind)) return parseJsonLines(file, file.name, limits);
+  const text = await file.text();
   if (kind === "csv") return parseCsv(text, file.name);
   try {
     const documents = unwrapJson(JSON.parse(text));
@@ -120,19 +198,25 @@ function manifestReferences(document) {
   if (!document || !["dataset-manifest", "actor-manifest"].includes(document.dtype)) return [];
   const files = Array.isArray(document.data?.files) ? document.data.files : [];
   return files
-    .map((entry) => typeof entry === "string" ? entry : entry?.path || entry?.name || entry?.file)
+    .map((entry) => (typeof entry === "string" ? entry : entry?.path || entry?.name || entry?.file))
     .filter(Boolean);
 }
 
 export async function collectImportDocuments(fileList, options = {}) {
   const files = Array.from(fileList || []);
+  const limits = { ...IMPORT_LIMITS, ...(options.limits || {}) };
+  if (files.length > limits.maxFiles)
+    throw new RangeError(`Import file limit exceeded: ${limits.maxFiles}`);
+  const totalBytes = files.reduce((total, file) => total + Number(file.size || 0), 0);
+  if (totalBytes > limits.maxTotalBytes)
+    throw new RangeError(`Import byte limit exceeded: ${limits.maxTotalBytes}`);
   const resolveManifestReferences = options.resolveManifestReferences === true;
   const byName = new Map(files.map((file) => [file.name, file]));
   const parsed = new Map();
   const errors = [];
 
   for (const file of files) {
-    const result = await parseFile(file);
+    const result = await parseFile(file, limits);
     parsed.set(file.name, result);
     errors.push(...result.errors);
   }
@@ -149,9 +233,12 @@ export async function collectImportDocuments(fileList, options = {}) {
     if (resolveManifestReferences) {
       for (const document of result.documents) {
         for (const reference of manifestReferences(document)) {
-          const candidate = byName.has(reference) ? reference : [...byName.keys()].find((key) => key.endsWith(`/${reference}`));
+          const candidate = byName.has(reference)
+            ? reference
+            : [...byName.keys()].find((key) => key.endsWith(`/${reference}`));
           if (candidate) include(candidate);
-          else errors.push({ file: name, message: `manifest reference not supplied: ${reference}` });
+          else
+            errors.push({ file: name, message: `manifest reference not supplied: ${reference}` });
         }
       }
     }
@@ -168,9 +255,12 @@ export async function importFiles(fileList, saveBatch, options = {}) {
     origin: collected.origins[index] || { record: index + 1 },
     index
   }));
-  const obviousInvalid = records
-    .filter(({ document }) => !document || typeof document !== "object");
-  const candidateRecords = records.filter(({ document }) => document && typeof document === "object");
+  const obviousInvalid = records.filter(
+    ({ document }) => !document || typeof document !== "object"
+  );
+  const candidateRecords = records.filter(
+    ({ document }) => document && typeof document === "object"
+  );
   const candidates = candidateRecords.map(({ document }) => document);
   const origins = candidateRecords.map(({ origin }) => origin);
   const parseErrors = [

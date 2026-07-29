@@ -55,11 +55,7 @@ export interface GraphHistoryOperationOptions {
 export type GraphHistoryAction = "commit" | "redo" | "undo";
 
 export type GraphHistoryRejectionCode =
-  | "command-rejected"
-  | "empty-transaction"
-  | "history-empty"
-  | "invalid-history"
-  | "stale-revision";
+  "command-rejected" | "empty-transaction" | "history-empty" | "invalid-history" | "stale-revision";
 
 export interface GraphHistoryIssue {
   code: GraphHistoryRejectionCode;
@@ -136,10 +132,7 @@ function normalizeLimit(value: number | undefined): number {
   return limit;
 }
 
-function trimStack(
-  stack: GraphTransactionRecord[],
-  limit: number
-): GraphTransactionRecord[] {
+function trimStack(stack: GraphTransactionRecord[], limit: number): GraphTransactionRecord[] {
   if (limit === 0) return [];
   return stack.length <= limit ? stack : stack.slice(stack.length - limit);
 }
@@ -198,10 +191,7 @@ function assertRevisionCanAdvance(state: GraphHistoryState): GraphHistoryIssue[]
   return [];
 }
 
-function validateState(
-  state: GraphHistoryState,
-  registry: TypeRegistry
-): GraphHistoryIssue[] {
+function validateState(state: GraphHistoryState, registry: TypeRegistry): GraphHistoryIssue[] {
   const errors = [
     ...validateRevision(state.revision, "revision"),
     ...validateRevision(state.limit, "limit")
@@ -253,10 +243,7 @@ function transactionTimestamp(
   return options.timestamp ?? command.timestamp ?? new Date().toISOString();
 }
 
-function transactionLabel(
-  command: GraphCommand,
-  options: CommitGraphTransactionOptions
-): string {
+function transactionLabel(command: GraphCommand, options: CommitGraphTransactionOptions): string {
   if (options.label?.trim()) return options.label.trim();
   if (command.type === "batch" && command.label?.trim()) return command.label.trim();
   return command.type;

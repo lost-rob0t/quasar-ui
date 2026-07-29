@@ -28,14 +28,14 @@ test("uses a full-screen graph canvas with three mobile controls", async ({ page
       const iconRect = button.querySelector("svg")?.getBoundingClientRect();
       return {
         x: Math.abs(
-          buttonRect.left
-          + buttonRect.width / 2
-          - ((iconRect?.left || 0) + (iconRect?.width || 0) / 2)
+          buttonRect.left +
+            buttonRect.width / 2 -
+            ((iconRect?.left || 0) + (iconRect?.width || 0) / 2)
         ),
         y: Math.abs(
-          buttonRect.top
-          + buttonRect.height / 2
-          - ((iconRect?.top || 0) + (iconRect?.height || 0) / 2)
+          buttonRect.top +
+            buttonRect.height / 2 -
+            ((iconRect?.top || 0) + (iconRect?.height || 0) / 2)
         )
       };
     })

@@ -17,14 +17,19 @@ export function readSelectOptions(select) {
 }
 
 function sameOptions(left, right) {
-  return left.length === right.length && left.every((option, index) => {
-    const candidate = right[index];
-    return option.value === candidate?.value
-      && option.label === candidate.label
-      && option.disabled === candidate.disabled
-      && option.selected === candidate.selected
-      && option.index === candidate.index;
-  });
+  return (
+    left.length === right.length &&
+    left.every((option, index) => {
+      const candidate = right[index];
+      return (
+        option.value === candidate?.value &&
+        option.label === candidate.label &&
+        option.disabled === candidate.disabled &&
+        option.selected === candidate.selected &&
+        option.index === candidate.index
+      );
+    })
+  );
 }
 
 export function setSelectValue(select, value) {
@@ -40,13 +45,7 @@ export function setSelectValue(select, value) {
   return true;
 }
 
-export default function GraphSelectMenu({
-  open,
-  selectLabel,
-  title,
-  listLabel,
-  onClose
-}) {
+export default function GraphSelectMenu({ open, selectLabel, title, listLabel, onClose }) {
   const searchRef = useRef(null);
   const listRef = useRef(null);
   const closeRef = useRef(onClose);
@@ -65,7 +64,7 @@ export default function GraphSelectMenu({
 
     const sync = () => {
       const next = readSelectOptions(findSelect(selectLabel));
-      setOptions((current) => sameOptions(current, next) ? current : next);
+      setOptions((current) => (sameOptions(current, next) ? current : next));
     };
     sync();
 
@@ -105,8 +104,10 @@ export default function GraphSelectMenu({
 
   if (!open) return null;
 
-  const optionButtons = () => [...(listRef.current?.querySelectorAll('[role="option"]') || [])]
-    .filter((button) => !button.disabled);
+  const optionButtons = () =>
+    [...(listRef.current?.querySelectorAll('[role="option"]') || [])].filter(
+      (button) => !button.disabled
+    );
 
   const moveFocus = (event) => {
     if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
@@ -114,11 +115,12 @@ export default function GraphSelectMenu({
     if (!buttons.length) return;
     event.preventDefault();
     const current = Math.max(0, buttons.indexOf(document.activeElement));
-    const next = event.key === "Home"
-      ? 0
-      : event.key === "End"
-        ? buttons.length - 1
-        : (current + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length;
+    const next =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? buttons.length - 1
+          : (current + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length;
     buttons[next]?.focus();
   };
 
@@ -127,9 +129,7 @@ export default function GraphSelectMenu({
     const buttons = optionButtons();
     if (!buttons.length) return;
     event.preventDefault();
-    const target = event.key === "ArrowUp" || event.key === "End"
-      ? buttons.at(-1)
-      : buttons[0];
+    const target = event.key === "ArrowUp" || event.key === "End" ? buttons.at(-1) : buttons[0];
     target?.focus();
   };
 
@@ -141,7 +141,12 @@ export default function GraphSelectMenu({
         aria-label={`Close ${title.toLowerCase()} picker`}
         onClick={() => closeRef.current()}
       />
-      <section className="graph-select-picker" role="dialog" aria-modal="true" aria-label={`Select ${title.toLowerCase()}`}>
+      <section
+        className="graph-select-picker"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Select ${title.toLowerCase()}`}
+      >
         <header className="graph-select-picker-header">
           <strong>{title}</strong>
           <button
@@ -164,7 +169,11 @@ export default function GraphSelectMenu({
             onKeyDown={moveFromSearch}
           />
           {query && (
-            <button type="button" aria-label={`Clear ${listLabel.toLowerCase()} search`} onClick={() => setQuery("")}>
+            <button
+              type="button"
+              aria-label={`Clear ${listLabel.toLowerCase()} search`}
+              onClick={() => setQuery("")}
+            >
               <X size={16} aria-hidden="true" />
             </button>
           )}

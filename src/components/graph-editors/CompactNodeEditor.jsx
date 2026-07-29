@@ -1,12 +1,7 @@
 import { useMemo, useState } from "react";
 import { Braces, Save, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import {
-  assertDocument,
-  createDocument,
-  documentLabel,
-  touchDocument
-} from "starintel_doc";
+import { assertDocument, createDocument, documentLabel, touchDocument } from "starintel_doc";
 import { connectedDocumentIds } from "../../lib/document-delete";
 import { operation } from "../../lib/operations";
 import {
@@ -22,26 +17,46 @@ import { SchemaField } from "../DocumentEditor";
 import { FieldPicker, GraphModalShell, parseJson, saveEditorDraft } from "./shared";
 
 function initialValues(document, descriptors, names) {
-  return Object.fromEntries(names.map((name) => {
-    const descriptor = descriptors.find((item) => item.name === name);
-    return [name, formatSchemaValue(document?.data?.[name], descriptor?.schema || {})];
-  }));
+  return Object.fromEntries(
+    names.map((name) => {
+      const descriptor = descriptors.find((item) => item.name === name);
+      return [name, formatSchemaValue(document?.data?.[name], descriptor?.schema || {})];
+    })
+  );
 }
 
 function emptyRequired(value) {
   return value == null || value === "" || (Array.isArray(value) && value.length === 0);
 }
 
-export default function CompactNodeEditor({ document = null, objectType = "entity", dataset = "default", position = null, onClose, onSaved }) {
+export default function CompactNodeEditor({
+  document = null,
+  objectType = "entity",
+  dataset = "default",
+  position = null,
+  onClose,
+  onSaved
+}) {
   const navigate = useNavigate();
   const { documents, execute, setNotice, addDocumentsToActiveGraph, workspace } = useQuasar();
   const dtype = document?.dtype || objectType;
   const descriptors = useMemo(() => dataFieldDescriptorsForDtype(dtype), [dtype]);
   const essential = useMemo(() => essentialDataFieldsForDtype(dtype), [dtype]);
-  const [added, setAdded] = useState(() => descriptors.filter((descriptor) => descriptor.name in (document?.data || {}) && !essential.includes(descriptor.name)).map((descriptor) => descriptor.name));
-  const [values, setValues] = useState(() => initialValues(document, descriptors, [...essential, ...added]));
+  const [added, setAdded] = useState(() =>
+    descriptors
+      .filter(
+        (descriptor) =>
+          descriptor.name in (document?.data || {}) && !essential.includes(descriptor.name)
+      )
+      .map((descriptor) => descriptor.name)
+  );
+  const [values, setValues] = useState(() =>
+    initialValues(document, descriptors, [...essential, ...added])
+  );
   const [rawMode, setRawMode] = useState(false);
-  const [raw, setRaw] = useState(() => JSON.stringify(document || { dataset, dtype, data: document?.data || {} }, null, 2));
+  const [raw, setRaw] = useState(() =>
+    JSON.stringify(document || { dataset, dtype, data: document?.data || {} }, null, 2)
+  );
   const [rawValidation, setRawValidation] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [dirty, setDirty] = useState(false);
@@ -52,7 +67,10 @@ export default function CompactNodeEditor({ document = null, objectType = "entit
     setAdded((current) => [...new Set([...current, name])]);
     if (!(name in values)) {
       const descriptor = descriptors.find((item) => item.name === name);
-      setValues((current) => ({ ...current, [name]: formatSchemaValue(document?.data?.[name], descriptor?.schema || {}) }));
+      setValues((current) => ({
+        ...current,
+        [name]: formatSchemaValue(document?.data?.[name], descriptor?.schema || {})
+      }));
     }
     setDirty(true);
   }
@@ -63,7 +81,8 @@ export default function CompactNodeEditor({ document = null, objectType = "entit
     for (const name of visible) {
       const descriptor = descriptors.find((item) => item.name === name);
       const parsed = parseSchemaField(name, values[name], descriptor?.schema || {}, parseJson);
-      if (descriptor?.required && emptyRequired(parsed)) errors[name] = "This field requires a value.";
+      if (descriptor?.required && emptyRequired(parsed))
+        errors[name] = "This field requires a value.";
       if (parsed === undefined) delete data[name];
       else data[name] = parsed;
     }
@@ -101,7 +120,11 @@ export default function CompactNodeEditor({ document = null, objectType = "entit
       } else {
         const parsed = parseJson(raw, "Document JSON", {});
         const nextData = parsed.data || {};
-        const nextAdded = descriptors.filter((descriptor) => descriptor.name in nextData && !essential.includes(descriptor.name)).map((descriptor) => descriptor.name);
+        const nextAdded = descriptors
+          .filter(
+            (descriptor) => descriptor.name in nextData && !essential.includes(descriptor.name)
+          )
+          .map((descriptor) => descriptor.name);
         setAdded(nextAdded);
         setValues(initialValues({ data: nextData }, descriptors, [...essential, ...nextAdded]));
         setRawValidation("");
@@ -113,14 +136,22 @@ export default function CompactNodeEditor({ document = null, objectType = "entit
   }
 
   function generateEmpty() {
-    if (raw.trim() && raw.trim() !== "{}" && !window.confirm("Replace current JSON?\n\nThis will discard the current editor contents.")) return;
-    const generated = generateEmptyDocument(dtype, { overrides: { dataset: document?.dataset || dataset, dtype } });
+    if (
+      raw.trim() &&
+      raw.trim() !== "{}" &&
+      !window.confirm("Replace current JSON?\n\nThis will discard the current editor contents.")
+    )
+      return;
+    const generated = generateEmptyDocument(dtype, {
+      overrides: { dataset: document?.dataset || dataset, dtype }
+    });
     const nextRaw = JSON.stringify(generated.document, null, 2);
     setRaw(nextRaw);
     setRawMode(true);
     setDirty(true);
     validateRaw(nextRaw);
-    if (generated.warnings.length) setNotice({ kind: "warning", message: generated.warnings.join(" ") });
+    if (generated.warnings.length)
+      setNotice({ kind: "warning", message: generated.warnings.join(" ") });
   }
 
   async function submit(event) {
@@ -134,7 +165,8 @@ export default function CompactNodeEditor({ document = null, objectType = "entit
       await execute(operation.save(next), `${document ? "Update" : "Create"} ${next._id}`);
       if (!document) {
         const changes = { selectedIds: [next._id] };
-        if (position?.position) changes.positions = { ...(workspace?.positions || {}), [next._id]: position.position };
+        if (position?.position)
+          changes.positions = { ...(workspace?.positions || {}), [next._id]: position.position };
         addDocumentsToActiveGraph([next._id], changes);
       }
       setDirty(false);
@@ -151,8 +183,14 @@ export default function CompactNodeEditor({ document = null, objectType = "entit
   function openFullEditor() {
     try {
       const draft = buildDraft();
-      const token = saveEditorDraft(draft, { kind: "node", objectType: dtype, documentId: document?._id || "" });
-      const path = document ? `/documents/${encodeURIComponent(document._id)}/edit` : "/documents/new";
+      const token = saveEditorDraft(draft, {
+        kind: "node",
+        objectType: dtype,
+        documentId: document?._id || ""
+      });
+      const path = document
+        ? `/documents/${encodeURIComponent(document._id)}/edit`
+        : "/documents/new";
       navigate(`${path}?draft=${encodeURIComponent(token)}&advanced=1&returnTo=graph`);
     } catch (error) {
       setNotice({ kind: "error", message: error.message });
@@ -160,28 +198,67 @@ export default function CompactNodeEditor({ document = null, objectType = "entit
   }
 
   async function remove() {
-    if (!document || !window.confirm(`Delete ${documentLabel(document)} and attached relations?`)) return;
+    if (!document || !window.confirm(`Delete ${documentLabel(document)} and attached relations?`))
+      return;
     const ids = connectedDocumentIds(documents, [document._id]);
-    await execute(operation.batch(ids.map((id) => operation.remove(id)), `Delete ${document._id}`), `Delete ${document._id}`);
+    await execute(
+      operation.batch(
+        ids.map((id) => operation.remove(id)),
+        `Delete ${document._id}`
+      ),
+      `Delete ${document._id}`
+    );
     setDirty(false);
     onClose();
   }
 
   return (
-    <GraphModalShell title={`${document ? "Edit" : "New"} ${dtypeLabel(dtype)}`} position={position} onClose={onClose} dirty={dirty} className="graph-node-editor">
+    <GraphModalShell
+      title={`${document ? "Edit" : "New"} ${dtypeLabel(dtype)}`}
+      position={position}
+      onClose={onClose}
+      dirty={dirty}
+      className="graph-node-editor"
+    >
       {(requestClose) => (
         <form className="graph-compact-form" onSubmit={submit}>
           {rawMode ? (
-            <label className="field full"><span>Document JSON</span><small>object · complete document</small><textarea className="code-editor graph-json-editor" value={raw} onChange={(event) => { setRaw(event.target.value); setDirty(true); validateRaw(event.target.value); }} />{rawValidation && <p className="validation-error">{rawValidation}</p>}</label>
+            <label className="field full">
+              <span>Document JSON</span>
+              <small>object · complete document</small>
+              <textarea
+                className="code-editor graph-json-editor"
+                value={raw}
+                onChange={(event) => {
+                  setRaw(event.target.value);
+                  setDirty(true);
+                  validateRaw(event.target.value);
+                }}
+              />
+              {rawValidation && <p className="validation-error">{rawValidation}</p>}
+            </label>
           ) : (
             <>
-              <div className="graph-editor-type-heading"><strong>Fields for {dtype}</strong><span>{document?.dataset || dataset}</span></div>
+              <div className="graph-editor-type-heading">
+                <strong>Fields for {dtype}</strong>
+                <span>{document?.dataset || dataset}</span>
+              </div>
               <div className="graph-editor-fields">
                 {visible.map((name) => {
                   const descriptor = descriptors.find((item) => item.name === name);
                   return (
                     <div className="graph-editor-field" key={name}>
-                      <SchemaField name={name} fieldSchema={descriptor?.schema || {}} required={descriptor?.required} value={values[name] ?? ""} onChange={(value) => { setValues((current) => ({ ...current, [name]: value })); setFieldErrors((current) => ({ ...current, [name]: "" })); setDirty(true); }} />
+                      <SchemaField
+                        name={name}
+                        fieldSchema={descriptor?.schema || {}}
+                        required={descriptor?.required}
+                        value={values[name] ?? ""}
+                        onChange={(value) => {
+                          setValues((current) => ({ ...current, [name]: value }));
+                          setFieldErrors((current) => ({ ...current, [name]: "" }));
+                          setDirty(true);
+                        }}
+                      />
                       {fieldErrors[name] && <p className="validation-error">{fieldErrors[name]}</p>}
                     </div>
                   );
@@ -191,15 +268,29 @@ export default function CompactNodeEditor({ document = null, objectType = "entit
             </>
           )}
           <div className="graph-editor-secondary-actions">
-            <button className="button small" type="button" onClick={toggleRaw}><Braces size={14} /> {rawMode ? "Basic" : "Inspect JSON"}</button>
-            <button className="button small" type="button" onClick={generateEmpty}>Generate empty document</button>
-            <button className="button small" type="button" onClick={openFullEditor}>Open full editor</button>
+            <button className="button small" type="button" onClick={toggleRaw}>
+              <Braces size={14} /> {rawMode ? "Basic" : "Inspect JSON"}
+            </button>
+            <button className="button small" type="button" onClick={generateEmpty}>
+              Generate empty document
+            </button>
+            <button className="button small" type="button" onClick={openFullEditor}>
+              Open full editor
+            </button>
           </div>
           <div className="form-actions graph-editor-actions">
-            {document && <button className="button danger" type="button" onClick={remove}><Trash2 size={14} /> Delete</button>}
+            {document && (
+              <button className="button danger" type="button" onClick={remove}>
+                <Trash2 size={14} /> Delete
+              </button>
+            )}
             <span />
-            <button className="button" type="button" onClick={requestClose}>Cancel</button>
-            <button className="button primary" disabled={saving}><Save size={14} /> {saving ? "Saving…" : "Save"}</button>
+            <button className="button" type="button" onClick={requestClose}>
+              Cancel
+            </button>
+            <button className="button primary" disabled={saving}>
+              <Save size={14} /> {saving ? "Saving…" : "Save"}
+            </button>
           </div>
         </form>
       )}

@@ -50,78 +50,78 @@ No destructive in-place conversion is permitted. A storage migration must retain
 
 ### Phase 0 — Foundation
 
-| Issue | Deliverable | Depends on |
-| --- | --- | --- |
-| [#3](https://github.com/lost-rob0t/quasar-ui/issues/3) | TypeScript/React/Vite workspace | — |
-| [#4](https://github.com/lost-rob0t/quasar-ui/issues/4) | Package boundaries and architecture rules | #3 |
-| [#5](https://github.com/lost-rob0t/quasar-ui/issues/5) | Quality, test, and CI baseline | #3 |
+| Issue                                                  | Deliverable                                   | Depends on |
+| ------------------------------------------------------ | --------------------------------------------- | ---------- |
+| [#3](https://github.com/lost-rob0t/quasar-ui/issues/3) | TypeScript/React/Vite workspace               | —          |
+| [#4](https://github.com/lost-rob0t/quasar-ui/issues/4) | Package boundaries and architecture rules     | #3         |
+| [#5](https://github.com/lost-rob0t/quasar-ui/issues/5) | Quality, test, and CI baseline                | #3         |
 | [#6](https://github.com/lost-rob0t/quasar-ui/issues/6) | Deterministic fixtures and schema conformance | #3, #4, #5 |
 
 Exit gate: a clean checkout builds and tests, architecture boundaries are enforceable, and deterministic fixtures exist.
 
 ### Phase 1 — Local-first graph core
 
-| Issue | Deliverable | Depends on |
-| --- | --- | --- |
-| [#7](https://github.com/lost-rob0t/quasar-ui/issues/7) | Canonical graph document and type registry | #4, #6 |
-| [#8](https://github.com/lost-rob0t/quasar-ui/issues/8) | Graph commands and atomic batch engine | #7 |
-| [#9](https://github.com/lost-rob0t/quasar-ui/issues/9) | Transaction undo/redo and revisions | #8 |
-| [#10](https://github.com/lost-rob0t/quasar-ui/issues/10) | IndexedDB repository and migrations | #7, #9 |
+| Issue                                                    | Deliverable                                  | Depends on      |
+| -------------------------------------------------------- | -------------------------------------------- | --------------- |
+| [#7](https://github.com/lost-rob0t/quasar-ui/issues/7)   | Canonical graph document and type registry   | #4, #6          |
+| [#8](https://github.com/lost-rob0t/quasar-ui/issues/8)   | Graph commands and atomic batch engine       | #7              |
+| [#9](https://github.com/lost-rob0t/quasar-ui/issues/9)   | Transaction undo/redo and revisions          | #8              |
+| [#10](https://github.com/lost-rob0t/quasar-ui/issues/10) | IndexedDB repository and migrations          | #7, #9          |
 | [#11](https://github.com/lost-rob0t/quasar-ui/issues/11) | Canonical JSON, GraphML, and CSV interchange | #6, #7, #8, #10 |
 
 Exit gate: graphs can be created, edited through commands, saved offline, reopened, undone and redone, imported, and exported without a server.
 
 ### Phase 2 — Editable workbench MVP
 
-| Issue | Deliverable | Depends on |
-| --- | --- | --- |
-| [#12](https://github.com/lost-rob0t/quasar-ui/issues/12) | Resizable investigation shell | #3, #10 |
-| [#13](https://github.com/lost-rob0t/quasar-ui/issues/13) | Cytoscape graph adapter and extension loader | #7, #8, #12 |
-| [#14](https://github.com/lost-rob0t/quasar-ui/issues/14) | Node and edge editing gestures | #8, #9, #13 |
-| [#15](https://github.com/lost-rob0t/quasar-ui/issues/15) | Typed node and edge inspector | #7, #8, #12, #14 |
-| [#16](https://github.com/lost-rob0t/quasar-ui/issues/16) | Persisted layouts, viewport, selection, and views | #9, #10, #13, #14 |
-| [#17](https://github.com/lost-rob0t/quasar-ui/issues/17) | Command palette, keymap, and navigation | #12, #14, #15, #16 |
+| Issue                                                    | Deliverable                                       | Depends on         |
+| -------------------------------------------------------- | ------------------------------------------------- | ------------------ |
+| [#12](https://github.com/lost-rob0t/quasar-ui/issues/12) | Resizable investigation shell                     | #3, #10            |
+| [#13](https://github.com/lost-rob0t/quasar-ui/issues/13) | Cytoscape graph adapter and extension loader      | #7, #8, #12        |
+| [#14](https://github.com/lost-rob0t/quasar-ui/issues/14) | Node and edge editing gestures                    | #8, #9, #13        |
+| [#15](https://github.com/lost-rob0t/quasar-ui/issues/15) | Typed node and edge inspector                     | #7, #8, #12, #14   |
+| [#16](https://github.com/lost-rob0t/quasar-ui/issues/16) | Persisted layouts, viewport, selection, and views | #9, #10, #13, #14  |
+| [#17](https://github.com/lost-rob0t/quasar-ui/issues/17) | Command palette, keymap, and navigation           | #12, #14, #15, #16 |
 
 Exit gate: a user can open a workspace, create and connect typed nodes, edit properties, arrange the graph, save and reopen it, and operate the core editor by pointer or keyboard.
 
 ### Phase 3 — JavaScript actions and optional integrations
 
-| Issue | Deliverable | Depends on |
-| --- | --- | --- |
-| [#18](https://github.com/lost-rob0t/quasar-ui/issues/18) | Action registry and applicability | #7, #14, #17 |
-| [#19](https://github.com/lost-rob0t/quasar-ui/issues/19) | Sandboxed Web Worker action runner | #18 |
-| [#20](https://github.com/lost-rob0t/quasar-ui/issues/20) | Validated, undoable action batches | #8, #9, #19 |
+| Issue                                                    | Deliverable                                     | Depends on    |
+| -------------------------------------------------------- | ----------------------------------------------- | ------------- |
+| [#18](https://github.com/lost-rob0t/quasar-ui/issues/18) | Action registry and applicability               | #7, #14, #17  |
+| [#19](https://github.com/lost-rob0t/quasar-ui/issues/19) | Sandboxed Web Worker action runner              | #18           |
+| [#20](https://github.com/lost-rob0t/quasar-ui/issues/20) | Validated, undoable action batches              | #8, #9, #19   |
 | [#21](https://github.com/lost-rob0t/quasar-ui/issues/21) | Action progress, cancellation, logs, and traces | #18, #19, #20 |
-| [#22](https://github.com/lost-rob0t/quasar-ui/issues/22) | Optional StarIntel HTTP/WebSocket adapter | #7, #18, #21 |
+| [#22](https://github.com/lost-rob0t/quasar-ui/issues/22) | Optional StarIntel HTTP/WebSocket adapter       | #7, #18, #21  |
 
 Exit gate: a local worker action can be discovered, invoked, cancelled, validated, applied, and undone while remote integration remains optional.
 
 ### Phase 4 — Investigation projections and dashboard
 
-| Issue | Deliverable | Depends on |
-| --- | --- | --- |
-| [#23](https://github.com/lost-rob0t/quasar-ui/issues/23) | Virtualized table projection | #7, #12, #16 |
-| [#24](https://github.com/lost-rob0t/quasar-ui/issues/24) | MapLibre adapter and layer registry | #7, #12, #16 |
-| [#25](https://github.com/lost-rob0t/quasar-ui/issues/25) | Timeline adapter and temporal filtering | #7, #12, #16 |
-| [#26](https://github.com/lost-rob0t/quasar-ui/issues/26) | Shared selection, filters, and time | #13, #23, #24, #25 |
-| [#27](https://github.com/lost-rob0t/quasar-ui/issues/27) | Dashboard manifests, panels, and layouts | #12, #23, #24, #25, #26 |
-| [#28](https://github.com/lost-rob0t/quasar-ui/issues/28) | Projection coordinator and refresh scheduler | #22, #23, #24, #25, #27 |
-| [#29](https://github.com/lost-rob0t/quasar-ui/issues/29) | CodeMirror and optional Star-Lang integration | #7, #11, #17, #22 |
-| [#30](https://github.com/lost-rob0t/quasar-ui/issues/30) | Evidence and document inspection | #10, #15, #22, #26 |
+| Issue                                                    | Deliverable                                   | Depends on              |
+| -------------------------------------------------------- | --------------------------------------------- | ----------------------- |
+| [#23](https://github.com/lost-rob0t/quasar-ui/issues/23) | Virtualized table projection                  | #7, #12, #16            |
+| [#24](https://github.com/lost-rob0t/quasar-ui/issues/24) | MapLibre adapter and layer registry           | #7, #12, #16            |
+| [#25](https://github.com/lost-rob0t/quasar-ui/issues/25) | Timeline adapter and temporal filtering       | #7, #12, #16            |
+| [#26](https://github.com/lost-rob0t/quasar-ui/issues/26) | Shared selection, filters, and time           | #13, #23, #24, #25      |
+| [#27](https://github.com/lost-rob0t/quasar-ui/issues/27) | Dashboard manifests, panels, and layouts      | #12, #23, #24, #25, #26 |
+| [#28](https://github.com/lost-rob0t/quasar-ui/issues/28) | Projection coordinator and refresh scheduler  | #22, #23, #24, #25, #27 |
+| [#29](https://github.com/lost-rob0t/quasar-ui/issues/29) | CodeMirror and optional Star-Lang integration | #7, #11, #17, #22       |
+| [#30](https://github.com/lost-rob0t/quasar-ui/issues/30) | Evidence and document inspection              | #10, #15, #22, #26      |
 
 Exit gate: graph, table, map, timeline, dashboard, editor, and document views coordinate through stable identifiers without creating duplicate canonical stores.
 
 ### Phase 5 — Production deployment
 
-| Issue | Deliverable | Depends on |
-| --- | --- | --- |
-| [#31](https://github.com/lost-rob0t/quasar-ui/issues/31) | Installable offline PWA | #10, #12, #16, #27 |
-| [#32](https://github.com/lost-rob0t/quasar-ui/issues/32) | Secure local files and recovery | #10, #11, #30, #31 |
-| [#33](https://github.com/lost-rob0t/quasar-ui/issues/33) | CSP, import, renderer, and extension hardening | #11, #19, #22, #29, #30, #31 |
-| [#34](https://github.com/lost-rob0t/quasar-ui/issues/34) | Accessibility, responsive, and touch support | #12, #14, #15, #17, #23, #24, #25, #27 |
-| [#35](https://github.com/lost-rob0t/quasar-ui/issues/35) | Performance workers, fixtures, and budgets | #6, #13, #19, #23, #24, #25, #28, #29, #32 |
-| [#36](https://github.com/lost-rob0t/quasar-ui/issues/36) | Production CI and static deployment | #5, #31, #33, #34, #35 |
-| [#37](https://github.com/lost-rob0t/quasar-ui/issues/37) | Versioning, diagnostics, and operations | #31, #32, #33, #35, #36 |
+| Issue                                                    | Deliverable                                    | Depends on                                 |
+| -------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------ |
+| [#31](https://github.com/lost-rob0t/quasar-ui/issues/31) | Installable offline PWA                        | #10, #12, #16, #27                         |
+| [#32](https://github.com/lost-rob0t/quasar-ui/issues/32) | Secure local files and recovery                | #10, #11, #30, #31                         |
+| [#33](https://github.com/lost-rob0t/quasar-ui/issues/33) | CSP, import, renderer, and extension hardening | #11, #19, #22, #29, #30, #31               |
+| [#34](https://github.com/lost-rob0t/quasar-ui/issues/34) | Accessibility, responsive, and touch support   | #12, #14, #15, #17, #23, #24, #25, #27     |
+| [#35](https://github.com/lost-rob0t/quasar-ui/issues/35) | Performance workers, fixtures, and budgets     | #6, #13, #19, #23, #24, #25, #28, #29, #32 |
+| [#36](https://github.com/lost-rob0t/quasar-ui/issues/36) | Production CI and static deployment            | #5, #31, #33, #34, #35                     |
+| [#37](https://github.com/lost-rob0t/quasar-ui/issues/37) | Versioning, diagnostics, and operations        | #31, #32, #33, #35, #36                    |
 
 Exit gate: the static PWA is reproducibly deployed, installable, offline-capable, secure under its CSP, accessible, performance-budgeted, recoverable, versioned, and rollback-ready.
 

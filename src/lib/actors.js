@@ -9,19 +9,21 @@ export function generateUsernameCandidatesActor(context) {
   const selected = Array.isArray(context.selection) ? context.selection.slice(0, maxSelection) : [];
   const documents = [];
 
-  const normalizePart = (value) => String(value || "")
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "");
-  const normalizeUsername = (value) => String(value || "")
-    .trim()
-    .replace(/^@+/, "")
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, "")
-    .slice(0, 64);
+  const normalizePart = (value) =>
+    String(value || "")
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "");
+  const normalizeUsername = (value) =>
+    String(value || "")
+      .trim()
+      .replace(/^@+/, "")
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, "")
+      .slice(0, 64);
   const hash = (value) => {
     let state = 0x811c9dc5;
     for (let index = 0; index < value.length; index += 1) {
@@ -50,24 +52,40 @@ export function generateUsernameCandidatesActor(context) {
     if (source.dtype === "target") {
       const targetType = String(data.target_type || "").toLowerCase();
       const targetValue = String(data.target || "").trim();
-      if (["username", "handle", "user"].some((type) => targetType.includes(type)) || targetValue.startsWith("@")) {
+      if (
+        ["username", "handle", "user"].some((type) => targetType.includes(type)) ||
+        targetValue.startsWith("@")
+      ) {
         addValue(candidates, targetValue);
       }
     }
     if (Array.isArray(data.external_ids)) {
       data.external_ids
-        .filter((identifier) => ["username", "handle"].includes(String(identifier?.scheme || "").toLowerCase()))
+        .filter((identifier) =>
+          ["username", "handle"].includes(String(identifier?.scheme || "").toLowerCase())
+        )
         .forEach((identifier) => addValue(candidates, identifier.value));
     }
 
     const explicitFirst = normalizePart(data.first_name || data.given_name || data.fname);
     const explicitMiddle = normalizePart(data.middle_name || data.mname);
-    const explicitLast = normalizePart(data.last_name || data.family_name || data.surname || data.lname);
-    const fullName = String(data.full_name || data.name || data.display_name || source.title || "").trim().slice(0, 256);
+    const explicitLast = normalizePart(
+      data.last_name || data.family_name || data.surname || data.lname
+    );
+    const fullName = String(data.full_name || data.name || data.display_name || source.title || "")
+      .trim()
+      .slice(0, 256);
     const parts = fullName.split(/\s+/).map(normalizePart).filter(Boolean);
     const first = explicitFirst || parts[0] || "";
     const last = explicitLast || (parts.length > 1 ? parts.at(-1) : "");
-    const middle = explicitMiddle || (parts.length > 2 ? parts.slice(1, -1).map((part) => part[0]).join("") : "");
+    const middle =
+      explicitMiddle ||
+      (parts.length > 2
+        ? parts
+            .slice(1, -1)
+            .map((part) => part[0])
+            .join("")
+        : "");
 
     [
       first,
@@ -113,11 +131,13 @@ export function generateUsernameCandidatesActor(context) {
             name: username,
             etype: "username",
             status: "candidate",
-            external_ids: [{
-              scheme: "username",
-              value: username,
-              notes: `Candidate generated from ${source._id}`
-            }]
+            external_ids: [
+              {
+                scheme: "username",
+                value: username,
+                notes: `Candidate generated from ${source._id}`
+              }
+            ]
           },
           extensions: { "quasar.actor": actorExtension }
         },
@@ -157,19 +177,21 @@ export function prepareWhatsMyNameSearchesActor(context) {
   const selected = Array.isArray(context.selection) ? context.selection.slice(0, maxSelection) : [];
   const documents = [];
 
-  const normalizePart = (value) => String(value || "")
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "");
-  const normalizeUsername = (value) => String(value || "")
-    .trim()
-    .replace(/^@+/, "")
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, "")
-    .slice(0, 64);
+  const normalizePart = (value) =>
+    String(value || "")
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "");
+  const normalizeUsername = (value) =>
+    String(value || "")
+      .trim()
+      .replace(/^@+/, "")
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, "")
+      .slice(0, 64);
   const hash = (value) => {
     let state = 0x811c9dc5;
     for (let index = 0; index < value.length; index += 1) {
@@ -198,20 +220,29 @@ export function prepareWhatsMyNameSearchesActor(context) {
     if (source.dtype === "target") {
       const targetType = String(data.target_type || "").toLowerCase();
       const targetValue = String(data.target || "").trim();
-      if (["username", "handle", "user"].some((type) => targetType.includes(type)) || targetValue.startsWith("@")) {
+      if (
+        ["username", "handle", "user"].some((type) => targetType.includes(type)) ||
+        targetValue.startsWith("@")
+      ) {
         addValue(usernames, targetValue);
       }
     }
     if (Array.isArray(data.external_ids)) {
       data.external_ids
-        .filter((identifier) => ["username", "handle"].includes(String(identifier?.scheme || "").toLowerCase()))
+        .filter((identifier) =>
+          ["username", "handle"].includes(String(identifier?.scheme || "").toLowerCase())
+        )
         .forEach((identifier) => addValue(usernames, identifier.value));
     }
 
-    const name = String(data.full_name || data.name || data.display_name || source.title || "").trim().slice(0, 256);
+    const name = String(data.full_name || data.name || data.display_name || source.title || "")
+      .trim()
+      .slice(0, 256);
     const parts = name.split(/\s+/).map(normalizePart).filter(Boolean);
     const first = normalizePart(data.first_name || data.given_name || data.fname) || parts[0] || "";
-    const last = normalizePart(data.last_name || data.family_name || data.surname || data.lname) || (parts.length > 1 ? parts.at(-1) : "");
+    const last =
+      normalizePart(data.last_name || data.family_name || data.surname || data.lname) ||
+      (parts.length > 1 ? parts.at(-1) : "");
     [
       first,
       last,
@@ -252,13 +283,15 @@ export function prepareWhatsMyNameSearchesActor(context) {
             etype: "osint-query",
             status: "prepared",
             website: queryUrl,
-            external_ids: [{
-              scheme: "username",
-              value: username,
-              issuer: "WhatsMyName",
-              url: queryUrl,
-              notes: "Prepared enumeration query"
-            }]
+            external_ids: [
+              {
+                scheme: "username",
+                value: username,
+                issuer: "WhatsMyName",
+                url: queryUrl,
+                notes: "Prepared enumeration query"
+              }
+            ]
           },
           extensions: { "quasar.actor": actorExtension }
         },
@@ -300,8 +333,12 @@ export function normalizeNamesActor(context) {
       data.fname || data.first_name || data.given_name,
       data.mname || data.middle_name,
       data.lname || data.last_name || data.family_name
-    ].map((value) => String(value || "").trim()).filter(Boolean);
-    const name = String(data.full_name || data.name || source.title || parts.join(" ")).trim().replace(/\s+/g, " ");
+    ]
+      .map((value) => String(value || "").trim())
+      .filter(Boolean);
+    const name = String(data.full_name || data.name || source.title || parts.join(" "))
+      .trim()
+      .replace(/\s+/g, " ");
     if (source.dtype === "person" && name) data.full_name = name;
     else if (name) data.name = name;
     return {
@@ -354,7 +391,10 @@ export function relationsFromRelatedIdsActor(context) {
           evidence: source.evidence || [],
           data: { subject: source._id, predicate: "related-to", object: target, directed: false },
           extensions: {
-            "quasar.actor": { actor_id: "quasar.actor.related-id-relations", input_ids: [source._id] }
+            "quasar.actor": {
+              actor_id: "quasar.actor.related-id-relations",
+              input_ids: [source._id]
+            }
           }
         }
       });
@@ -504,11 +544,12 @@ export function targetInputExpansionActor(context) {
       const classified = classify(raw);
       let objectId = classified.value;
       if (classified.kind !== "document-reference" || !corpus.has(classified.value)) {
-        const slug = classified.value
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-+|-+$/g, "")
-          .slice(0, 42) || classified.kind;
+        const slug =
+          classified.value
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "")
+            .slice(0, 42) || classified.kind;
         objectId = `starintel:entity:target-input:${slug}-${hash(`${source._id}\0${classified.kind}\0${classified.value}`)}`;
         if (!existing.has(objectId)) {
           const stamp = new Date().toISOString();
@@ -588,7 +629,8 @@ export function targetInputExpansionActor(context) {
 
 export async function cityLegistarCalendarActor(context, api) {
   const source = Array.isArray(context.selection) ? context.selection[0] : null;
-  if (!source) return { documents: [], message: "Select a city, location, organization, entity, or target." };
+  if (!source)
+    return { documents: [], message: "Select a city, location, organization, entity, or target." };
 
   const resolveClient = (input) => {
     const data = input?.data && typeof input.data === "object" ? input.data : input || {};
@@ -664,7 +706,11 @@ export async function cityLegistarCalendarActor(context, api) {
   });
   if (!response.ok) throw new Error(`Legistar ${client} returned HTTP ${response.status}`);
   const payload = response.body;
-  const events = Array.isArray(payload) ? payload : Array.isArray(payload?.value) ? payload.value : [];
+  const events = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.value)
+      ? payload.value
+      : [];
   const existing = new Set((context.documents || []).map((document) => document._id));
   const documents = [];
 
@@ -678,10 +724,17 @@ export async function cityLegistarCalendarActor(context, api) {
     const eventId = `starintel:event:legistar-${client}-${eventIdValue}`;
     const relationId = `starintel:relation:legistar-calendar:${hash(`${source._id}\0${eventId}`)}`;
     const stamp = new Date().toISOString();
-    const name = [event.EventBodyName, event.EventDate ? new Date(event.EventDate).toLocaleDateString("en-US") : ""]
-      .filter(Boolean)
-      .join(" · ") || `Legistar event ${eventIdValue}`;
-    const website = absolute(event.EventInSiteURL || event.EventAgendaFile || event.EventMinutesFile, site);
+    const name =
+      [
+        event.EventBodyName,
+        event.EventDate ? new Date(event.EventDate).toLocaleDateString("en-US") : ""
+      ]
+        .filter(Boolean)
+        .join(" · ") || `Legistar event ${eventIdValue}`;
+    const website = absolute(
+      event.EventInSiteURL || event.EventAgendaFile || event.EventMinutesFile,
+      site
+    );
     const actorExtension = {
       actor_id: "quasar.actor.city-legistar-calendar",
       input_ids: [source._id],
@@ -705,7 +758,8 @@ export async function cityLegistarCalendarActor(context, api) {
         data: {
           name,
           event_type: "government-meeting",
-          start_time: eventDate && Number.isFinite(eventDate.getTime()) ? eventDate.toISOString() : "",
+          start_time:
+            eventDate && Number.isFinite(eventDate.getTime()) ? eventDate.toISOString() : "",
           location: event.EventLocation || "",
           status: event.EventAgendaStatusName || String(event.EventAgendaStatusId || ""),
           website,
@@ -752,7 +806,12 @@ export function actorsForTarget(actors, target, trigger = "target:create") {
   const requested = new Set();
   const add = (value) => {
     if (Array.isArray(value)) value.forEach(add);
-    else String(value || "").split(",").map((item) => item.trim()).filter(Boolean).forEach((item) => requested.add(item));
+    else
+      String(value || "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .forEach((item) => requested.add(item));
   };
   add(data.actor);
   add(data.actors);
@@ -846,7 +905,8 @@ export const BUILTIN_ACTORS = Object.freeze([
   {
     id: "quasar.actor.city-legistar-calendar",
     label: "Load city Legistar calendar",
-    description: "Load bounded public meeting records for a city or Legistar client supplied by the selected input.",
+    description:
+      "Load bounded public meeting records for a city or Legistar client supplied by the selected input.",
     version: 1,
     accepts: ["target", "location", "org", "entity"],
     triggers: [],
@@ -888,9 +948,11 @@ export const BUILTIN_ACTORS = Object.freeze([
 ]);
 
 export function normalizeActorManifest(manifest) {
-  if (!manifest || typeof manifest !== "object") throw new TypeError("Actor manifest must be an object");
+  if (!manifest || typeof manifest !== "object")
+    throw new TypeError("Actor manifest must be an object");
   const minSelection = manifest.minSelection === undefined ? 1 : Number(manifest.minSelection);
-  const maxSelection = manifest.maxSelection === undefined ? MAX_ACTOR_SELECTION : Number(manifest.maxSelection);
+  const maxSelection =
+    manifest.maxSelection === undefined ? MAX_ACTOR_SELECTION : Number(manifest.maxSelection);
   const actor = {
     id: String(manifest.id || "").trim(),
     label: String(manifest.label || manifest.id || "").trim(),
@@ -898,28 +960,50 @@ export function normalizeActorManifest(manifest) {
     version: Number(manifest.version || 1),
     accepts: Array.isArray(manifest.accepts) ? [...new Set(manifest.accepts.map(String))] : ["*"],
     triggers: Array.isArray(manifest.triggers)
-      ? [...new Set(manifest.triggers.map((trigger) => String(trigger || "").trim()).filter(Boolean))]
+      ? [
+          ...new Set(
+            manifest.triggers.map((trigger) => String(trigger || "").trim()).filter(Boolean)
+          )
+        ]
       : [],
     runtime: String(manifest.runtime || BROWSER_ACTOR_RUNTIME).trim(),
     capabilities: Array.isArray(manifest.capabilities)
-      ? [...new Set(manifest.capabilities.map((capability) => String(capability || "").trim()).filter(Boolean))]
+      ? [
+          ...new Set(
+            manifest.capabilities
+              .map((capability) => String(capability || "").trim())
+              .filter(Boolean)
+          )
+        ]
       : [],
-    limits: manifest.limits && typeof manifest.limits === "object" && !Array.isArray(manifest.limits)
-      ? { ...manifest.limits }
-      : {},
+    limits:
+      manifest.limits && typeof manifest.limits === "object" && !Array.isArray(manifest.limits)
+        ? { ...manifest.limits }
+        : {},
     minSelection,
     maxSelection,
     source: String(manifest.source || "").trim()
   };
   if (!actor.id) throw new TypeError("Actor id is required");
   if (!actor.label) throw new TypeError("Actor label is required");
-  if (!Number.isInteger(actor.version) || actor.version < 1) throw new TypeError("Actor version must be a positive integer");
+  if (!Number.isInteger(actor.version) || actor.version < 1)
+    throw new TypeError("Actor version must be a positive integer");
   if (!actor.accepts.length) throw new TypeError("Actor accepts must contain at least one dtype");
-  if (!Number.isInteger(actor.minSelection) || actor.minSelection < 0 || actor.minSelection > MAX_ACTOR_SELECTION) {
+  if (
+    !Number.isInteger(actor.minSelection) ||
+    actor.minSelection < 0 ||
+    actor.minSelection > MAX_ACTOR_SELECTION
+  ) {
     throw new TypeError(`Actor minSelection must be an integer from 0 to ${MAX_ACTOR_SELECTION}`);
   }
-  if (!Number.isInteger(actor.maxSelection) || actor.maxSelection < actor.minSelection || actor.maxSelection > MAX_ACTOR_SELECTION) {
-    throw new TypeError(`Actor maxSelection must be an integer from minSelection to ${MAX_ACTOR_SELECTION}`);
+  if (
+    !Number.isInteger(actor.maxSelection) ||
+    actor.maxSelection < actor.minSelection ||
+    actor.maxSelection > MAX_ACTOR_SELECTION
+  ) {
+    throw new TypeError(
+      `Actor maxSelection must be an integer from minSelection to ${MAX_ACTOR_SELECTION}`
+    );
   }
   if (!actor.source) throw new TypeError("Actor source is required");
   return actor;
@@ -931,18 +1015,23 @@ export function actorApplicability(manifest, selection) {
   if (selected.length < actor.minSelection) {
     return {
       applicable: false,
-      reason: actor.minSelection === 1
-        ? "Select a graph document."
-        : `Select at least ${actor.minSelection} graph documents.`
+      reason:
+        actor.minSelection === 1
+          ? "Select a graph document."
+          : `Select at least ${actor.minSelection} graph documents.`
     };
   }
   if (selected.length > actor.maxSelection) {
-    return { applicable: false, reason: `Select no more than ${actor.maxSelection} graph documents.` };
+    return {
+      applicable: false,
+      reason: `Select no more than ${actor.maxSelection} graph documents.`
+    };
   }
   const accepted = new Set(actor.accepts);
   if (!accepted.has("*")) {
     const rejected = selected.find((document) => !accepted.has(document.dtype));
-    if (rejected) return { applicable: false, reason: `Does not accept ${rejected.dtype} documents.` };
+    if (rejected)
+      return { applicable: false, reason: `Does not accept ${rejected.dtype} documents.` };
   }
   return { applicable: true, reason: "" };
 }
@@ -952,25 +1041,81 @@ export function actorApplicable(actor, selection) {
 }
 
 export function isBuiltinActor(actor) {
-  return BUILTIN_ACTORS.some((candidate) => candidate.id === actor?.id && candidate.source === actor?.source);
+  return BUILTIN_ACTORS.some(
+    (candidate) => candidate.id === actor?.id && candidate.source === actor?.source
+  );
+}
+
+const ACTOR_RESPONSE_LIMIT = 1_048_576;
+const FORBIDDEN_ACTOR_HEADER =
+  /^(?:authorization|cookie|proxy-|sec-|host$|origin$|referer$|x-api-key$)/i;
+
+function assertLiteralPublicHost(url) {
+  const host = url.hostname.toLowerCase();
+  if (
+    host === "localhost" ||
+    host === "0.0.0.0" ||
+    host === "::1" ||
+    host.endsWith(".local") ||
+    /^127\./.test(host) ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^169\.254\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+  )
+    throw new Error("Actor network.fetch blocks private network URLs");
+}
+
+async function readBoundedActorBody(response, signal) {
+  const reader = response.body?.getReader();
+  if (!reader) return new Uint8Array();
+  const chunks = [];
+  let total = 0;
+  for (;;) {
+    if (signal?.aborted) throw signal.reason || new DOMException("Aborted", "AbortError");
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > ACTOR_RESPONSE_LIMIT) {
+      await reader.cancel("Actor response limit exceeded");
+      throw new RangeError(`Actor response exceeds ${ACTOR_RESPONSE_LIMIT} bytes`);
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
 }
 
 async function networkFetchService(payload, { signal }) {
   const url = new URL(String(payload?.url || payload || ""));
-  if (!["http:", "https:"].includes(url.protocol)) {
-    throw new Error(`Actor network.fetch rejects ${url.protocol || "unknown"} URLs`);
-  }
+  if (url.protocol !== "https:") throw new Error("Actor network.fetch requires HTTPS");
+  assertLiteralPublicHost(url);
   const options = payload?.options && typeof payload.options === "object" ? payload.options : {};
+  const method = String(options.method || "GET").toUpperCase();
+  if (!["GET", "HEAD"].includes(method)) throw new Error(`Actor network.fetch rejects ${method}`);
+  const headers = Object.fromEntries(
+    Object.entries(options.headers || {}).map(([name, value]) => {
+      if (FORBIDDEN_ACTOR_HEADER.test(name))
+        throw new Error(`Actor request header denied: ${name}`);
+      return [name, String(value)];
+    })
+  );
   const response = await fetch(url.href, {
-    method: String(options.method || "GET").toUpperCase(),
-    headers: options.headers || {},
-    body: options.body,
+    method,
+    headers,
     credentials: "omit",
-    redirect: "follow",
+    redirect: "error",
     signal
   });
+  const bytes = await readBoundedActorBody(response, signal);
+  const raw = new TextDecoder().decode(bytes);
   const responseType = payload?.responseType === "json" ? "json" : "text";
-  const body = responseType === "json" ? await response.json() : await response.text();
+  const body = responseType === "json" && raw ? JSON.parse(raw) : raw;
   return {
     ok: response.ok,
     status: response.status,
@@ -1011,11 +1156,16 @@ function eventEmitService(payload) {
   return { emitted: true, name };
 }
 
-export async function runBrowserActor(manifest, context, {
-  timeout = DEFAULT_ACTOR_TIMEOUT_MS,
-  signal,
-  onEvent
-} = {}) {
+export async function runBrowserActor(
+  manifest,
+  context,
+  { timeout = DEFAULT_ACTOR_TIMEOUT_MS, signal, onEvent, trusted = false } = {}
+) {
+  if (!trusted) {
+    throw new Error(
+      "Custom browser actor execution is disabled until the opaque-origin sandbox is available"
+    );
+  }
   const actor = normalizeActorManifest(manifest);
   if (!Number.isInteger(timeout) || timeout < 1 || timeout > MAX_ACTOR_TIMEOUT_MS) {
     throw new TypeError(`Actor timeout must be an integer from 1 to ${MAX_ACTOR_TIMEOUT_MS}`);
@@ -1037,7 +1187,10 @@ export async function runBrowserActor(manifest, context, {
       limits: {
         ...actor.limits,
         timeoutMs: timeout,
-        maxDocuments: Math.min(actor.limits.maxDocuments || MAX_ACTOR_DOCUMENTS, MAX_ACTOR_DOCUMENTS)
+        maxDocuments: Math.min(
+          actor.limits.maxDocuments || MAX_ACTOR_DOCUMENTS,
+          MAX_ACTOR_DOCUMENTS
+        )
       }
     }),
     context,

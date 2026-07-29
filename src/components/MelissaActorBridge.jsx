@@ -18,7 +18,10 @@ export default function MelissaActorBridge() {
     if (!settings || installingRef.current || settings.melissaActorPackInstalled === false) return;
     const installedIds = new Set((settings.actors || []).map((actor) => actor.id));
     const merged = mergeMelissaActors(settings.actors || []);
-    const complete = merged.every((actor) => !String(actor.id || "").startsWith("quasar.actor.melissa-") || installedIds.has(actor.id));
+    const complete = merged.every(
+      (actor) =>
+        !String(actor.id || "").startsWith("quasar.actor.melissa-") || installedIds.has(actor.id)
+    );
     if (complete && settings.melissaActorPackVersion === MELISSA_ACTOR_PACK_VERSION) return;
 
     installingRef.current = true;

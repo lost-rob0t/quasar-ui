@@ -16,15 +16,21 @@ export const STARINTEL_VIEW_MANIFEST = Object.freeze([
         reduce: "_count"
       },
       review_count: {
-        map: map("emit(doc.verification && doc.verification.verified === true ? 'reviewed' : 'unreviewed', 1);"),
+        map: map(
+          "emit(doc.verification && doc.verification.verified === true ? 'reviewed' : 'unreviewed', 1);"
+        ),
         reduce: "_count"
       },
       review_dtype_count: {
-        map: map("if (doc.dtype) emit([doc.verification && doc.verification.verified === true ? 'reviewed' : 'unreviewed', doc.dtype], 1);"),
+        map: map(
+          "if (doc.dtype) emit([doc.verification && doc.verification.verified === true ? 'reviewed' : 'unreviewed', doc.dtype], 1);"
+        ),
         reduce: "_count"
       },
       review_dataset_count: {
-        map: map("if (doc.dataset) emit([doc.verification && doc.verification.verified === true ? 'reviewed' : 'unreviewed', doc.dataset], 1);"),
+        map: map(
+          "if (doc.dataset) emit([doc.verification && doc.verification.verified === true ? 'reviewed' : 'unreviewed', doc.dataset], 1);"
+        ),
         reduce: "_count"
       }
     }
@@ -34,20 +40,30 @@ export const STARINTEL_VIEW_MANIFEST = Object.freeze([
     version: VIEW_VERSION,
     views: {
       edges: {
-        map: map("if (doc.dtype === 'relation' && doc.data && doc.data.subject && doc.data.object) emit(doc.data.subject, {id: doc._id, object: doc.data.object, predicate: doc.data.predicate || 'related-to', directed: doc.data.directed !== false});")
+        map: map(
+          "if (doc.dtype === 'relation' && doc.data && doc.data.subject && doc.data.object) emit(doc.data.subject, {id: doc._id, object: doc.data.object, predicate: doc.data.predicate || 'related-to', directed: doc.data.directed !== false});"
+        )
       },
       outgoing: {
-        map: map("if (doc.dtype === 'relation' && doc.data && doc.data.subject && doc.data.object) emit(doc.data.subject, doc.data.object);")
+        map: map(
+          "if (doc.dtype === 'relation' && doc.data && doc.data.subject && doc.data.object) emit(doc.data.subject, doc.data.object);"
+        )
       },
       incoming: {
-        map: map("if (doc.dtype === 'relation' && doc.data && doc.data.subject && doc.data.object) emit(doc.data.object, doc.data.subject);")
+        map: map(
+          "if (doc.dtype === 'relation' && doc.data && doc.data.subject && doc.data.object) emit(doc.data.object, doc.data.subject);"
+        )
       },
       outgoing_count: {
-        map: map("if (doc.dtype === 'relation' && doc.data && doc.data.subject) emit(doc.data.subject, 1);"),
+        map: map(
+          "if (doc.dtype === 'relation' && doc.data && doc.data.subject) emit(doc.data.subject, 1);"
+        ),
         reduce: "_count"
       },
       incoming_count: {
-        map: map("if (doc.dtype === 'relation' && doc.data && doc.data.object) emit(doc.data.object, 1);"),
+        map: map(
+          "if (doc.dtype === 'relation' && doc.data && doc.data.object) emit(doc.data.object, 1);"
+        ),
         reduce: "_count"
       }
     }
@@ -57,14 +73,20 @@ export const STARINTEL_VIEW_MANIFEST = Object.freeze([
     version: VIEW_VERSION,
     views: {
       by_actor: {
-        map: map("if (doc.dtype === 'target' && doc.data && doc.data.actor) emit(doc.data.actor, null);")
+        map: map(
+          "if (doc.dtype === 'target' && doc.data && doc.data.actor) emit(doc.data.actor, null);"
+        )
       },
       actor_count: {
-        map: map("if (doc.dtype === 'target' && doc.data && doc.data.actor) emit(doc.data.actor, 1);"),
+        map: map(
+          "if (doc.dtype === 'target' && doc.data && doc.data.actor) emit(doc.data.actor, 1);"
+        ),
         reduce: "_count"
       },
       target_count: {
-        map: map("if (doc.dtype === 'target' && doc.data && doc.data.target) emit(doc.data.target, 1);"),
+        map: map(
+          "if (doc.dtype === 'target' && doc.data && doc.data.target) emit(doc.data.target, 1);"
+        ),
         reduce: "_count"
       },
       state_count: {
@@ -78,13 +100,19 @@ export const STARINTEL_VIEW_MANIFEST = Object.freeze([
     version: VIEW_VERSION,
     views: {
       by_user: {
-        map: map("if ((doc.dtype === 'message' || doc.dtype === 'email-message' || doc.dtype === 'social-media-post') && doc.data && doc.data.user) emit([doc.data.user, doc.date_added || doc.date_updated || ''], null);")
+        map: map(
+          "if ((doc.dtype === 'message' || doc.dtype === 'email-message' || doc.dtype === 'social-media-post') && doc.data && doc.data.user) emit([doc.data.user, doc.date_added || doc.date_updated || ''], null);"
+        )
       },
       by_channel: {
-        map: map("if ((doc.dtype === 'message' || doc.dtype === 'email-message' || doc.dtype === 'social-media-post') && doc.data && doc.data.channel) emit([doc.data.group || null, doc.data.channel, doc.date_added || doc.date_updated || ''], null);")
+        map: map(
+          "if ((doc.dtype === 'message' || doc.dtype === 'email-message' || doc.dtype === 'social-media-post') && doc.data && doc.data.channel) emit([doc.data.group || null, doc.data.channel, doc.date_added || doc.date_updated || ''], null);"
+        )
       },
       by_platform: {
-        map: map("if ((doc.dtype === 'message' || doc.dtype === 'social-media-post') && doc.data && doc.data.platform) emit([doc.data.platform, doc.date_added || doc.date_updated || ''], null);")
+        map: map(
+          "if ((doc.dtype === 'message' || doc.dtype === 'social-media-post') && doc.data && doc.data.platform) emit([doc.data.platform, doc.date_added || doc.date_updated || ''], null);"
+        )
       }
     }
   },
@@ -93,10 +121,14 @@ export const STARINTEL_VIEW_MANIFEST = Object.freeze([
     version: VIEW_VERSION,
     views: {
       by_type: {
-        map: map("if (doc.dtype === 'event' && doc.data) emit(doc.data.event_kind || doc.data.type || 'event', null);")
+        map: map(
+          "if (doc.dtype === 'event' && doc.data) emit(doc.data.event_kind || doc.data.type || 'event', null);"
+        )
       },
       by_time: {
-        map: map("if (doc.dtype === 'event' && doc.data) emit(doc.data.start_at || doc.date_added || doc.date_updated || '', null);")
+        map: map(
+          "if (doc.dtype === 'event' && doc.data) emit(doc.data.start_at || doc.date_added || doc.date_updated || '', null);"
+        )
       }
     }
   }
@@ -112,8 +144,10 @@ function designDocument(entry) {
 }
 
 function sameDefinition(current, next) {
-  return current?.quasar_view_version === next.quasar_view_version
-    && JSON.stringify(current.views || {}) === JSON.stringify(next.views || {});
+  return (
+    current?.quasar_view_version === next.quasar_view_version &&
+    JSON.stringify(current.views || {}) === JSON.stringify(next.views || {})
+  );
 }
 
 export async function installStarIntelViews(database) {

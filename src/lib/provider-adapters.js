@@ -1,4 +1,12 @@
 const PROVIDER_TYPES = new Set(["openrouter", "openai", "anthropic", "openai-compatible", "local"]);
+const PROTECTED_PROVIDER_ENDPOINTS = Object.freeze({
+  openrouter: "https://openrouter.ai/api/v1",
+  openai: "https://api.openai.com/v1",
+  anthropic: "https://api.anthropic.com/v1",
+  local: "http://localhost:11434/v1"
+});
+const FORBIDDEN_CONFIG_HEADER =
+  /^(?:authorization|proxy-|host$|cookie$|set-cookie$|origin$|referer$|sec-|x-api-key$)/i;
 
 export class ProviderError extends Error {
   constructor(message, details = {}) {
@@ -15,7 +23,34 @@ function requiredString(value, label) {
 }
 
 function normalizeBaseUrl(value) {
-  return requiredString(value, "Provider base URL").replace(/\/+$/, "");
+  const url = new URL(requiredString(value, "Provider base URL"));
+  if (!["http:", "https:"].includes(url.protocol)) {
+    throw new TypeError("Provider URL must use HTTP or HTTPS");
+  }
+  if (url.username || url.password) {
+    throw new TypeError("Provider URL cannot contain embedded credentials");
+  }
+  const loopback =
+    url.hostname === "localhost" || url.hostname === "::1" || /^127\./.test(url.hostname);
+  if (url.protocol !== "https:" && !loopback) {
+    throw new TypeError("Provider URL must use HTTPS unless it targets loopback");
+  }
+  url.hash = "";
+  url.search = "";
+  return url.href.replace(/\/+$/, "");
+}
+
+function sanitizeHeaders(headers) {
+  if (!headers || typeof headers !== "object" || Array.isArray(headers)) return {};
+  return Object.fromEntries(
+    Object.entries(headers).map(([name, value]) => {
+      const normalized = String(name || "").trim();
+      if (!normalized || FORBIDDEN_CONFIG_HEADER.test(normalized)) {
+        throw new TypeError(`Provider header is not allowed: ${normalized || "<empty>"}`);
+      }
+      return [normalized, String(value)];
+    })
+  );
 }
 
 function parseRetryAfter(headers) {
@@ -42,7 +77,8 @@ export function normalizeProviderError(error, response) {
             ? "Provider is unavailable"
             : `Provider request failed (${status})`,
       {
-        code: status === 429 ? "rate_limit" : status >= 500 ? "provider_unavailable" : "request_failed",
+        code:
+          status === 429 ? "rate_limit" : status >= 500 ? "provider_unavailable" : "request_failed",
         status,
         retryable: status === 408 || status === 409 || status === 429 || status >= 500,
         retryAfterMs: parseRetryAfter(response.headers)
@@ -73,7 +109,9 @@ function usageFromOpenAi(data) {
   return {
     inputTokens: Number(usage.prompt_tokens || usage.input_tokens || 0),
     outputTokens: Number(usage.completion_tokens || usage.output_tokens || 0),
-    cachedTokens: Number(usage.prompt_tokens_details?.cached_tokens || usage.input_tokens_details?.cached_tokens || 0),
+    cachedTokens: Number(
+      usage.prompt_tokens_details?.cached_tokens || usage.input_tokens_details?.cached_tokens || 0
+    ),
     exact: Boolean(data?.usage)
   };
 }
@@ -82,8 +120,8 @@ function openAiAdapter(config, secret) {
   const baseUrl = normalizeBaseUrl(config.baseUrl);
   const headers = {
     "Content-Type": "application/json",
-    ...(secret ? { Authorization: `Bearer ${secret}` } : {}),
-    ...(config.headers || {})
+    ...(config.headers || {}),
+    ...(secret ? { Authorization: `Bearer ${secret}` } : {})
   };
   return {
     type: config.type,
@@ -100,7 +138,15 @@ function openAiAdapter(config, secret) {
         throw normalizeProviderError(error);
       }
     },
-    async sendMessages({ model, messages, tools = [], toolChoice = "auto", maxTokens, temperature, signal }) {
+    async sendMessages({
+      model,
+      messages,
+      tools = [],
+      toolChoice = "auto",
+      maxTokens,
+      temperature,
+      signal
+    }) {
       try {
         const response = await fetch(`${baseUrl}/chat/completions`, {
           method: "POST",
@@ -116,7 +162,11 @@ function openAiAdapter(config, secret) {
         });
         const data = await readJson(response);
         const message = data.choices?.[0]?.message;
-        if (!message) throw new ProviderError("Provider response has no message", { code: "invalid_response", retryable: true });
+        if (!message)
+          throw new ProviderError("Provider response has no message", {
+            code: "invalid_response",
+            retryable: true
+          });
         return {
           id: data.id || crypto.randomUUID(),
           text: message.content || "",
@@ -156,54 +206,74 @@ function anthropicAdapter(config, secret) {
     async listModels({ signal } = {}) {
       try {
         const data = await readJson(await fetch(`${baseUrl}/models`, { headers, signal }));
-        return (data.data || []).map((model) => ({ id: model.id, name: model.display_name || model.id, contextWindow: null }));
+        return (data.data || []).map((model) => ({
+          id: model.id,
+          name: model.display_name || model.id,
+          contextWindow: null
+        }));
       } catch (error) {
         if (error instanceof ProviderError) throw error;
         throw normalizeProviderError(error);
       }
     },
     async sendMessages({ model, messages, tools = [], maxTokens = 4_096, temperature, signal }) {
-      const system = messages.filter((message) => message.role === "system").map((message) => message.content).join("\n\n");
+      const system = messages
+        .filter((message) => message.role === "system")
+        .map((message) => message.content)
+        .join("\n\n");
       const turns = messages
         .filter((message) => message.role !== "system")
-        .map((message) => message.role === "tool"
-          ? {
-            role: "user",
-            content: [{
-              type: "tool_result",
-              tool_use_id: message.tool_call_id,
-              content: message.content
-            }]
-          }
-          : message);
+        .map((message) =>
+          message.role === "tool"
+            ? {
+                role: "user",
+                content: [
+                  {
+                    type: "tool_result",
+                    tool_use_id: message.tool_call_id,
+                    content: message.content
+                  }
+                ]
+              }
+            : message
+        );
       try {
-        const data = await readJson(await fetch(`${baseUrl}/messages`, {
-          method: "POST",
-          headers,
-          signal,
-          body: JSON.stringify({
-            model,
-            system,
-            messages: turns,
-            max_tokens: maxTokens,
-            ...(tools.length ? {
-              tools: tools.map((tool) => ({
-                name: tool.function.name,
-                description: tool.function.description,
-                input_schema: tool.function.parameters
-              }))
-            } : {}),
-            ...(temperature !== undefined ? { temperature } : {})
+        const data = await readJson(
+          await fetch(`${baseUrl}/messages`, {
+            method: "POST",
+            headers,
+            signal,
+            body: JSON.stringify({
+              model,
+              system,
+              messages: turns,
+              max_tokens: maxTokens,
+              ...(tools.length
+                ? {
+                    tools: tools.map((tool) => ({
+                      name: tool.function.name,
+                      description: tool.function.description,
+                      input_schema: tool.function.parameters
+                    }))
+                  }
+                : {}),
+              ...(temperature !== undefined ? { temperature } : {})
+            })
           })
-        }));
+        );
         return {
           id: data.id || crypto.randomUUID(),
-          text: (data.content || []).filter((part) => part.type === "text").map((part) => part.text).join("\n"),
-          toolCalls: (data.content || []).filter((part) => part.type === "tool_use").map((part) => ({
-            id: part.id,
-            name: part.name,
-            arguments: JSON.stringify(part.input || {})
-          })),
+          text: (data.content || [])
+            .filter((part) => part.type === "text")
+            .map((part) => part.text)
+            .join("\n"),
+          toolCalls: (data.content || [])
+            .filter((part) => part.type === "tool_use")
+            .map((part) => ({
+              id: part.id,
+              name: part.name,
+              arguments: JSON.stringify(part.input || {})
+            })),
           finishReason: data.stop_reason || null,
           usage: {
             inputTokens: Number(data.usage?.input_tokens || 0),
@@ -229,30 +299,68 @@ function anthropicAdapter(config, secret) {
 }
 
 export const DEFAULT_PROVIDER_CONFIGS = Object.freeze([
-  { id: "openrouter", name: "OpenRouter", type: "openrouter", baseUrl: "https://openrouter.ai/api/v1", requiresKey: true },
-  { id: "openai", name: "OpenAI", type: "openai", baseUrl: "https://api.openai.com/v1", requiresKey: true },
-  { id: "anthropic", name: "Anthropic", type: "anthropic", baseUrl: "https://api.anthropic.com/v1", requiresKey: true },
-  { id: "custom", name: "OpenAI-compatible", type: "openai-compatible", baseUrl: "", requiresKey: false },
-  { id: "local", name: "Local model", type: "local", baseUrl: "http://localhost:11434/v1", requiresKey: false }
+  {
+    id: "openrouter",
+    name: "OpenRouter",
+    type: "openrouter",
+    baseUrl: "https://openrouter.ai/api/v1",
+    requiresKey: true
+  },
+  {
+    id: "openai",
+    name: "OpenAI",
+    type: "openai",
+    baseUrl: "https://api.openai.com/v1",
+    requiresKey: true
+  },
+  {
+    id: "anthropic",
+    name: "Anthropic",
+    type: "anthropic",
+    baseUrl: "https://api.anthropic.com/v1",
+    requiresKey: true
+  },
+  {
+    id: "custom",
+    name: "OpenAI-compatible",
+    type: "openai-compatible",
+    baseUrl: "",
+    requiresKey: false
+  },
+  {
+    id: "local",
+    name: "Local model",
+    type: "local",
+    baseUrl: "http://localhost:11434/v1",
+    requiresKey: false
+  }
 ]);
 
 export function normalizeProviderConfig(input) {
   const type = requiredString(input.type, "Provider type");
   if (!PROVIDER_TYPES.has(type)) throw new TypeError(`Unsupported provider type: ${type}`);
+  const id = requiredString(input.id, "Provider ID");
+  const rawBaseUrl = String(input.baseUrl || "").trim();
+  const baseUrl = rawBaseUrl ? normalizeBaseUrl(rawBaseUrl) : "";
+  const protectedEndpoint = PROTECTED_PROVIDER_ENDPOINTS[id];
+  if (protectedEndpoint && baseUrl !== protectedEndpoint) {
+    throw new TypeError(`${id} must use its built-in reviewed endpoint`);
+  }
   return {
-    id: requiredString(input.id, "Provider ID"),
+    id,
     name: requiredString(input.name || input.id, "Provider name"),
     type,
-    baseUrl: String(input.baseUrl || "").trim(),
+    baseUrl,
     requiresKey: input.requiresKey !== false && type !== "local",
     enabled: input.enabled !== false,
-    headers: input.headers && typeof input.headers === "object" ? { ...input.headers } : {}
+    headers: sanitizeHeaders(input.headers)
   };
 }
 
 export function createProviderAdapter(input, secret = "") {
   const config = normalizeProviderConfig(input);
-  if (config.requiresKey && !secret) throw new ProviderError("Provider key is missing", { code: "missing_key", retryable: false });
+  if (config.requiresKey && !secret)
+    throw new ProviderError("Provider key is missing", { code: "missing_key", retryable: false });
   if (config.type === "anthropic") return anthropicAdapter(config, secret);
   return openAiAdapter(config, secret);
 }

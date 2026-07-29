@@ -2,11 +2,7 @@ import PouchDB from "pouchdb-browser";
 import { assertDocument, isStarIntelDocument } from "starintel_doc";
 import { commitDocumentBatch } from "./document-batch";
 import { normalizeGraphWorkspace } from "./graph-workspaces";
-import {
-  installStarIntelViews,
-  queryCountView,
-  queryStarIntelView
-} from "./views";
+import { installStarIntelViews, queryCountView, queryStarIntelView } from "./views";
 
 export const documentsDb = new PouchDB("quasar-starintel-v09", { auto_compaction: true });
 export const stateDb = new PouchDB("quasar-ui-state-v1", { auto_compaction: true });
@@ -19,7 +15,10 @@ export async function listDocuments() {
   const result = await documentsDb.allDocs({ include_docs: true });
   return result.rows
     .map((row) => row.doc)
-    .filter((document) => document && !document._id.startsWith("_design/") && isStarIntelDocument(document))
+    .filter(
+      (document) =>
+        document && !document._id.startsWith("_design/") && isStarIntelDocument(document)
+    )
     .sort(newestFirst);
 }
 
@@ -73,7 +72,11 @@ export async function getState(id, fallback = null) {
 
 export async function putState(id, value) {
   const current = await getState(id, null);
-  const result = await stateDb.put({ ...value, _id: id, ...(current?._rev ? { _rev: current._rev } : {}) });
+  const result = await stateDb.put({
+    ...value,
+    _id: id,
+    ...(current?._rev ? { _rev: current._rev } : {})
+  });
   return { ...value, _id: id, _rev: result.rev };
 }
 
@@ -139,7 +142,10 @@ export function createRemoteDatabase(config) {
     fetch: (url, options = {}) => {
       const headers = new Headers(options.headers || {});
       if (config.couchUsername) {
-        headers.set("Authorization", `Basic ${btoa(`${config.couchUsername}:${config.couchPassword || ""}`)}`);
+        headers.set(
+          "Authorization",
+          `Basic ${btoa(`${config.couchUsername}:${config.couchPassword || ""}`)}`
+        );
       }
       return PouchDB.fetch(url, { ...options, headers });
     }

@@ -41,39 +41,32 @@ export function blankGraphFixture() {
     fixtureVersion: FIXTURE_SCHEMA_VERSION,
     documents: [],
     workspace: {
-      graphs: [{
-        id: "all-documents",
-        name: "All documents",
-        documentIds: null,
-        positions: {},
-        viewport: null,
-        layout: "cose",
-        selectedIds: []
-      }],
+      graphs: [
+        {
+          id: "all-documents",
+          name: "All documents",
+          documentIds: null,
+          positions: {},
+          viewport: null,
+          layout: "cose",
+          selectedIds: []
+        }
+      ],
       activeGraphId: "all-documents"
     }
   };
 }
 
 export function smallTypedGraphFixture() {
-  const person = baseDocument(
-    "starintel:person:ada",
-    "person",
-    "people",
-    { full_name: "Ada Lovelace" }
-  );
-  const organization = baseDocument(
-    "starintel:org:analytical-society",
-    "org",
-    "organizations",
-    { name: "Analytical Society" }
-  );
-  const event = baseDocument(
-    "starintel:event:lecture",
-    "event",
-    "events",
-    { name: "Public lecture" }
-  );
+  const person = baseDocument("starintel:person:ada", "person", "people", {
+    full_name: "Ada Lovelace"
+  });
+  const organization = baseDocument("starintel:org:analytical-society", "org", "organizations", {
+    name: "Analytical Society"
+  });
+  const event = baseDocument("starintel:event:lecture", "event", "events", {
+    name: "Public lecture"
+  });
   const relations = [
     relation("starintel:relation:ada-member", "people", person._id, "member-of", organization._id),
     relation("starintel:relation:ada-lecture", "events", person._id, "participated-in", event._id)
@@ -84,19 +77,21 @@ export function smallTypedGraphFixture() {
     fixtureVersion: FIXTURE_SCHEMA_VERSION,
     documents,
     workspace: {
-      graphs: [{
-        id: "cross-dataset-investigation",
-        name: "Cross-dataset investigation",
-        documentIds: documents.map((document) => document._id),
-        positions: {
-          [person._id]: { x: 0, y: 0 },
-          [organization._id]: { x: 240, y: -100 },
-          [event._id]: { x: 240, y: 100 }
-        },
-        viewport: { zoom: 1, pan: { x: 0, y: 0 } },
-        layout: "preset",
-        selectedIds: [person._id]
-      }],
+      graphs: [
+        {
+          id: "cross-dataset-investigation",
+          name: "Cross-dataset investigation",
+          documentIds: documents.map((document) => document._id),
+          positions: {
+            [person._id]: { x: 0, y: 0 },
+            [organization._id]: { x: 240, y: -100 },
+            [event._id]: { x: 240, y: 100 }
+          },
+          viewport: { zoom: 1, pan: { x: 0, y: 0 } },
+          layout: "preset",
+          selectedIds: [person._id]
+        }
+      ],
       activeGraphId: "cross-dataset-investigation"
     }
   };
@@ -105,25 +100,24 @@ export function smallTypedGraphFixture() {
 export function unknownTypeGraphFixture() {
   return {
     fixtureVersion: FIXTURE_SCHEMA_VERSION,
-    documents: [baseDocument(
-      "starintel:future:one",
-      "future-entity",
-      "future-data",
-      { name: "Forward-compatible record", extension_value: { nested: true } },
-      { fixture_extension: "preserve-me" }
-    )]
+    documents: [
+      baseDocument(
+        "starintel:future:one",
+        "future-entity",
+        "future-data",
+        { name: "Forward-compatible record", extension_value: { nested: true } },
+        { fixture_extension: "preserve-me" }
+      )
+    ]
   };
 }
 
 export function highDegreeGraphFixture(leafCount = 32) {
   const hub = baseDocument("starintel:org:hub", "org", "scale", { name: "Hub" });
   const leaves = Array.from({ length: leafCount }, (_, index) =>
-    baseDocument(
-      `starintel:org:leaf-${String(index).padStart(4, "0")}`,
-      "org",
-      "scale",
-      { name: `Leaf ${index}` }
-    )
+    baseDocument(`starintel:org:leaf-${String(index).padStart(4, "0")}`, "org", "scale", {
+      name: `Leaf ${index}`
+    })
   );
   const relations = leaves.map((leaf, index) =>
     relation(
@@ -152,17 +146,12 @@ export function invalidDocumentFixtures() {
     },
     {
       name: "missing-relation-object",
-      document: baseDocument(
-        "starintel:relation:missing-object",
-        "relation",
-        "invalid",
-        {
-          subject: "starintel:org:a",
-          predicate: "connected-to",
-          source: "starintel:org:a",
-          directed: true
-        }
-      )
+      document: baseDocument("starintel:relation:missing-object", "relation", "invalid", {
+        subject: "starintel:org:a",
+        predicate: "connected-to",
+        source: "starintel:org:a",
+        directed: true
+      })
     }
   ];
 }
@@ -184,7 +173,10 @@ export function operationFixtures() {
     command: save,
     batch: { type: "batch", label: "Fixture batch", operations: [save, remove] },
     import: { replace: false, atomic: true, documents: smallTypedGraphFixture().documents },
-    export: { format: "jsonl", documentIds: smallTypedGraphFixture().documents.map((item) => item._id) },
+    export: {
+      format: "jsonl",
+      documentIds: smallTypedGraphFixture().documents.map((item) => item._id)
+    },
     revisionTrace: [
       { revision: "1-fixture", operation: save },
       { revision: "2-fixture", operation: remove }
@@ -214,7 +206,9 @@ function sorted(value) {
   if (Array.isArray(value)) return value.map(sorted);
   if (!value || typeof value !== "object") return value;
   return Object.fromEntries(
-    Object.keys(value).sort().map((key) => [key, sorted(value[key])])
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, sorted(value[key])])
   );
 }
 

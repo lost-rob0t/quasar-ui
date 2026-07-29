@@ -60,27 +60,31 @@ describe("Melissa actor pack", () => {
 
   it("normalizes person matches into valid person, location, phone, email, and relation documents", async () => {
     const runtime = api({
-      Records: [{
-        FullName: "Ada Lovelace",
-        FirstName: "Ada",
-        LastName: "Lovelace",
-        EmailAddress: "ada@example.com",
-        PhoneNumber: "+15551234567",
-        AddressLine1: "1 Main St",
-        City: "Columbus",
-        State: "OH",
-        PostalCode: "43215",
-        CountryAbbreviation: "US",
-        MelissaIdentityKey: "MIK123",
-        Results: "PS01",
-        Confidence: "9"
-      }]
+      Records: [
+        {
+          FullName: "Ada Lovelace",
+          FirstName: "Ada",
+          LastName: "Lovelace",
+          EmailAddress: "ada@example.com",
+          PhoneNumber: "+15551234567",
+          AddressLine1: "1 Main St",
+          City: "Columbus",
+          State: "OH",
+          PostalCode: "43215",
+          CountryAbbreviation: "US",
+          MelissaIdentityKey: "MIK123",
+          Results: "PS01",
+          Confidence: "9"
+        }
+      ]
     });
 
     const result = await implementation("personator-search")({ selection: [input()] }, runtime);
     const dtypes = result.documents.map((document) => document.dtype);
 
-    expect(dtypes).toEqual(expect.arrayContaining(["person", "location", "phone", "email", "relation"]));
+    expect(dtypes).toEqual(
+      expect.arrayContaining(["person", "location", "phone", "email", "relation"])
+    );
     expect(runtime.network.fetch).toHaveBeenCalledOnce();
     expect(runtime.network.fetch.mock.calls[0][0].url).not.toContain("id=");
     expect(result.documents.find((document) => document.dtype === "person")?.data).toMatchObject({
@@ -88,8 +92,12 @@ describe("Melissa actor pack", () => {
       fname: "Ada",
       lname: "Lovelace"
     });
-    expect(result.documents.find((document) => document.dtype === "phone")?.data.number).toBe("+15551234567");
-    expect(result.documents.find((document) => document.dtype === "email")?.data.address).toBe("ada@example.com");
+    expect(result.documents.find((document) => document.dtype === "phone")?.data.number).toBe(
+      "+15551234567"
+    );
+    expect(result.documents.find((document) => document.dtype === "email")?.data.address).toBe(
+      "ada@example.com"
+    );
     result.documents.forEach((document) => expect(() => assertDocument(document)).not.toThrow());
   });
 
@@ -111,32 +119,33 @@ describe("Melissa actor pack", () => {
       data: { fname: "Dorothy", mname: "Vaughan", lname: "Johnson" }
     });
 
-    await implementation("personator-search")({
-      selection: [titleOnly, mainOnly, splitName]
-    }, runtime);
+    await implementation("personator-search")(
+      {
+        selection: [titleOnly, mainOnly, splitName]
+      },
+      runtime
+    );
 
     const names = runtime.network.fetch.mock.calls.map(([request]) =>
       new URL(request.url).searchParams.get("full")
     );
-    expect(names).toEqual([
-      "Grace Hopper",
-      "Katherine Johnson",
-      "Dorothy Vaughan Johnson"
-    ]);
+    expect(names).toEqual(["Grace Hopper", "Katherine Johnson", "Dorothy Vaughan Johnson"]);
   });
 
   it("creates valid reverse-geocoded location documents", async () => {
     const runtime = api({
-      Records: [{
-        AddressLine1: "100 Broad St",
-        City: "Columbus",
-        State: "OH",
-        PostalCode: "43215",
-        CountryAbbreviation: "US",
-        Latitude: "39.9612",
-        Longitude: "-82.9988",
-        MelissaAddressKey: "MAK123"
-      }]
+      Records: [
+        {
+          AddressLine1: "100 Broad St",
+          City: "Columbus",
+          State: "OH",
+          PostalCode: "43215",
+          CountryAbbreviation: "US",
+          Latitude: "39.9612",
+          Longitude: "-82.9988",
+          MelissaAddressKey: "MAK123"
+        }
+      ]
     });
     const location = input({
       _id: "starintel:location:input",
@@ -161,37 +170,58 @@ describe("Melissa actor pack", () => {
 
   it("creates a property asset, location, owner person, and explicit relations", async () => {
     const runtime = api({
-      Records: [{
-        AddressLine1: "100 Broad St",
-        City: "Columbus",
-        State: "OH",
-        PostalCode: "43215",
-        CountryAbbreviation: "US",
-        APN: "010-123456",
-        PrimaryOwnerName: "Example Owner",
-        OwnerType: "Individual",
-        Results: "YS01"
-      }]
+      Records: [
+        {
+          AddressLine1: "100 Broad St",
+          City: "Columbus",
+          State: "OH",
+          PostalCode: "43215",
+          CountryAbbreviation: "US",
+          APN: "010-123456",
+          PrimaryOwnerName: "Example Owner",
+          OwnerType: "Individual",
+          Results: "YS01"
+        }
+      ]
     });
     const address = input({
       _id: "starintel:location:property-input",
       dtype: "location",
       title: "100 Broad St",
-      data: { name: "100 Broad St", street: "100 Broad St", city: "Columbus", state: "OH", postal: "43215" }
+      data: {
+        name: "100 Broad St",
+        street: "100 Broad St",
+        city: "Columbus",
+        state: "OH",
+        postal: "43215"
+      }
     });
 
     const result = await implementation("property")({ selection: [address] }, runtime);
 
-    expect(result.documents.some((document) => document.dtype === "asset" && document.data.asset_type === "property")).toBe(true);
-    expect(result.documents.some((document) => document.dtype === "person" && document.data.full_name === "Example Owner")).toBe(true);
-    expect(result.documents.some((document) => document.dtype === "relation" && document.data.predicate === "owned-by")).toBe(true);
+    expect(
+      result.documents.some(
+        (document) => document.dtype === "asset" && document.data.asset_type === "property"
+      )
+    ).toBe(true);
+    expect(
+      result.documents.some(
+        (document) => document.dtype === "person" && document.data.full_name === "Example Owner"
+      )
+    ).toBe(true);
+    expect(
+      result.documents.some(
+        (document) => document.dtype === "relation" && document.data.predicate === "owned-by"
+      )
+    ).toBe(true);
     result.documents.forEach((document) => expect(() => assertDocument(document)).not.toThrow());
   });
 
   it("requires service-specific input before issuing a request", async () => {
     const runtime = api({ Records: [] });
-    await expect(implementation("global-phone")({ selection: [input()] }, runtime))
-      .rejects.toThrow("requires a phone number");
+    await expect(implementation("global-phone")({ selection: [input()] }, runtime)).rejects.toThrow(
+      "requires a phone number"
+    );
     expect(runtime.network.fetch).not.toHaveBeenCalled();
   });
 });

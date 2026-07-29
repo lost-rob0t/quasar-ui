@@ -20,21 +20,25 @@ const pack = {
   format: AGENT_PACK_FORMAT,
   version: 1,
   name: "Test operators",
-  roles: [{
-    id: "pack-researcher",
-    name: "Pack researcher",
-    instructions: "Keep facts and inference separate.",
-    permissions: ["documents.read", "graph.read"]
-  }],
-  agents: [{
-    id: "pack-operator",
-    name: "Pack operator",
-    role: "pack-researcher",
-    provider: "openrouter",
-    model: "test/model",
-    system_prompt: "Use the imported operating procedure.",
-    permissions: ["documents.read", "graph.read"]
-  }]
+  roles: [
+    {
+      id: "pack-researcher",
+      name: "Pack researcher",
+      instructions: "Keep facts and inference separate.",
+      permissions: ["documents.read", "graph.read"]
+    }
+  ],
+  agents: [
+    {
+      id: "pack-operator",
+      name: "Pack operator",
+      role: "pack-researcher",
+      provider: "openrouter",
+      model: "test/model",
+      system_prompt: "Use the imported operating procedure.",
+      permissions: ["documents.read", "graph.read"]
+    }
+  ]
 };
 
 describe("agent records", () => {
@@ -59,11 +63,13 @@ describe("agent records", () => {
   });
 
   it("rejects unknown role permissions", () => {
-    expect(() => normalizeRole({
-      id: "bad",
-      name: "Bad",
-      permissions: ["root.shell"]
-    })).toThrow("Unknown permission");
+    expect(() =>
+      normalizeRole({
+        id: "bad",
+        name: "Bad",
+        permissions: ["root.shell"]
+      })
+    ).toThrow("Unknown permission");
   });
 
   it("gives the default operator roles graph editing and external sources", () => {
@@ -86,14 +92,18 @@ describe("agent records", () => {
   });
 
   it("rejects duplicate records and embedded secrets", () => {
-    expect(() => normalizeAgentSystemImport({
-      ...pack,
-      agents: [...pack.agents, { ...pack.agents[0] }]
-    })).toThrow("Duplicate imported record");
-    expect(() => normalizeAgentSystemImport({
-      ...pack,
-      providers: [{ id: "unsafe", apiKey: "nope" }]
-    })).toThrow("cannot contain secrets");
+    expect(() =>
+      normalizeAgentSystemImport({
+        ...pack,
+        agents: [...pack.agents, { ...pack.agents[0] }]
+      })
+    ).toThrow("Duplicate imported record");
+    expect(() =>
+      normalizeAgentSystemImport({
+        ...pack,
+        providers: [{ id: "unsafe", apiKey: "nope" }]
+      })
+    ).toThrow("cannot contain secrets");
   });
 
   it("installs roles before agents", async () => {

@@ -2,10 +2,10 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: .45rem;
-  margin: .55rem .55rem 0;
+  gap: 0.45rem;
+  margin: 0.55rem 0.55rem 0;
   min-height: 42px;
-  padding: .35rem .5rem;
+  padding: 0.35rem 0.5rem;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--panel-2);
@@ -51,20 +51,20 @@
 
 .graph-pwa-install {
   position: absolute;
-  right: .7rem;
-  bottom: .7rem;
+  right: 0.7rem;
+  bottom: 0.7rem;
   z-index: 19;
   display: inline-flex;
   align-items: center;
-  gap: .4rem;
+  gap: 0.4rem;
   min-height: 42px;
-  padding: .45rem .65rem;
+  padding: 0.45rem 0.65rem;
   border: 1px solid color-mix(in srgb, var(--line) 76%, var(--accent));
   border-radius: 10px;
   background: color-mix(in srgb, var(--panel) 90%, transparent);
   color: var(--text);
   box-shadow: 0 8px 28px #0008;
-  font-size: .7rem;
+  font-size: 0.7rem;
   font-weight: 750;
   backdrop-filter: blur(12px);
 }
@@ -79,7 +79,7 @@
 
 @media (max-width: 850px) {
   .graph-pwa-install {
-    right: .5rem;
+    right: 0.5rem;
     bottom: max(4.5rem, calc(env(safe-area-inset-bottom) + 4rem));
     width: 44px;
     height: 44px;

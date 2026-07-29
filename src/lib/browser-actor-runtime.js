@@ -72,8 +72,20 @@ export function normalizeBrowserActorManifest(manifest) {
     throw new TypeError("Actor manifest must be an object");
   }
 
-  const minSelection = boundedInteger(manifest.minSelection, 1, 0, MAX_SELECTION, "Actor minSelection");
-  const maxSelection = boundedInteger(manifest.maxSelection, 32, minSelection, MAX_SELECTION, "Actor maxSelection");
+  const minSelection = boundedInteger(
+    manifest.minSelection,
+    1,
+    0,
+    MAX_SELECTION,
+    "Actor minSelection"
+  );
+  const maxSelection = boundedInteger(
+    manifest.maxSelection,
+    32,
+    minSelection,
+    MAX_SELECTION,
+    "Actor maxSelection"
+  );
   const capabilities = normalizeStringList(manifest.capabilities);
   const unknownCapability = capabilities.find((capability) => !CAPABILITY_SET.has(capability));
   if (unknownCapability) throw new TypeError(`Unsupported actor capability: ${unknownCapability}`);
@@ -101,7 +113,8 @@ export function normalizeBrowserActorManifest(manifest) {
   if (actor.runtime !== BROWSER_ACTOR_RUNTIME) {
     throw new TypeError(`Unsupported actor runtime: ${actor.runtime || "<missing>"}`);
   }
-  if (!actor.accepts.length) throw new TypeError("Actor accepts must contain at least one object type");
+  if (!actor.accepts.length)
+    throw new TypeError("Actor accepts must contain at least one object type");
   if (!actor.source) throw new TypeError("Actor source is required");
 
   return actor;
@@ -125,18 +138,23 @@ export function actorContextApplicability(manifest, context = {}) {
   if (selection.length < actor.minSelection) {
     return {
       applicable: false,
-      reason: actor.minSelection === 1
-        ? "Select a graph document."
-        : `Select at least ${actor.minSelection} graph documents.`
+      reason:
+        actor.minSelection === 1
+          ? "Select a graph document."
+          : `Select at least ${actor.minSelection} graph documents.`
     };
   }
   if (selection.length > actor.maxSelection) {
-    return { applicable: false, reason: `Select no more than ${actor.maxSelection} graph documents.` };
+    return {
+      applicable: false,
+      reason: `Select no more than ${actor.maxSelection} graph documents.`
+    };
   }
   const accepted = new Set(actor.accepts);
   if (!accepted.has("*")) {
     const rejected = selection.find((document) => !accepted.has(document?.dtype));
-    if (rejected) return { applicable: false, reason: `Does not accept ${rejected.dtype} documents.` };
+    if (rejected)
+      return { applicable: false, reason: `Does not accept ${rejected.dtype} documents.` };
   }
   return { applicable: true, reason: "" };
 }
@@ -169,9 +187,10 @@ export function normalizeBrowserActorResult(result, manifest) {
     operations: cloneValue(operations),
     artifacts: cloneValue(artifacts),
     message: String(value.message || "").trim(),
-    metrics: value.metrics && typeof value.metrics === "object" && !Array.isArray(value.metrics)
-      ? cloneValue(value.metrics)
-      : {}
+    metrics:
+      value.metrics && typeof value.metrics === "object" && !Array.isArray(value.metrics)
+        ? cloneValue(value.metrics)
+        : {}
   };
   if (byteLength(normalized) > actor.limits.maxResultBytes) {
     throw new RangeError(`Actor result exceeds ${actor.limits.maxResultBytes} bytes`);
@@ -298,7 +317,11 @@ export function createBrowserActorRuntime(options = {}) {
   const emitGlobal = typeof options.onEvent === "function" ? options.onEvent : () => {};
   const environment = resolveEnvironment(options);
 
-  if (!environment.WorkerClass || !environment.BlobClass || !environment.URLObject?.createObjectURL) {
+  if (
+    !environment.WorkerClass ||
+    !environment.BlobClass ||
+    !environment.URLObject?.createObjectURL
+  ) {
     throw new Error("Browser actor runtime requires Worker, Blob, and URL.createObjectURL");
   }
 
@@ -318,14 +341,20 @@ export function createBrowserActorRuntime(options = {}) {
       const emitRun = typeof runOptions.onEvent === "function" ? runOptions.onEvent : () => {};
       const emit = (event, data = {}) => {
         const payload = { actorId: actor.id, event, at: new Date().toISOString(), data };
-        try { emitGlobal(payload); } catch {}
-        try { emitRun(payload); } catch {}
+        try {
+          emitGlobal(payload);
+        } catch {}
+        try {
+          emitRun(payload);
+        } catch {}
       };
 
       if (runOptions.signal?.aborted) throw new DOMException("Actor aborted", "AbortError");
 
       const source = buildBrowserActorWorkerSource(actor);
-      const url = environment.URLObject.createObjectURL(new environment.BlobClass([source], { type: "text/javascript" }));
+      const url = environment.URLObject.createObjectURL(
+        new environment.BlobClass([source], { type: "text/javascript" })
+      );
       const worker = new environment.WorkerClass(url, { name: actor.id });
       const signal = runOptions.signal;
       let settled = false;
@@ -340,7 +369,9 @@ export function createBrowserActorRuntime(options = {}) {
       };
       const abort = () => {
         if (settled) return;
-        try { worker.postMessage({ type: "abort" }); } catch {}
+        try {
+          worker.postMessage({ type: "abort" });
+        } catch {}
       };
       let handleAbort = abort;
 
@@ -353,10 +384,13 @@ export function createBrowserActorRuntime(options = {}) {
           fn(value);
         };
 
-        const fail = (error, event = "failed") => finish(reject, error, event, { error: {
-          name: error.name,
-          message: error.message
-        } });
+        const fail = (error, event = "failed") =>
+          finish(reject, error, event, {
+            error: {
+              name: error.name,
+              message: error.message
+            }
+          });
 
         timer = setTimeout(() => {
           fail(new Error(`Actor timed out after ${timeoutMs}ms`), "timeout");
@@ -378,12 +412,13 @@ export function createBrowserActorRuntime(options = {}) {
             requestCount += 1;
             const capability = String(message.capability || "");
             emit("capability-request", { capability, requestCount });
-            const deny = (error) => worker.postMessage({
-              type: "response",
-              id: message.id,
-              ok: false,
-              error: { name: error.name, message: error.message, stack: error.stack || "" }
-            });
+            const deny = (error) =>
+              worker.postMessage({
+                type: "response",
+                id: message.id,
+                ok: false,
+                error: { name: error.name, message: error.message, stack: error.stack || "" }
+              });
             if (!actor.capabilities.includes(capability)) {
               deny(new Error(`Actor capability denied: ${capability}`));
               return;
@@ -397,10 +432,14 @@ export function createBrowserActorRuntime(options = {}) {
               deny(new Error(`Actor capability unavailable: ${capability}`));
               return;
             }
-            Promise.resolve(service(cloneValue(message.payload), { actor, context: cloneValue(context), signal }))
+            Promise.resolve(
+              service(cloneValue(message.payload), { actor, context: cloneValue(context), signal })
+            )
               .then((value) => {
                 if (byteLength(value) > actor.limits.maxResponseBytes) {
-                  throw new RangeError(`Capability response exceeds ${actor.limits.maxResponseBytes} bytes`);
+                  throw new RangeError(
+                    `Capability response exceeds ${actor.limits.maxResponseBytes} bytes`
+                  );
                 }
                 worker.postMessage({ type: "response", id: message.id, ok: true, value });
               })
@@ -423,7 +462,8 @@ export function createBrowserActorRuntime(options = {}) {
           if (message.type === "error") fail(actorError(message.error));
         };
 
-        worker.onerror = (event) => fail(new Error(event.message || "Actor worker crashed"), "crashed");
+        worker.onerror = (event) =>
+          fail(new Error(event.message || "Actor worker crashed"), "crashed");
         emit("started", { runtime: actor.runtime, capabilities: actor.capabilities });
         worker.postMessage({ type: "start", context: cloneValue(context) });
       });

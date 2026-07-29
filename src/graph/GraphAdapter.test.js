@@ -12,8 +12,12 @@ const extent = { x1: -500, y1: -300, x2: 500, y2: 300 };
 
 describe("adaptiveWheelSensitivity", () => {
   it("keeps normal-sized nodes at the controlled base sensitivity", () => {
-    expect(adaptiveWheelSensitivity(TARGET_RENDERED_NODE_SIZE, -100)).toBe(DEFAULT_WHEEL_SENSITIVITY);
-    expect(adaptiveWheelSensitivity(TARGET_RENDERED_NODE_SIZE, 100)).toBe(DEFAULT_WHEEL_SENSITIVITY);
+    expect(adaptiveWheelSensitivity(TARGET_RENDERED_NODE_SIZE, -100)).toBe(
+      DEFAULT_WHEEL_SENSITIVITY
+    );
+    expect(adaptiveWheelSensitivity(TARGET_RENDERED_NODE_SIZE, 100)).toBe(
+      DEFAULT_WHEEL_SENSITIVITY
+    );
   });
 
   it("accelerates zoom-in when fitted nodes are tiny", () => {
@@ -27,7 +31,9 @@ describe("adaptiveWheelSensitivity", () => {
 
   it("accelerates zoom-out when nodes are oversized", () => {
     expect(adaptiveWheelSensitivity(TARGET_RENDERED_NODE_SIZE * 4, 100)).toBeGreaterThan(1);
-    expect(adaptiveWheelSensitivity(TARGET_RENDERED_NODE_SIZE * 4, -100)).toBe(DEFAULT_WHEEL_SENSITIVITY);
+    expect(adaptiveWheelSensitivity(TARGET_RENDERED_NODE_SIZE * 4, -100)).toBe(
+      DEFAULT_WHEEL_SENSITIVITY
+    );
   });
 
   it("falls back to the base sensitivity for invalid input", () => {
@@ -39,14 +45,18 @@ describe("adaptiveWheelSensitivity", () => {
 
 describe("automaticNodePosition", () => {
   it("spreads a batch of new nodes instead of stacking them", () => {
-    const positions = Array.from({ length: 24 }, (_, index) => automaticNodePosition(index, extent));
+    const positions = Array.from({ length: 24 }, (_, index) =>
+      automaticNodePosition(index, extent)
+    );
     const unique = new Set(positions.map(({ x, y }) => `${x.toFixed(4)}:${y.toFixed(4)}`));
 
     expect(unique.size).toBe(positions.length);
   });
 
   it("keeps generated positions finite around the visible graph extent", () => {
-    const positions = Array.from({ length: 24 }, (_, index) => automaticNodePosition(index, extent));
+    const positions = Array.from({ length: 24 }, (_, index) =>
+      automaticNodePosition(index, extent)
+    );
 
     for (const position of positions) {
       expect(Number.isFinite(position.x)).toBe(true);

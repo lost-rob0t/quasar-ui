@@ -31,16 +31,11 @@ export function adaptiveWheelSensitivity(renderedNodeSize, deltaY) {
     return DEFAULT_WHEEL_SENSITIVITY;
   }
 
-  const directionalRatio = delta < 0
-    ? TARGET_RENDERED_NODE_SIZE / size
-    : size / TARGET_RENDERED_NODE_SIZE;
+  const directionalRatio =
+    delta < 0 ? TARGET_RENDERED_NODE_SIZE / size : size / TARGET_RENDERED_NODE_SIZE;
   const scale = Math.pow(Math.max(1, directionalRatio), 0.75);
 
-  return clamp(
-    DEFAULT_WHEEL_SENSITIVITY * scale,
-    DEFAULT_WHEEL_SENSITIVITY,
-    MAX_WHEEL_SENSITIVITY
-  );
+  return clamp(DEFAULT_WHEEL_SENSITIVITY * scale, DEFAULT_WHEEL_SENSITIVITY, MAX_WHEEL_SENSITIVITY);
 }
 
 function sampleRenderedNodeSize(cy) {
@@ -90,9 +85,11 @@ export function automaticNodePosition(index, extent) {
 
 function hasPosition(node) {
   const position = node.position();
-  return Number.isFinite(position.x)
-    && Number.isFinite(position.y)
-    && (Math.abs(position.x) > 0.001 || Math.abs(position.y) > 0.001);
+  return (
+    Number.isFinite(position.x) &&
+    Number.isFinite(position.y) &&
+    (Math.abs(position.x) > 0.001 || Math.abs(position.y) > 0.001)
+  );
 }
 
 function installAutomaticNodePlacement(cy) {
@@ -160,15 +157,17 @@ function exposeDevelopmentGraph(cy) {
 export class GraphAdapter {
   static create(options) {
     registerPlugins();
-    const cy = installMaltegoLayouts(cytoscape({
-      panningEnabled: true,
-      userPanningEnabled: true,
-      zoomingEnabled: true,
-      userZoomingEnabled: true,
-      wheelSensitivity: DEFAULT_WHEEL_SENSITIVITY,
-      ...options,
-      selectionType: "single"
-    }));
+    const cy = installMaltegoLayouts(
+      cytoscape({
+        panningEnabled: true,
+        userPanningEnabled: true,
+        zoomingEnabled: true,
+        userZoomingEnabled: true,
+        wheelSensitivity: DEFAULT_WHEEL_SENSITIVITY,
+        ...options,
+        selectionType: "single"
+      })
+    );
     const restoreUserNavigation = installUserNavigationGuard(cy);
     cy.one("destroy", restoreUserNavigation);
     installAutomaticNodePlacement(cy);

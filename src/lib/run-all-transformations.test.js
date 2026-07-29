@@ -41,12 +41,14 @@ function relation(id, subject, object) {
 
 describe("run-all transformation planning", () => {
   it("collects relation endpoints as linked documents", () => {
-    expect([
-      ...linkedDocumentIds([
-        relation("r1", "a", "b"),
-        { _id: "r2", dtype: "relation", data: { source: "b", target: "c" } }
-      ])
-    ].sort()).toEqual(["a", "b", "c"]);
+    expect(
+      [
+        ...linkedDocumentIds([
+          relation("r1", "a", "b"),
+          { _id: "r2", dtype: "relation", data: { source: "b", target: "c" } }
+        ])
+      ].sort()
+    ).toEqual(["a", "b", "c"]);
   });
 
   it("treats actor outputs and their inputs as already touched", () => {
@@ -68,12 +70,7 @@ describe("run-all transformation planning", () => {
       "run-1",
       "2026-07-28T12:00:00.000Z"
     );
-    const second = recordTransformationRun(
-      first,
-      "actor.two",
-      "run-2",
-      "2026-07-28T12:01:00.000Z"
-    );
+    const second = recordTransformationRun(first, "actor.two", "run-2", "2026-07-28T12:01:00.000Z");
 
     expect(second.version).toBe(3);
     expect(second.extensions["quasar.transformations"].actors).toEqual({
@@ -90,11 +87,7 @@ describe("run-all transformation planning", () => {
   });
 
   it("runs inputs with no links or no prior actor run", () => {
-    const linkedRan = recordTransformationRun(
-      entity("linked-ran"),
-      "actor.test",
-      "run-1"
-    );
+    const linkedRan = recordTransformationRun(entity("linked-ran"), "actor.test", "run-1");
     const documents = [
       entity("unlinked-ran", {
         actor_id: "actor.test",
@@ -107,9 +100,7 @@ describe("run-all transformation planning", () => {
     ];
 
     expect(
-      transformationCandidates(actor(), documents, documents).map(
-        (document) => document._id
-      )
+      transformationCandidates(actor(), documents, documents).map((document) => document._id)
     ).toEqual(["unlinked-ran", "linked-new"]);
   });
 
@@ -121,24 +112,13 @@ describe("run-all transformation planning", () => {
     ];
 
     expect(
-      transformationCandidates(actor(), documents, documents).map(
-        (document) => document._id
-      )
+      transformationCandidates(actor(), documents, documents).map((document) => document._id)
     ).toEqual(["accepted"]);
   });
 
   it("batches candidates by actor limits and drops an undersized tail", () => {
-    const candidates = [
-      entity("a"),
-      entity("b"),
-      entity("c"),
-      entity("d"),
-      entity("e")
-    ];
-    const batches = transformationBatches(
-      actor({ minSelection: 2, maxSelection: 2 }),
-      candidates
-    );
+    const candidates = [entity("a"), entity("b"), entity("c"), entity("d"), entity("e")];
+    const batches = transformationBatches(actor({ minSelection: 2, maxSelection: 2 }), candidates);
 
     expect(batches.map((batch) => batch.map((document) => document._id))).toEqual([
       ["a", "b"],
@@ -147,9 +127,7 @@ describe("run-all transformation planning", () => {
   });
 
   it("supports zero-selection actors without looping", () => {
-    expect(
-      transformationBatches(actor({ minSelection: 0, maxSelection: 0 }), [])
-    ).toEqual([[]]);
+    expect(transformationBatches(actor({ minSelection: 0, maxSelection: 0 }), [])).toEqual([[]]);
   });
 
   it("merges actor outputs and removes deleted inputs for later transformations", () => {
@@ -159,13 +137,7 @@ describe("run-all transformation planning", () => {
       ["removed"]
     );
 
-    expect(merged.map((document) => document._id).sort()).toEqual([
-      "a",
-      "b",
-      "replace"
-    ]);
-    expect(merged.find((document) => document._id === "replace")?.title).toBe(
-      "updated"
-    );
+    expect(merged.map((document) => document._id).sort()).toEqual(["a", "b", "replace"]);
+    expect(merged.find((document) => document._id === "replace")?.title).toBe("updated");
   });
 });

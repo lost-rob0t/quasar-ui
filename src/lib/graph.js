@@ -64,7 +64,11 @@ const EVENT_DTYPES = new Set(["event", "meeting"]);
 const TARGET_DTYPES = new Set(["investigation-target", "target"]);
 
 function normalizedStatus(value) {
-  return String(value || "").trim().toLowerCase().replaceAll("_", "-").replaceAll(" ", "-");
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replaceAll("_", "-")
+    .replaceAll(" ", "-");
 }
 
 export function reviewState(document) {
@@ -162,7 +166,9 @@ function unresolvedNode(id) {
 
 export function buildGraph(documents, positions = {}) {
   const entities = documents.filter((document) => document.dtype !== "relation");
-  const nodes = new Map(entities.map((document) => [document._id, nodeData(document, positions[document._id])]));
+  const nodes = new Map(
+    entities.map((document) => [document._id, nodeData(document, positions[document._id])])
+  );
   const edges = [];
 
   for (const relation of documents.filter((document) => document.dtype === "relation")) {
@@ -216,15 +222,11 @@ export function buildGraph(documents, positions = {}) {
 }
 
 export function filterGraph(graph, queryOrFilters = "", legacyDtype = "") {
-  const filters = typeof queryOrFilters === "object" && queryOrFilters !== null
-    ? queryOrFilters
-    : { query: queryOrFilters, dtype: legacyDtype };
-  const {
-    query = "",
-    dtype = "",
-    dataset = "",
-    predicate = ""
-  } = filters;
+  const filters =
+    typeof queryOrFilters === "object" && queryOrFilters !== null
+      ? queryOrFilters
+      : { query: queryOrFilters, dtype: legacyDtype };
+  const { query = "", dtype = "", dataset = "", predicate = "" } = filters;
 
   const needle = query.trim().toLowerCase();
   const candidateNodes = graph.nodes.filter((node) => {
@@ -238,14 +240,17 @@ export function filterGraph(graph, queryOrFilters = "", legacyDtype = "") {
       node.data.dataset,
       node.data.document?.summary,
       node.data.document?.title
-    ].filter(Boolean).some((value) => String(value).toLowerCase().includes(needle));
+    ]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(needle));
   });
   const candidateIds = new Set(candidateNodes.map((node) => node.data.id));
-  const edges = graph.edges.filter((edge) => (
-    candidateIds.has(edge.data.source)
-    && candidateIds.has(edge.data.target)
-    && (!predicate || edge.data.predicate === predicate)
-  ));
+  const edges = graph.edges.filter(
+    (edge) =>
+      candidateIds.has(edge.data.source) &&
+      candidateIds.has(edge.data.target) &&
+      (!predicate || edge.data.predicate === predicate)
+  );
   const visibleIds = predicate
     ? new Set(edges.flatMap((edge) => [edge.data.source, edge.data.target]))
     : candidateIds;
@@ -255,11 +260,7 @@ export function filterGraph(graph, queryOrFilters = "", legacyDtype = "") {
 
 export function importedGraphNodeIds(graph, importedIds = []) {
   const imported = new Set(importedIds);
-  const focused = new Set(
-    graph.nodes
-      .map((node) => node.data.id)
-      .filter((id) => imported.has(id))
-  );
+  const focused = new Set(graph.nodes.map((node) => node.data.id).filter((id) => imported.has(id)));
   for (const edge of graph.edges) {
     if (!imported.has(edge.data.relationId)) continue;
     focused.add(edge.data.source);
@@ -276,7 +277,8 @@ export function graphStatistics(documents, graph = null) {
   let evidenceCount = 0;
 
   for (const document of reviewed) {
-    const status = document.verification?.status || (document.verification?.verified ? "verified" : "reviewed");
+    const status =
+      document.verification?.status || (document.verification?.verified ? "verified" : "reviewed");
     byStatus[status] = (byStatus[status] || 0) + 1;
     sourceCount += document.sources?.length || 0;
     evidenceCount += document.evidence?.length || 0;
@@ -305,7 +307,8 @@ export function graphStatistics(documents, graph = null) {
     reviewedEntities: reviewed.filter((document) => ENTITY_DTYPES.has(document.dtype)).length,
     reviewedRelations,
     reviewedEvents: reviewed.filter((document) => EVENT_DTYPES.has(document.dtype)).length,
-    reviewedInvestigationTargets: reviewed.filter((document) => TARGET_DTYPES.has(document.dtype)).length,
+    reviewedInvestigationTargets: reviewed.filter((document) => TARGET_DTYPES.has(document.dtype))
+      .length,
     reviewPercent: documents.length ? Math.round((reviewed.length / documents.length) * 100) : 0,
     nodes: reviewedGraph.nodes.length,
     edges: reviewedGraph.edges.length,
@@ -360,5 +363,7 @@ export function findPaths(graph, startId, endId, limit = 5, maxDepth = 8) {
     }
     expansions += 1;
   }
-  return results.sort((left, right) => left.edges.length - right.edges.length || left.cost - right.cost);
+  return results.sort(
+    (left, right) => left.edges.length - right.edges.length || left.cost - right.cost
+  );
 }

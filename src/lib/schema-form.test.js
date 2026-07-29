@@ -37,29 +37,33 @@ function expectEmptyValue(value, fieldSchema) {
 describe("schema-driven document fields", () => {
   it("uses person data properties from the active StarIntel schema", () => {
     const fields = dataFieldsForDtype("person");
-    expect(fields).toEqual(expect.arrayContaining([
-      "fname",
-      "mname",
-      "lname",
-      "full_name",
-      "dob",
-      "nationalities",
-      "occupations"
-    ]));
+    expect(fields).toEqual(
+      expect.arrayContaining([
+        "fname",
+        "mname",
+        "lname",
+        "full_name",
+        "dob",
+        "nationalities",
+        "occupations"
+      ])
+    );
     expect(dataSchemaForDtype("person").additionalProperties).toBe(false);
   });
 
   it("switches to organization fields without leaking person fields", () => {
     const fields = dataFieldsForDtype("org");
-    expect(fields).toEqual(expect.arrayContaining([
-      "name",
-      "legal_name",
-      "org_type",
-      "industry",
-      "headquarters",
-      "registration_number",
-      "website"
-    ]));
+    expect(fields).toEqual(
+      expect.arrayContaining([
+        "name",
+        "legal_name",
+        "org_type",
+        "industry",
+        "headquarters",
+        "registration_number",
+        "website"
+      ])
+    );
     expect(fields).not.toContain("fname");
     expect(fields).not.toContain("mname");
     expect(fields).not.toContain("lname");
@@ -72,8 +76,12 @@ describe("schema-driven document fields", () => {
       expect(essentialFields.length).toBeLessThanOrEqual(6);
       expect(essentialFields.every((field) => schemaFields.has(field))).toBe(true);
     }
-    expect(essentialDataFieldsForDtype("person")).toEqual(expect.arrayContaining(["fname", "mname", "lname"]));
-    expect(essentialDataFieldsForDtype("org")).toEqual(expect.arrayContaining(["name", "org_type"]));
+    expect(essentialDataFieldsForDtype("person")).toEqual(
+      expect.arrayContaining(["fname", "mname", "lname"])
+    );
+    expect(essentialDataFieldsForDtype("org")).toEqual(
+      expect.arrayContaining(["name", "org_type"])
+    );
     expect(essentialDataFieldsForDtype("target")[0]).toBe("target");
   });
 
@@ -85,23 +93,28 @@ describe("schema-driven document fields", () => {
 });
 
 describe("empty StarIntel document generation", () => {
-  it.each(["person", "org", "relation", "target"])("generates every active %s field with type-correct empty values", (dtype) => {
-    const { document, warnings } = generateEmptyDocument(dtype);
-    const variant = schema.allOf.find((candidate) => candidate.if?.properties?.dtype?.const === dtype);
-    const dataSchema = variant.then.properties.data;
+  it.each(["person", "org", "relation", "target"])(
+    "generates every active %s field with type-correct empty values",
+    (dtype) => {
+      const { document, warnings } = generateEmptyDocument(dtype);
+      const variant = schema.allOf.find(
+        (candidate) => candidate.if?.properties?.dtype?.const === dtype
+      );
+      const dataSchema = variant.then.properties.data;
 
-    expect(document.dtype).toBe(dtype);
-    expect(Object.keys(document.data).sort()).toEqual(dataFieldsForDtype(dtype).sort());
-    for (const [name, fieldSchema] of Object.entries(dataSchema.properties || {})) {
-      expect(document.data).toHaveProperty(name);
-      expectEmptyValue(document.data[name], fieldSchema);
+      expect(document.dtype).toBe(dtype);
+      expect(Object.keys(document.data).sort()).toEqual(dataFieldsForDtype(dtype).sort());
+      for (const [name, fieldSchema] of Object.entries(dataSchema.properties || {})) {
+        expect(document.data).toHaveProperty(name);
+        expectEmptyValue(document.data[name], fieldSchema);
+      }
+      expect(document._id).toBe("");
+      expect(document.sources).toEqual([]);
+      expect(document.date_added).toBe("");
+      expect(document.date_updated).toBe("");
+      expect(warnings).toEqual([]);
     }
-    expect(document._id).toBe("");
-    expect(document.sources).toEqual([]);
-    expect(document.date_added).toBe("");
-    expect(document.date_updated).toBe("");
-    expect(warnings).toEqual([]);
-  });
+  );
 
   it("generates nested objects recursively and keeps constants", () => {
     const activeSchema = {
@@ -112,27 +125,29 @@ describe("empty StarIntel document generation", () => {
         fixed: { const: "locked" },
         data: { type: "object" }
       },
-      allOf: [{
-        if: { properties: { dtype: { const: "person" } } },
-        then: {
-          properties: {
-            dtype: { const: "person" },
-            data: {
-              type: "object",
-              properties: {
-                identity: {
-                  type: "object",
-                  properties: {
-                    name: { type: "string" },
-                    active: { type: "boolean" },
-                    aliases: { type: "array", items: { type: "string" } }
+      allOf: [
+        {
+          if: { properties: { dtype: { const: "person" } } },
+          then: {
+            properties: {
+              dtype: { const: "person" },
+              data: {
+                type: "object",
+                properties: {
+                  identity: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string" },
+                      active: { type: "boolean" },
+                      aliases: { type: "array", items: { type: "string" } }
+                    }
                   }
                 }
               }
             }
           }
         }
-      }]
+      ]
     };
 
     const { document } = generateEmptyDocument("person", { activeSchema });

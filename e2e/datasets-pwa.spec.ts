@@ -32,8 +32,12 @@ test("exposes the PWA install action inside the graph workspace", async ({ page 
   });
 
   await install.click();
-  await expect.poll(() => page.evaluate(() => {
-    const state = window as typeof window & { __quasarInstallPrompted?: boolean };
-    return state.__quasarInstallPrompted;
-  })).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const state = window as typeof window & { __quasarInstallPrompted?: boolean };
+        return state.__quasarInstallPrompted;
+      })
+    )
+    .toBe(true);
 });

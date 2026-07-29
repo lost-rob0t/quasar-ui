@@ -7,20 +7,98 @@ const RECENT_KEY = "quasar.recent-predicates.v1";
 // Keep the source IDs intact. Underscore aliases are added for UI search and custom-predicate migration.
 export const STAR_CL_PREDICATE_IDS = Object.freeze([
   "related-to",
-  "same-as", "duplicate-of", "aka", "alias-of", "username-of", "email-of", "phone-of", "account-of",
-  "member-of", "employed-by", "contractor-for", "works-with", "manages", "reports-to",
-  "owns", "owned-by", "controls", "controlled-by", "operates", "operated-by", "administers", "administered-by",
-  "registered-to", "registrant-of", "whois-registrant-of", "whois-admin-of", "whois-tech-of",
-  "located-at", "geolocated-at", "seen-at",
-  "communicates-with", "contacted", "contacted-by", "mentions", "replies-to", "follows",
-  "links-to", "redirects-to", "canonical-url-of", "hosts", "hosted-by", "served-by",
-  "resolves-to", "ptr-to", "has-a", "has-aaaa", "has-cname", "has-ns", "has-mx", "has-txt", "has-spf", "has-dkim", "has-dmarc", "has-soa", "behind-cdn",
-  "belongs-to-asn", "served-from", "shares-ip-with", "shares-asn-with",
-  "hosts-service", "listens-on", "exposes-port", "runs", "runs-on",
-  "leaked-in", "credential-for", "compromised-by",
-  "observed-on", "observed-by", "collected-from", "extracted-from", "derived-from", "downloaded-from", "uploaded-to", "created-by", "modified-by", "hashes-to", "matches-hash", "evidence-of", "indicates",
-  "attributed-to", "uses", "targets", "exploits", "mitigates", "c2-for",
-  "in-scope-of", "out-of-scope-of", "discovered-by", "scanned-by", "has-finding", "vulnerable-to"
+  "same-as",
+  "duplicate-of",
+  "aka",
+  "alias-of",
+  "username-of",
+  "email-of",
+  "phone-of",
+  "account-of",
+  "member-of",
+  "employed-by",
+  "contractor-for",
+  "works-with",
+  "manages",
+  "reports-to",
+  "owns",
+  "owned-by",
+  "controls",
+  "controlled-by",
+  "operates",
+  "operated-by",
+  "administers",
+  "administered-by",
+  "registered-to",
+  "registrant-of",
+  "whois-registrant-of",
+  "whois-admin-of",
+  "whois-tech-of",
+  "located-at",
+  "geolocated-at",
+  "seen-at",
+  "communicates-with",
+  "contacted",
+  "contacted-by",
+  "mentions",
+  "replies-to",
+  "follows",
+  "links-to",
+  "redirects-to",
+  "canonical-url-of",
+  "hosts",
+  "hosted-by",
+  "served-by",
+  "resolves-to",
+  "ptr-to",
+  "has-a",
+  "has-aaaa",
+  "has-cname",
+  "has-ns",
+  "has-mx",
+  "has-txt",
+  "has-spf",
+  "has-dkim",
+  "has-dmarc",
+  "has-soa",
+  "behind-cdn",
+  "belongs-to-asn",
+  "served-from",
+  "shares-ip-with",
+  "shares-asn-with",
+  "hosts-service",
+  "listens-on",
+  "exposes-port",
+  "runs",
+  "runs-on",
+  "leaked-in",
+  "credential-for",
+  "compromised-by",
+  "observed-on",
+  "observed-by",
+  "collected-from",
+  "extracted-from",
+  "derived-from",
+  "downloaded-from",
+  "uploaded-to",
+  "created-by",
+  "modified-by",
+  "hashes-to",
+  "matches-hash",
+  "evidence-of",
+  "indicates",
+  "attributed-to",
+  "uses",
+  "targets",
+  "exploits",
+  "mitigates",
+  "c2-for",
+  "in-scope-of",
+  "out-of-scope-of",
+  "discovered-by",
+  "scanned-by",
+  "has-finding",
+  "vulnerable-to"
 ]);
 
 function storage() {
@@ -40,11 +118,17 @@ function writeJson(key, value) {
 }
 
 function labelFor(id) {
-  return id.replaceAll("_", " ").replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return id
+    .replaceAll("_", " ")
+    .replaceAll("-", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function normalizedSimilarityKey(value) {
-  return String(value || "").trim().toLowerCase().replace(/[_\s-]+/g, "_");
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s-]+/g, "_");
 }
 
 function predicateDefinition(id, source, extra = {}) {
@@ -65,15 +149,21 @@ function predicateDefinition(id, source, extra = {}) {
   };
 }
 
-export const STAR_CL_PREDICATES = Object.freeze(STAR_CL_PREDICATE_IDS.map((id, index) => predicateDefinition(id, "star-cl", {
-  common: index < 35,
-  hint: `star-cl · ${labelFor(id)}`
-})));
+export const STAR_CL_PREDICATES = Object.freeze(
+  STAR_CL_PREDICATE_IDS.map((id, index) =>
+    predicateDefinition(id, "star-cl", {
+      common: index < 35,
+      hint: `star-cl · ${labelFor(id)}`
+    })
+  )
+);
 
 function schemaPredicateCandidates(activeSchema = schema) {
   const definitions = [];
   const declared = activeSchema["x-starintel-predicates"] || activeSchema.$defs?.predicates || [];
-  const rows = Array.isArray(declared) ? declared : Object.entries(declared).map(([id, value]) => ({ id, ...value }));
+  const rows = Array.isArray(declared)
+    ? declared
+    : Object.entries(declared).map(([id, value]) => ({ id, ...value }));
   for (const row of rows) {
     if (typeof row === "string") definitions.push(predicateDefinition(row, "active spec"));
     else if (row?.id) definitions.push(predicateDefinition(row.id, "active spec", row));
@@ -82,7 +172,8 @@ function schemaPredicateCandidates(activeSchema = schema) {
     const dtype = variant.if?.properties?.dtype?.const;
     if (dtype !== "relation") continue;
     const properties = variant.then?.properties?.data?.properties || {};
-    const enumValues = properties.predicate?.enum || variant.then?.properties?.predicate?.enum || [];
+    const enumValues =
+      properties.predicate?.enum || variant.then?.properties?.predicate?.enum || [];
     for (const id of enumValues) definitions.push(predicateDefinition(id, "active spec"));
   }
   return definitions;
@@ -96,11 +187,15 @@ export function predicatesFromDocuments(documents = []) {
     if (!id) continue;
     counts.set(id, (counts.get(id) || 0) + 1);
   }
-  return [...counts.entries()].map(([id, usageCount]) => predicateDefinition(id, "active dataset", { usageCount }));
+  return [...counts.entries()].map(([id, usageCount]) =>
+    predicateDefinition(id, "active dataset", { usageCount })
+  );
 }
 
 export function loadCustomPredicates() {
-  return readJson(STORAGE_KEY, []).filter((item) => item?.id).map((item) => predicateDefinition(item.id, "custom", { ...item, custom: true }));
+  return readJson(STORAGE_KEY, [])
+    .filter((item) => item?.id)
+    .map((item) => predicateDefinition(item.id, "custom", { ...item, custom: true }));
 }
 
 export function recentPredicateIds() {
@@ -152,8 +247,14 @@ export function similarPredicates(value, catalog, limit = 5) {
   if (!needle) return [];
   return catalog
     .map((item) => ({ item, distance: editDistance(needle, normalizedSimilarityKey(item.id)) }))
-    .filter(({ distance, item }) => normalizedSimilarityKey(item.id) === needle || distance <= Math.max(1, Math.floor(needle.length / 4)))
-    .sort((left, right) => left.distance - right.distance || left.item.id.localeCompare(right.item.id))
+    .filter(
+      ({ distance, item }) =>
+        normalizedSimilarityKey(item.id) === needle ||
+        distance <= Math.max(1, Math.floor(needle.length / 4))
+    )
+    .sort(
+      (left, right) => left.distance - right.distance || left.item.id.localeCompare(right.item.id)
+    )
     .slice(0, limit)
     .map(({ item }) => item);
 }
@@ -161,7 +262,9 @@ export function similarPredicates(value, catalog, limit = 5) {
 export function saveCustomPredicate(input, existingCatalog = []) {
   const validation = validateCustomPredicateId(input.id || input.label);
   if (!validation.valid) throw new Error(validation.message);
-  const duplicate = existingCatalog.find((item) => normalizedSimilarityKey(item.id) === normalizedSimilarityKey(validation.id));
+  const duplicate = existingCatalog.find(
+    (item) => normalizedSimilarityKey(item.id) === normalizedSimilarityKey(validation.id)
+  );
   if (duplicate) throw new Error(`A similar predicate already exists: ${duplicate.id}`);
   const definition = predicateDefinition(validation.id, "custom", {
     custom: true,
@@ -210,22 +313,34 @@ export function buildPredicateCatalog({ activeSchema = schema, documents = [] } 
 }
 
 export function searchPredicates(catalog, options = {}) {
-  const query = String(options.query || "").trim().toLowerCase();
+  const query = String(options.query || "")
+    .trim()
+    .toLowerCase();
   const recent = new Set(options.recentIds || recentPredicateIds());
-  const dataset = new Set(options.datasetIds || predicatesFromDocuments(options.documents || []).map((item) => item.id));
+  const dataset = new Set(
+    options.datasetIds || predicatesFromDocuments(options.documents || []).map((item) => item.id)
+  );
   return catalog
-    .filter((item) => compatible(item.sourceTypes, options.sourceType) && compatible(item.targetTypes, options.targetType))
+    .filter(
+      (item) =>
+        compatible(item.sourceTypes, options.sourceType) &&
+        compatible(item.targetTypes, options.targetType)
+    )
     .map((item) => {
       const haystack = [item.id, item.label, ...(item.aliases || [])].join(" ").toLowerCase();
       if (query && !haystack.includes(query)) return null;
-      const exact = query && (item.id.toLowerCase() === query || item.aliases?.some((alias) => alias.toLowerCase() === query));
+      const exact =
+        query &&
+        (item.id.toLowerCase() === query ||
+          item.aliases?.some((alias) => alias.toLowerCase() === query));
       const starts = query && haystack.split(/\s+/).some((part) => part.startsWith(query));
-      const score = (exact ? 1000 : 0)
-        + (starts ? 250 : 0)
-        + (recent.has(item.id) ? 180 : 0)
-        + (dataset.has(item.id) ? 120 : 0)
-        + (item.common ? 80 : 0)
-        + Math.min(item.usageCount || 0, 50);
+      const score =
+        (exact ? 1000 : 0) +
+        (starts ? 250 : 0) +
+        (recent.has(item.id) ? 180 : 0) +
+        (dataset.has(item.id) ? 120 : 0) +
+        (item.common ? 80 : 0) +
+        Math.min(item.usageCount || 0, 50);
       return { ...item, score };
     })
     .filter(Boolean)

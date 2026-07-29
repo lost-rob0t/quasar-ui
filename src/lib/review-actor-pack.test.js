@@ -51,6 +51,8 @@ describe("review actor", () => {
   });
 
   it("installs idempotently", () => {
-    expect(mergeReviewActor([REVIEW_ACTOR, REVIEW_ACTOR]).filter((actor) => actor.id === REVIEW_ACTOR_ID)).toHaveLength(1);
+    expect(
+      mergeReviewActor([REVIEW_ACTOR, REVIEW_ACTOR]).filter((actor) => actor.id === REVIEW_ACTOR_ID)
+    ).toHaveLength(1);
   });
 });
