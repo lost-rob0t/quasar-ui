@@ -7,6 +7,12 @@ on:
     paths:
       - scripts/apply-performance-audit-fixes.py
       - .github/workflows/apply-performance-audit-fixes.yml
+  pull_request:
+    branches:
+      - perf/large-graph-responsiveness
+    paths:
+      - scripts/apply-performance-audit-fixes.py
+      - .github/workflows/apply-performance-audit-fixes.yml
 
 permissions:
   contents: write
@@ -17,7 +23,7 @@ concurrency:
 
 jobs:
   apply:
-    if: github.actor != 'github-actions[bot]'
+    if: github.actor != 'github-actions[bot]' && (github.event_name != 'pull_request' || github.head_ref == 'agent/performance-audit-fixes')
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
