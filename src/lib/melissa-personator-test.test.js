@@ -6,8 +6,8 @@ import {
 } from "./melissa-personator-test";
 
 describe("manual Personator Search credential test", () => {
-  it("places the exact normalized credit key in the documented request", () => {
-    const url = buildMelissaPersonatorTestUrl("License Key Using Credits:\nCopy\nCR+ED/IT==");
+  it("places the exact credit key in the documented request", () => {
+    const url = buildMelissaPersonatorTestUrl("CR+ED/IT==");
 
     expect(url.origin + url.pathname).toBe(
       "https://personatorsearch.melissadata.net/WEB/doPersonatorSearch"
@@ -19,6 +19,13 @@ describe("manual Personator Search credential test", () => {
     expect(url.searchParams.get("state")).toBe("CA");
     expect(url.searchParams.get("postal")).toBe("92688");
     expect(url.href).toContain("id=CR%2BED%2FIT%3D%3D");
+  });
+
+  it("does not strip labels, quotes, whitespace, or symbols from the supplied value", () => {
+    const exact = ' License Key Using Credits: "CR+ED/IT==" ';
+    const url = buildMelissaPersonatorTestUrl(exact);
+
+    expect(url.searchParams.get("id")).toBe(exact);
   });
 
   it("reports the service response without exposing the full key", async () => {
@@ -43,7 +50,13 @@ describe("manual Personator Search credential test", () => {
       transmissionResults: "US01",
       totalRecords: 1,
       version: "test",
-      key: { length: 10, ending: "IT==" }
+      key: {
+        length: 10,
+        ending: "IT==",
+        sentUnchanged: true,
+        whitespaceCount: 0,
+        invisibleCount: 0
+      }
     });
     expect(result.key).not.toHaveProperty("value");
     expect(String(fetchImpl.mock.calls[0][0])).toContain("id=CR%2BED%2FIT%3D%3D");
@@ -66,10 +79,14 @@ describe("manual Personator Search credential test", () => {
   });
 
   it("uses a stable masked key description", () => {
-    expect(describeMelissaLicenseKey("CREDIT-KEY")).toEqual({
+    expect(describeMelissaLicenseKey("CREDIT-KEY")).toMatchObject({
       length: 10,
       ending: "-KEY",
-      fingerprint: expect.stringMatching(/^[0-9a-f]{8}$/)
+      fingerprint: expect.stringMatching(/^[0-9a-f]{8}$/),
+      sentUnchanged: true,
+      leadingOrTrailingWhitespace: false,
+      whitespaceCount: 0,
+      invisibleCount: 0
     });
   });
 });
