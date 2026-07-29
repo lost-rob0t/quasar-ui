@@ -1,6 +1,6 @@
 import { MELISSA_ACTORS as BASE_MELISSA_ACTORS } from "./melissa-actor-pack";
 
-export const MELISSA_ACTOR_PACK_VERSION = 3;
+export const MELISSA_ACTOR_PACK_VERSION = 4;
 
 function replaceRequired(source, before, after, label) {
   if (!source.includes(before)) {
@@ -167,6 +167,54 @@ function normalizeActorSource(actor) {
       if (SERVICE === "property" && !has("mak", "addresskey", "a1", "apn", "fips", "account", "ff")) missing("Property lookup", "an address, MAK, APN/FIPS, account, or free-form value");
     };`,
     "service validation"
+  );
+
+  source = replaceRequired(
+    source,
+    `      const records = recordsFrom(response.body);
+      const transmissionResults = findValue(response.body, ["TransmissionResults", "TransmissionResult"]);
+      const dataset = source.dataset || "melissa";`,
+    `      const transmissionResults = findValue(response.body, ["TransmissionResults", "TransmissionResult"]);
+      const resultCodes = (value) => text(value).toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean);
+      const transmissionError = resultCodes(transmissionResults).find((code) => /^(GE|SE)\\d{2}$/.test(code));
+      if (transmissionError) {
+        const descriptions = {
+          GE01: "empty request",
+          GE02: "empty request record",
+          GE03: "record limit exceeded",
+          GE04: "empty license key",
+          GE05: "invalid license key",
+          GE06: "disabled license key",
+          GE07: "invalid request",
+          GE08: "product or service level not enabled",
+          GE09: "customer does not exist",
+          GE10: "customer license disabled",
+          GE11: "customer disabled",
+          GE12: "request IP blacklisted",
+          GE13: "request IP not whitelisted",
+          GE14: "out of credits",
+          SE01: "Melissa service error"
+        };
+        throw new Error(
+          "Melissa " + SPEC.label + " failed: " + transmissionError +
+          " (" + (descriptions[transmissionError] || "service-level error") + ")"
+        );
+      }
+      const records = recordsFrom(response.body);
+      const dataset = source.dataset || "melissa";`,
+    "transmission error rejection"
+  );
+
+  source = replaceRequired(
+    source,
+    `        const fields = fieldsFrom(record, source, url);
+        const kind = primaryKind(record);`,
+    `        const recordResults = findValue(record, ["Results", "ResultCodes", "Status"]);
+        const recordErrors = resultCodes(recordResults).filter((code) => /^[A-Z]E\\d{2}$/.test(code));
+        if (recordErrors.length > 0) continue;
+        const fields = fieldsFrom(record, source, url);
+        const kind = primaryKind(record);`,
+    "record error filtering"
   );
 
   return source;
