@@ -38,8 +38,7 @@ const MELISSA_HOSTS = new Set([
   "globalip.melissadata.net"
 ]);
 
-const MELISSA_KEY_LABEL =
-  /^(?:melissa\s+)?(?:api\s+key|license\s+key(?:\s+using\s+credits)?|customer\s+id)\s*(?::|=|\r?\n)\s*/i;
+const MELISSA_KEY_LABEL = /^(?:melissa\s+)?(?:api\s+key|license\s+key(?:\s+using\s+credits)?|customer\s+id)\s*(?::|=|\r?\n)\s*/i;
 const INVISIBLE_KEY_CHARACTERS = /[\u200b-\u200d\u2060\ufeff]/g;
 
 let originalFetch = null;
