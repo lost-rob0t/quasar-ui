@@ -16,12 +16,13 @@ export default function MelissaActorBridge() {
 
   useEffect(() => {
     if (!settings || installingRef.current || settings.melissaActorPackInstalled === false) return;
-    const installedIds = new Set((settings.actors || []).map((actor) => actor.id));
+    const installedActors = new Map((settings.actors || []).map((actor) => [actor.id, actor]));
     const installation = installMelissaActorPack(settings);
-    const complete = installation.actors.every(
-      (actor) =>
-        !String(actor.id || "").startsWith("quasar.actor.melissa-") || installedIds.has(actor.id)
-    );
+    const complete = installation.actors.every((actor) => {
+      if (!String(actor.id || "").startsWith("quasar.actor.melissa-")) return true;
+      const installed = installedActors.get(actor.id);
+      return installed?.version === actor.version && installed?.source === actor.source;
+    });
     if (complete && settings.melissaActorPackVersion === MELISSA_ACTOR_PACK_VERSION) return;
 
     installingRef.current = true;
