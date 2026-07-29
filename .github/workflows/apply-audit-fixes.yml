@@ -48,26 +48,8 @@ jobs:
           PY
       - run: python3 scripts/apply-audit-fixes.py
       - run: npm ci
-      - name: Format touched files
-        run: |
-          npx prettier --write \
-            src/lib/agent-records.js \
-            src/lib/provider-adapters.js \
-            src/components/AgentSystem.jsx \
-            src/lib/actors.js \
-            src/store.jsx \
-            src/lib/agent-web.js \
-            src/lib/document-batch.js \
-            src/lib/importer.js \
-            src/lib/agent-supervisor.js \
-            src/lib/agent-budget.js \
-            src/lib/agent-budget.test.js \
-            src/lib/agent-secrets.js \
-            public/sw.js \
-            public/sw-runtime.js \
-            src/lib/service-worker-runtime.test.js \
-            package.json \
-            .prettierignore
+      - name: Format maintained repository
+        run: npx prettier --write .
       - run: npm run check
       - run: npm test
       - run: npm run build
