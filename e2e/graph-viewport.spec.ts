@@ -52,3 +52,56 @@ test("desktop graph canvas pans and zooms", async ({ page }) => {
     .poll(async () => (await viewportState(canvas)).zoom)
     .toBeGreaterThan(beforeZoom.zoom);
 });
+
+test("full viewport keeps the modern graph workspace shell", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/graph");
+
+  const body = page.locator("body");
+  const canvas = page.locator(".graph-canvas");
+  const sidebar = page.locator(".app-shell > .sidebar");
+  const topbar = page.locator(".topbar");
+  const metrics = page.locator(".graph-workspace-metrics");
+  const dock = page.locator(".graph-agent-dock");
+  const inspector = page.locator(".graph-inspector");
+  const activity = page.locator(".graph-recent-activity");
+
+  await expect(sidebar).toBeVisible();
+  await expect(topbar).toBeVisible();
+  await expect(metrics).toBeVisible();
+  await expect(dock).toBeVisible();
+  await expect(inspector).toBeVisible();
+  await expect(activity).toBeVisible();
+  await expect(canvas).toBeVisible();
+
+  const canvasBefore = await canvas.boundingBox();
+  const sidebarBefore = await sidebar.boundingBox();
+  expect(canvasBefore).not.toBeNull();
+  expect(sidebarBefore).not.toBeNull();
+
+  await page.getByRole("button", { name: "Enter full viewport" }).click();
+
+  await expect(body).toHaveClass(/graph-viewport-full/);
+  await expect(sidebar).toBeVisible();
+  await expect(topbar).toBeVisible();
+  await expect(metrics).toBeVisible();
+  await expect(dock).toBeVisible();
+  await expect(inspector).toBeVisible();
+  await expect(activity).toBeVisible();
+  await expect(page.getByRole("button", { name: "Exit full viewport" })).toBeVisible();
+
+  const canvasAfter = await canvas.boundingBox();
+  const sidebarAfter = await sidebar.boundingBox();
+  expect(canvasAfter).not.toBeNull();
+  expect(sidebarAfter).not.toBeNull();
+  if (canvasBefore && canvasAfter && sidebarBefore && sidebarAfter) {
+    expect(sidebarAfter.width).toBeLessThan(sidebarBefore.width - 100);
+    expect(canvasAfter.width).toBeGreaterThan(canvasBefore.width + 120);
+    expect(canvasAfter.height).toBeGreaterThan(canvasBefore.height + 35);
+  }
+
+  await page.keyboard.press("Escape");
+  await expect(body).not.toHaveClass(/graph-viewport-full/);
+  await expect(sidebar).toBeVisible();
+  await expect(page.getByRole("button", { name: "Enter full viewport" })).toBeVisible();
+});
