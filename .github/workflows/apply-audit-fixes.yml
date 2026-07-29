@@ -11,6 +11,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: apply-audit-security-integrity-fixes
+  cancel-in-progress: false
+
 jobs:
   apply:
     if: github.actor != 'github-actions[bot]'
