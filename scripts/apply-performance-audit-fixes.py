@@ -89,6 +89,21 @@ text = replace_once(
 )
 path.write_text(text, encoding="utf-8")
 
+path = Path("scripts/bench-graph.mjs")
+text = path.read_text(encoding="utf-8")
+text = replace_once(
+    text,
+    '''const WARMUP_RUNS = 2;
+const MEASURED_RUNS = 5;''',
+    '''const WARMUP_RUNS = Math.max(0, Number(process.env.GRAPH_BENCH_WARMUP_RUNS ?? 2));
+const MEASURED_RUNS = Math.max(1, Number(process.env.GRAPH_BENCH_MEASURED_RUNS ?? 5));
+if (!Number.isInteger(WARMUP_RUNS) || !Number.isInteger(MEASURED_RUNS)) {
+  throw new TypeError("Graph benchmark run counts must be integers");
+}''',
+    "benchmark run configuration"
+)
+path.write_text(text, encoding="utf-8")
+
 # Remove the one-shot files from the final branch commit.
 Path("scripts/apply-performance-audit-fixes.py").unlink(missing_ok=True)
 Path(".github/workflows/apply-performance-audit-fixes.yml").unlink(missing_ok=True)
