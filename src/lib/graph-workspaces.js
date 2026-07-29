@@ -11,18 +11,24 @@ function cleanPositions(value) {
 
 function cleanGroups(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return Object.fromEntries(Object.entries(value).map(([id, group]) => [id, {
-    id,
-    name: String(group?.name || id),
-    documentIds: uniqueStrings(group?.documentIds),
-    collapsed: Boolean(group?.collapsed)
-  }]));
+  return Object.fromEntries(
+    Object.entries(value).map(([id, group]) => [
+      id,
+      {
+        id,
+        name: String(group?.name || id),
+        documentIds: uniqueStrings(group?.documentIds),
+        collapsed: Boolean(group?.collapsed)
+      }
+    ])
+  );
 }
 
 function normalizeGraph(graph, fallback = {}) {
-  const documentIds = graph?.documentIds === null
-    ? null
-    : uniqueStrings(graph?.documentIds || fallback.documentIds || []);
+  const documentIds =
+    graph?.documentIds === null
+      ? null
+      : uniqueStrings(graph?.documentIds || fallback.documentIds || []);
   const normalized = {
     id: String(graph?.id || fallback.id || "").trim(),
     name: String(graph?.name || fallback.name || "Untitled graph").trim(),
@@ -32,17 +38,19 @@ function normalizeGraph(graph, fallback = {}) {
     layout: String(graph?.layout || fallback.layout || "cose"),
     selectedIds: uniqueStrings(graph?.selectedIds || fallback.selectedIds || [])
   };
-  if (graph?.groups || fallback.groups) normalized.groups = cleanGroups(graph?.groups || fallback.groups);
+  if (graph?.groups || fallback.groups)
+    normalized.groups = cleanGroups(graph?.groups || fallback.groups);
   return normalized;
 }
 
 function generatedGraphId(name) {
-  const slug = String(name || "graph")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40) || "graph";
+  const slug =
+    String(name || "graph")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 40) || "graph";
   const suffix = globalThis.crypto?.randomUUID
     ? globalThis.crypto.randomUUID()
     : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
@@ -100,25 +108,27 @@ export function activeGraphMembershipKey(workspace) {
 
 export function updateActiveGraph(workspace, changes = {}) {
   const normalized = normalizeGraphWorkspace(workspace);
-  const graphs = normalized.graphs.map((graph) => graph.id === normalized.activeGraphId
-    ? normalizeGraph({ ...graph, ...changes }, graph)
-    : graph);
+  const graphs = normalized.graphs.map((graph) =>
+    graph.id === normalized.activeGraphId ? normalizeGraph({ ...graph, ...changes }, graph) : graph
+  );
   return normalizeGraphWorkspace({ ...normalized, graphs });
 }
 
 export function addDocumentsToActiveGraph(workspace, ids, changes = {}) {
   const normalized = normalizeGraphWorkspace(workspace);
   const active = getActiveGraph(normalized);
-  const documentIds = active.documentIds === null
-    ? null
-    : uniqueStrings([...active.documentIds, ...uniqueStrings(ids)]);
+  const documentIds =
+    active.documentIds === null
+      ? null
+      : uniqueStrings([...active.documentIds, ...uniqueStrings(ids)]);
   return updateActiveGraph(normalized, { ...changes, documentIds });
 }
 
 export function removeDocumentsFromActiveGraph(workspace, ids) {
   const normalized = normalizeGraphWorkspace(workspace);
   const active = getActiveGraph(normalized);
-  if (active.documentIds === null) throw new Error("Documents cannot be removed from the All documents graph");
+  if (active.documentIds === null)
+    throw new Error("Documents cannot be removed from the All documents graph");
   const removed = new Set(uniqueStrings(ids));
   const documentIds = active.documentIds.filter((id) => !removed.has(id));
   const positions = Object.fromEntries(
@@ -140,8 +150,10 @@ export function createGraph(workspace, name, { id = generatedGraphId(name) } = {
   const cleanId = String(id || "").trim();
   if (!cleanName) throw new TypeError("Graph name is required");
   if (!cleanId) throw new TypeError("Graph id is required");
-  if (normalized.graphs.length >= MAX_GRAPHS) throw new RangeError(`Graph limit reached: ${MAX_GRAPHS}`);
-  if (normalized.graphs.some((graph) => graph.id === cleanId)) throw new Error(`Graph already exists: ${cleanId}`);
+  if (normalized.graphs.length >= MAX_GRAPHS)
+    throw new RangeError(`Graph limit reached: ${MAX_GRAPHS}`);
+  if (normalized.graphs.some((graph) => graph.id === cleanId))
+    throw new Error(`Graph already exists: ${cleanId}`);
   const graph = normalizeGraph({
     id: cleanId,
     name: cleanName,

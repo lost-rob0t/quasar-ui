@@ -40,10 +40,12 @@ describe("agent graph operations", () => {
       agentId: "operator",
       runId: "run:1"
     });
-    await expect(applyAgentGraphPlan(plan, {
-      execute: vi.fn(),
-      applyWorkspaceOperation: vi.fn()
-    })).rejects.toMatchObject({ code: "approval_required" });
+    await expect(
+      applyAgentGraphPlan(plan, {
+        execute: vi.fn(),
+        applyWorkspaceOperation: vi.fn()
+      })
+    ).rejects.toMatchObject({ code: "approval_required" });
   });
 
   it("routes an approved plan through the undoable operation path", async () => {
@@ -52,7 +54,11 @@ describe("agent graph operations", () => {
       agentId: "operator",
       runId: "run:1"
     });
-    await applyAgentGraphPlan(plan, { execute, applyWorkspaceOperation: vi.fn() }, { approved: true });
+    await applyAgentGraphPlan(
+      plan,
+      { execute, applyWorkspaceOperation: vi.fn() },
+      { approved: true }
+    );
     expect(execute).toHaveBeenCalledOnce();
     expect(execute.mock.calls[0][0].type).toBe("batch");
   });

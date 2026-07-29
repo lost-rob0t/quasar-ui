@@ -54,10 +54,16 @@ describe("atomic document batches", () => {
   it("rejects mixed valid and invalid documents before touching the database", async () => {
     const database = new FakeDatabase();
     const valid = canonicalDocument("starintel:org:valid");
-    const report = await commitDocumentBatch(database, [
-      valid,
-      { _id: "invalid", dtype: "not-a-real-dtype" }
-    ], { origins: [{ file: "records.json", record: 1 }, { file: "records.json", record: 2 }] });
+    const report = await commitDocumentBatch(
+      database,
+      [valid, { _id: "invalid", dtype: "not-a-real-dtype" }],
+      {
+        origins: [
+          { file: "records.json", record: 1 },
+          { file: "records.json", record: 2 }
+        ]
+      }
+    );
 
     expect(report.saved).toEqual([]);
     expect(report.errors).toHaveLength(1);
@@ -88,10 +94,11 @@ describe("atomic document batches", () => {
   it("reports committed and rejected records separately in explicit partial mode", async () => {
     const database = new FakeDatabase();
     const valid = canonicalDocument("starintel:org:partial-valid");
-    const report = await commitDocumentBatch(database, [
-      valid,
-      { _id: "invalid", dtype: "not-a-real-dtype" }
-    ], { atomic: false });
+    const report = await commitDocumentBatch(
+      database,
+      [valid, { _id: "invalid", dtype: "not-a-real-dtype" }],
+      { atomic: false }
+    );
 
     expect(report.saved.map((item) => item.id)).toEqual([valid._id]);
     expect(report.errors).toHaveLength(1);
@@ -112,20 +119,24 @@ describe("atomic document batches", () => {
     expect(database.documents.size).toBe(0);
   });
 
-  it("reports any surviving write when compensating rollback fails", async () => {
+  it("throws a repair-required error when compensating rollback fails", async () => {
     const survivorId = "starintel:org:survivor";
     const failedId = "starintel:org:failed";
     const database = new FakeDatabase({
       failWrites: [failedId],
       failRollbacks: [survivorId]
     });
-    const report = await commitDocumentBatch(database, [
-      canonicalDocument(survivorId),
-      canonicalDocument(failedId)
-    ]);
 
-    expect(report.saved).toEqual([{ index: 0, id: survivorId, rev: `1-${survivorId}` }]);
-    expect(report.errors.some((error) => error.phase === "rollback")).toBe(true);
+    await expect(
+      commitDocumentBatch(database, [canonicalDocument(survivorId), canonicalDocument(failedId)])
+    ).rejects.toMatchObject({
+      code: "PARTIAL_BATCH_COMMIT",
+      report: {
+        saved: [{ index: 0, id: survivorId, rev: `1-${survivorId}` }],
+        rollbackAttempted: true
+      }
+    });
+
     expect(database.documents.has(survivorId)).toBe(true);
   });
 

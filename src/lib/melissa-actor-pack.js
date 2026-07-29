@@ -4,28 +4,32 @@ const SERVICES = Object.freeze({
   "personator-search": {
     id: "quasar.actor.melissa-personator-search",
     label: "Melissa person search",
-    description: "Resolve people from names, addresses, email, phone, MAK, or MIK with Personator Search.",
+    description:
+      "Resolve people from names, addresses, email, phone, MAK, or MIK with Personator Search.",
     accepts: ["person", "org", "entity", "target", "location", "address", "email", "phone"],
     predicate: "matched-to"
   },
   "people-business-search": {
     id: "quasar.actor.melissa-people-business-search",
     label: "Melissa people and business search",
-    description: "Search partial person, organization, and address data with Melissa People Business Search.",
+    description:
+      "Search partial person, organization, and address data with Melissa People Business Search.",
     accepts: ["person", "org", "entity", "target", "location", "address"],
     predicate: "matched-to"
   },
   "personator-consumer": {
     id: "quasar.actor.melissa-personator-consumer",
     label: "Melissa consumer verify and append",
-    description: "Check, verify, append, or move-match names, addresses, phones, and emails with Personator Consumer.",
+    description:
+      "Check, verify, append, or move-match names, addresses, phones, and emails with Personator Consumer.",
     accepts: ["person", "org", "entity", "target", "location", "address", "email", "phone"],
     predicate: "verified-as"
   },
   "personator-identity": {
     id: "quasar.actor.melissa-personator-identity",
     label: "Melissa identity check",
-    description: "Check or screen a global identity using name, address, phone, and email evidence.",
+    description:
+      "Check or screen a global identity using name, address, phone, and email evidence.",
     accepts: ["person", "entity", "target", "location", "address", "email", "phone"],
     predicate: "identity-check-result"
   },
@@ -39,7 +43,8 @@ const SERVICES = Object.freeze({
   property: {
     id: "quasar.actor.melissa-property",
     label: "Melissa property lookup",
-    description: "Retrieve parcel, ownership, assessment, mortgage, sale, and physical property data.",
+    description:
+      "Retrieve parcel, ownership, assessment, mortgage, sale, and physical property data.",
     accepts: ["location", "address", "entity", "target", "person"],
     predicate: "property-record"
   },
@@ -60,7 +65,8 @@ const SERVICES = Object.freeze({
   "global-phone": {
     id: "quasar.actor.melissa-global-phone",
     label: "Melissa global phone",
-    description: "Validate and enrich phone numbers with carrier, line type, geographic, and caller data.",
+    description:
+      "Validate and enrich phone numbers with carrier, line type, geographic, and caller data.",
     accepts: ["phone", "person", "org", "entity", "target"],
     predicate: "has-phone-result"
   },
@@ -589,29 +595,31 @@ function buildMelissaActorSource(service) {
 }
 
 export const MELISSA_ACTORS = Object.freeze(
-  Object.entries(SERVICES).map(([service, spec]) => Object.freeze({
-    id: spec.id,
-    label: spec.label,
-    description: spec.description,
-    version: MELISSA_ACTOR_PACK_VERSION,
-    accepts: spec.accepts,
-    triggers: [],
-    runtime: "quasar.browser-js.v1",
-    capabilities: ["network.fetch"],
-    limits: {
-      timeoutMs: 120_000,
-      maxDocuments: 1_024,
-      maxOperations: 2_048,
-      maxRequests: 64,
-      maxResponseBytes: 8 * 1_024 * 1_024,
-      maxResultBytes: 32 * 1_024 * 1_024
-    },
-    minSelection: 1,
-    maxSelection: 16,
-    source: buildMelissaActorSource(service),
-    pack: "melissa",
-    service
-  }))
+  Object.entries(SERVICES).map(([service, spec]) =>
+    Object.freeze({
+      id: spec.id,
+      label: spec.label,
+      description: spec.description,
+      version: MELISSA_ACTOR_PACK_VERSION,
+      accepts: spec.accepts,
+      triggers: [],
+      runtime: "quasar.browser-js.v1",
+      capabilities: ["network.fetch"],
+      limits: {
+        timeoutMs: 120_000,
+        maxDocuments: 1_024,
+        maxOperations: 2_048,
+        maxRequests: 64,
+        maxResponseBytes: 8 * 1_024 * 1_024,
+        maxResultBytes: 32 * 1_024 * 1_024
+      },
+      minSelection: 1,
+      maxSelection: 16,
+      source: buildMelissaActorSource(service),
+      pack: "melissa",
+      service
+    })
+  )
 );
 
 export const MELISSA_ACTOR_IDS = Object.freeze(MELISSA_ACTORS.map((actor) => actor.id));

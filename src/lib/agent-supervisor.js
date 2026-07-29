@@ -60,10 +60,14 @@ async function delay(milliseconds, signal) {
   if (!milliseconds) return;
   await new Promise((resolve, reject) => {
     const timer = setTimeout(resolve, Math.min(milliseconds, 60_000));
-    signal?.addEventListener("abort", () => {
-      clearTimeout(timer);
-      reject(new DOMException("Aborted", "AbortError"));
-    }, { once: true });
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        reject(new DOMException("Aborted", "AbortError"));
+      },
+      { once: true }
+    );
   });
 }
 
@@ -80,29 +84,32 @@ export class AgentSupervisor {
 
   async createRun(agent, input = {}) {
     if (!agent.enabled) throw new Error("Agent is disabled");
-    const run = await saveAgentRecord({
-      id: id("run"),
-      recordType: AGENT_RECORD_TYPES.run,
-      agentId: agent.id,
-      goal: String(input.goal || "").trim(),
-      status: "idle",
-      statusReason: "",
-      providerId: agent.providerId,
-      modelId: agent.modelId,
-      targetIds: input.targetIds || [],
-      selectionIds: input.selectionIds || [],
-      dataset: input.dataset || null,
-      graphId: input.graphId || null,
-      filters: input.filters || {},
-      loopEnabled: input.loopEnabled === true,
-      messages: input.messages || [],
-      history: [],
-      usage: zeroUsage(),
-      budget: { ...agent.budget },
-      pricingSnapshot: { ...this.pricingFor(agent.providerId, agent.modelId) },
-      checkpointId: null,
-      lastStepId: null
-    }, AGENT_RECORD_TYPES.run);
+    const run = await saveAgentRecord(
+      {
+        id: id("run"),
+        recordType: AGENT_RECORD_TYPES.run,
+        agentId: agent.id,
+        goal: String(input.goal || "").trim(),
+        status: "idle",
+        statusReason: "",
+        providerId: agent.providerId,
+        modelId: agent.modelId,
+        targetIds: input.targetIds || [],
+        selectionIds: input.selectionIds || [],
+        dataset: input.dataset || null,
+        graphId: input.graphId || null,
+        filters: input.filters || {},
+        loopEnabled: input.loopEnabled === true,
+        messages: input.messages || [],
+        history: [],
+        usage: zeroUsage(),
+        budget: { ...agent.budget },
+        pricingSnapshot: { ...this.pricingFor(agent.providerId, agent.modelId) },
+        checkpointId: null,
+        lastStepId: null
+      },
+      AGENT_RECORD_TYPES.run
+    );
     await this.checkpoint(run, "Run created");
     this.onUpdate(run);
     return run;
@@ -141,22 +148,26 @@ export class AgentSupervisor {
   async retry(runId) {
     const run = await this.getRun(runId);
     if (!run) throw new Error(`Run not found: ${runId}`);
-    if (!["failed", "paused", "completed"].includes(run.status)) throw new Error(`Cannot retry a ${run.status} run`);
+    if (!["failed", "paused", "completed"].includes(run.status))
+      throw new Error(`Cannot retry a ${run.status} run`);
     return this.run(run.agent, transition(run, "active", "Retrying"));
   }
 
   async checkpoint(run, label) {
-    const checkpoint = await saveAgentRecord({
-      id: id("checkpoint"),
-      recordType: AGENT_RECORD_TYPES.checkpoint,
-      runId: run.id,
-      label,
-      status: run.status,
-      usage: run.usage,
-      messages: run.messages,
-      history: run.history,
-      stateFingerprint: await this.stateFingerprint(run)
-    }, AGENT_RECORD_TYPES.checkpoint);
+    const checkpoint = await saveAgentRecord(
+      {
+        id: id("checkpoint"),
+        recordType: AGENT_RECORD_TYPES.checkpoint,
+        runId: run.id,
+        label,
+        status: run.status,
+        usage: run.usage,
+        messages: run.messages,
+        history: run.history,
+        stateFingerprint: await this.stateFingerprint(run)
+      },
+      AGENT_RECORD_TYPES.checkpoint
+    );
     run.checkpointId = checkpoint.id;
     await this.persist(run);
     return checkpoint;
@@ -177,20 +188,24 @@ export class AgentSupervisor {
       history: checkpoint.history,
       checkpointId: checkpoint.id
     };
-    await saveAgentRecord({
-      id: id("recovery"),
-      recordType: AGENT_RECORD_TYPES.recoveryEvent,
-      runId,
-      action: "restore-checkpoint",
-      checkpointId
-    }, AGENT_RECORD_TYPES.recoveryEvent);
+    await saveAgentRecord(
+      {
+        id: id("recovery"),
+        recordType: AGENT_RECORD_TYPES.recoveryEvent,
+        runId,
+        action: "restore-checkpoint",
+        checkpointId
+      },
+      AGENT_RECORD_TYPES.recoveryEvent
+    );
     return this.persist(restored);
   }
 
   async run(agent, inputOrRun) {
-    let run = inputOrRun?.recordType === AGENT_RECORD_TYPES.run
-      ? inputOrRun
-      : await this.createRun(agent, inputOrRun);
+    let run =
+      inputOrRun?.recordType === AGENT_RECORD_TYPES.run
+        ? inputOrRun
+        : await this.createRun(agent, inputOrRun);
     run.agent = agent;
     run = run.status === "active" ? run : transition(run, "active", "");
     run = await this.persist(run);
@@ -201,7 +216,8 @@ export class AgentSupervisor {
         run = await this.iterate(agent, run, controller.signal);
         if (!run.loopEnabled || run.status !== "active") break;
       }
-      if (run.status === "active") run = await this.persist(transition(run, "completed", "Run complete"));
+      if (run.status === "active")
+        run = await this.persist(transition(run, "completed", "Run complete"));
       return run;
     } catch (error) {
       if (error?.name === "AbortError") return this.getRun(run.id);
@@ -216,8 +232,19 @@ export class AgentSupervisor {
   async iterate(agent, run, signal) {
     const started = performance.now();
     const before = budgetState(run.budget, run.usage, { iterations: 1 });
-    if (before.state === "hard-stop") return this.persist(transition(run, "budget-exhausted", before.reason));
+    if (before.state === "hard-stop")
+      return this.persist(transition(run, "budget-exhausted", before.reason));
     const context = await this.contextFor(agent, run);
+    if (run.pricingSnapshot?.known === false) {
+      throw new Error(`Pricing is required before running ${run.modelId}`);
+    }
+    const remainingOutputTokens = Math.max(
+      0,
+      Number(run.budget.maxOutputTokens ?? 8_192) - Number(run.usage.outputTokens || 0)
+    );
+    if (remainingOutputTokens < 1) {
+      return this.persist(transition(run, "budget-exhausted", "Output tokens limit reached"));
+    }
     const adapter = await this.adapterFor(agent);
     const messages = [
       { role: "system", content: context.systemPrompt },
@@ -232,7 +259,7 @@ export class AgentSupervisor {
           model: agent.modelId,
           messages,
           tools: this.toolRegistry.modelDefinitions(agent),
-          maxTokens: Math.min(8_192, Number(run.budget.maxOutputTokens || 8_192)),
+          maxTokens: Math.min(8_192, remainingOutputTokens),
           signal
         });
       } catch (error) {
@@ -247,7 +274,10 @@ export class AgentSupervisor {
           error: errorRecord(error)
         };
         await saveAgentRecord(recovery, AGENT_RECORD_TYPES.recoveryEvent);
-        await delay(error.retryAfterMs || Number(agent.recovery?.backoffMs || 1_000) * (2 ** (attempt - 1)), signal);
+        await delay(
+          error.retryAfterMs || Number(agent.recovery?.backoffMs || 1_000) * 2 ** (attempt - 1),
+          signal
+        );
       }
     }
     const pricing = run.pricingSnapshot || {};
@@ -269,7 +299,10 @@ export class AgentSupervisor {
       at: stamp()
     };
     const history = [...run.history, modelEntry];
-    const nextMessages = [...run.messages, response.providerMessage || { role: "assistant", content: response.text || "" }];
+    const nextMessages = [
+      ...run.messages,
+      response.providerMessage || { role: "assistant", content: response.text || "" }
+    ];
 
     for (const call of response.toolCalls.slice(0, 4)) {
       const toolBudget = budgetState(run.budget, usage, { toolCalls: 1 });
@@ -358,46 +391,64 @@ export class AgentSupervisor {
 
     usage = addUsage(usage, { runtimeMs: performance.now() - started });
     run = { ...run, history, messages: nextMessages, usage, lastStepId: modelEntry.id };
-    const step = await saveAgentRecord({
-      id: id("step"),
-      recordType: AGENT_RECORD_TYPES.step,
-      runId: run.id,
-      index: usage.iterations,
-      actionSummary: response.text || (response.toolCalls.length ? `Called ${response.toolCalls.map((call) => call.name).join(", ")}` : "No action"),
-      toolCallIds: history.filter((entry) => entry.kind === "tool").slice(-response.toolCalls.length).map((entry) => entry.id),
-      usage,
-      stateFingerprint: await this.stateFingerprint(run)
-    }, AGENT_RECORD_TYPES.step);
+    const step = await saveAgentRecord(
+      {
+        id: id("step"),
+        recordType: AGENT_RECORD_TYPES.step,
+        runId: run.id,
+        index: usage.iterations,
+        actionSummary:
+          response.text ||
+          (response.toolCalls.length
+            ? `Called ${response.toolCalls.map((call) => call.name).join(", ")}`
+            : "No action"),
+        toolCallIds: history
+          .filter((entry) => entry.kind === "tool")
+          .slice(-response.toolCalls.length)
+          .map((entry) => entry.id),
+        usage,
+        stateFingerprint: await this.stateFingerprint(run)
+      },
+      AGENT_RECORD_TYPES.step
+    );
     run.lastStepId = step.id;
     const loop = detectAgentLoop(history, agent.loop);
     if (loop) {
-      await saveAgentRecord({
-        id: id("loop"),
-        recordType: AGENT_RECORD_TYPES.loopEvent,
-        runId: run.id,
-        ...loop
-      }, AGENT_RECORD_TYPES.loopEvent);
+      await saveAgentRecord(
+        {
+          id: id("loop"),
+          recordType: AGENT_RECORD_TYPES.loopEvent,
+          runId: run.id,
+          ...loop
+        },
+        AGENT_RECORD_TYPES.loopEvent
+      );
       run.loopWarning = loop;
       return this.persist(transition(run, "paused", loop.message));
     }
     const after = budgetState(run.budget, usage);
-    if (after.state === "hard-stop") return this.persist(transition(run, "budget-exhausted", after.reason));
+    if (after.state === "hard-stop")
+      return this.persist(transition(run, "budget-exhausted", after.reason));
     run.budgetWarning = after.state === "warning" ? after.reason : "";
     run.remainingBudget = remainingBudget(run.budget, usage);
-    await saveAgentRecord({
-      id: id("cost"),
-      recordType: AGENT_RECORD_TYPES.cost,
-      runId: run.id,
-      agentId: agent.id,
-      providerId: run.providerId,
-      modelId: run.modelId,
-      usage: response.usage,
-      costUsd: responseCost,
-      exactUsage: response.usage.exact,
-      pricingSnapshot: run.pricingSnapshot
-    }, AGENT_RECORD_TYPES.cost);
+    await saveAgentRecord(
+      {
+        id: id("cost"),
+        recordType: AGENT_RECORD_TYPES.cost,
+        runId: run.id,
+        agentId: agent.id,
+        providerId: run.providerId,
+        modelId: run.modelId,
+        usage: response.usage,
+        costUsd: responseCost,
+        exactUsage: response.usage.exact,
+        pricingSnapshot: run.pricingSnapshot
+      },
+      AGENT_RECORD_TYPES.cost
+    );
     await this.checkpoint(run, `Iteration ${usage.iterations}`);
-    if (!response.toolCalls.length) return this.persist(transition(run, "completed", "Run complete"));
+    if (!response.toolCalls.length)
+      return this.persist(transition(run, "completed", "Run complete"));
     return this.persist(run);
   }
 
@@ -405,7 +456,9 @@ export class AgentSupervisor {
     const runs = await this.listRuns();
     const restored = [];
     for (const run of runs.filter((candidate) => candidate.status === "active")) {
-      restored.push(await this.persist(transition(run, "paused", "Browser reloaded; resume from checkpoint")));
+      restored.push(
+        await this.persist(transition(run, "paused", "Browser reloaded; resume from checkpoint"))
+      );
     }
     return restored;
   }
@@ -413,7 +466,11 @@ export class AgentSupervisor {
 
 export function runStateFingerprint(documents, graph) {
   return fingerprint({
-    documents: documents.map((document) => [document._id, document._rev || document.version, document.date_updated]),
+    documents: documents.map((document) => [
+      document._id,
+      document._rev || document.version,
+      document.date_updated
+    ]),
     graph: graph ? [graph.id, graph.documentIds, graph.positions] : null
   });
 }

@@ -12,10 +12,10 @@ function distanceSquared(left, right) {
 
 export function boxesOverlap(left, right, padding = 0) {
   return !(
-    left.x2 + padding < right.x1
-    || left.x1 - padding > right.x2
-    || left.y2 + padding < right.y1
-    || left.y1 - padding > right.y2
+    left.x2 + padding < right.x1 ||
+    left.x1 - padding > right.x2 ||
+    left.y2 + padding < right.y1 ||
+    left.y1 - padding > right.y2
   );
 }
 
@@ -76,19 +76,22 @@ export function selectNodesInRenderedBox(cy, box) {
 
 export function findRelationDropTarget(cy, sourceNode, padding = DESKTOP_DROP_PADDING) {
   if (!cy || !sourceNode?.length) return null;
-  const sourceBox = sourceNode.renderedBoundingBox({ includeLabels: false, includeOverlays: false });
+  const sourceBox = sourceNode.renderedBoundingBox({
+    includeLabels: false,
+    includeOverlays: false
+  });
   const sourcePosition = sourceNode.renderedPosition();
   let best = null;
   let bestDistance = Number.POSITIVE_INFINITY;
 
   cy.nodes().forEach((candidate) => {
-    if (
-      candidate.id() === sourceNode.id()
-      || candidate.data("unresolved")
-      || !candidate.visible()
-    ) return;
+    if (candidate.id() === sourceNode.id() || candidate.data("unresolved") || !candidate.visible())
+      return;
 
-    const targetBox = candidate.renderedBoundingBox({ includeLabels: false, includeOverlays: false });
+    const targetBox = candidate.renderedBoundingBox({
+      includeLabels: false,
+      includeOverlays: false
+    });
     if (!boxesOverlap(sourceBox, targetBox, padding)) return;
     const distance = distanceSquared(sourcePosition, candidate.renderedPosition());
     if (distance < bestDistance) {
@@ -296,10 +299,9 @@ export function installGraphGestures(cy) {
   });
   cy.on("drag", "node", (event) => {
     if (!state.drag || state.drag.id !== event.target.id()) return;
-    state.drag.moved = distanceSquared(
-      state.drag.renderedPosition,
-      event.target.renderedPosition()
-    ) >= DRAG_THRESHOLD_SQUARED;
+    state.drag.moved =
+      distanceSquared(state.drag.renderedPosition, event.target.renderedPosition()) >=
+      DRAG_THRESHOLD_SQUARED;
   });
   cy.on("dragfree", "node", (event) => {
     const sourceNode = event.target;

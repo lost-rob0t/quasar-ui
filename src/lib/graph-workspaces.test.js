@@ -22,15 +22,17 @@ describe("graph workspaces", () => {
       selectedIds: ["a"]
     });
 
-    expect(workspace.graphs).toEqual([{
-      id: "all-documents",
-      name: "All documents",
-      documentIds: null,
-      positions: { a: { x: 1, y: 2 } },
-      viewport: null,
-      layout: "grid",
-      selectedIds: ["a"]
-    }]);
+    expect(workspace.graphs).toEqual([
+      {
+        id: "all-documents",
+        name: "All documents",
+        documentIds: null,
+        positions: { a: { x: 1, y: 2 } },
+        viewport: null,
+        layout: "grid",
+        selectedIds: ["a"]
+      }
+    ]);
     expect(workspace.activeGraphId).toBe("all-documents");
   });
 
@@ -99,7 +101,9 @@ describe("graph workspaces", () => {
     const documents = [{ _id: "a" }, { _id: "b" }, { _id: "r" }];
 
     expect(documentsForActiveGraph(workspace, documents)).toEqual([{ _id: "a" }, { _id: "r" }]);
-    expect(documentsForActiveGraph(switchActiveGraph(workspace, "all-documents"), documents)).toEqual(documents);
+    expect(
+      documentsForActiveGraph(switchActiveGraph(workspace, "all-documents"), documents)
+    ).toEqual(documents);
   });
 
   it("removes membership without touching documents", () => {
@@ -115,8 +119,9 @@ describe("graph workspaces", () => {
       positions: { b: { x: 2, y: 2 } },
       selectedIds: ["b"]
     });
-    expect(() => removeDocumentsFromActiveGraph(switchActiveGraph(workspace, "all-documents"), ["b"]))
-      .toThrow("All documents");
+    expect(() =>
+      removeDocumentsFromActiveGraph(switchActiveGraph(workspace, "all-documents"), ["b"])
+    ).toThrow("All documents");
   });
   it("clears a custom graph without deleting the graph", () => {
     let workspace = createGraph({}, "Case Alpha", { id: "case-alpha" });
@@ -143,5 +148,4 @@ describe("graph workspaces", () => {
     });
     expect(workspace.graphs.some((graph) => graph.id === "all-documents")).toBe(true);
   });
-
 });

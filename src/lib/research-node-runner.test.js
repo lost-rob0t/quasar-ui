@@ -39,7 +39,10 @@ function output(id) {
 }
 
 function harness({ node = researchNode(), runActor, actors, now } = {}) {
-  const documents = new Map([[input._id, input], [node._id, node]]);
+  const documents = new Map([
+    [input._id, input],
+    [node._id, node]
+  ]);
   const actorList = actors || [
     { id: "actor:first", label: "First" },
     { id: "actor:second", label: "Second" }
@@ -48,11 +51,13 @@ function harness({ node = researchNode(), runActor, actors, now } = {}) {
   const runner = createResearchNodeRunner({
     resolveActor: (id) => actorList.find((actor) => actor.id === id),
     resolveDocument: (id) => documents.get(id),
-    runActor: runActor || vi.fn(async (actor) => {
-      const document = output(`starintel:org:${actor.id.split(":").at(-1)}`);
-      documents.set(document._id, document);
-      return { documents: [document], newDocumentIds: [document._id], metrics: { requests: 1 } };
-    }),
+    runActor:
+      runActor ||
+      vi.fn(async (actor) => {
+        const document = output(`starintel:org:${actor.id.split(":").at(-1)}`);
+        documents.set(document._id, document);
+        return { documents: [document], newDocumentIds: [document._id], metrics: { requests: 1 } };
+      }),
     saveNode: vi.fn(async (document) => {
       documents.set(document._id, document);
       saves.push(document);
@@ -69,10 +74,7 @@ describe("research node runner", () => {
     const completed = await runner.run(documents.get("starintel:research-node:test"));
 
     expect(completed.data.status).toBe("completed");
-    expect(completed.data.output_ids).toEqual([
-      "starintel:org:first",
-      "starintel:org:second"
-    ]);
+    expect(completed.data.output_ids).toEqual(["starintel:org:first", "starintel:org:second"]);
     expect(completed.data.run_ids).toEqual(["run:actor:first", "run:actor:second"]);
     expect(completed.data.counters).toMatchObject({ actor_runs: 2, requests: 2 });
     expect(saves.map((document) => document.data.status)).toContain("queued");
@@ -113,11 +115,20 @@ describe("research node runner", () => {
 
   it("aborts the active actor and records an operator pause", async () => {
     let started;
-    const ready = new Promise((resolve) => { started = resolve; });
-    const runActor = vi.fn((_actor, _selection, { signal }) => new Promise((_resolve, reject) => {
-      started();
-      signal.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")), { once: true });
-    }));
+    const ready = new Promise((resolve) => {
+      started = resolve;
+    });
+    const runActor = vi.fn(
+      (_actor, _selection, { signal }) =>
+        new Promise((_resolve, reject) => {
+          started();
+          signal.addEventListener(
+            "abort",
+            () => reject(new DOMException("aborted", "AbortError")),
+            { once: true }
+          );
+        })
+    );
     const { runner, documents } = harness({ runActor });
     const running = runner.run(documents.get("starintel:research-node:test"));
     await ready;

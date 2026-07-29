@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  STARINTEL_VIEW_MANIFEST,
-  installStarIntelViews,
-  queryCountView
-} from "./views";
+import { STARINTEL_VIEW_MANIFEST, installStarIntelViews, queryCountView } from "./views";
 
 describe("StarIntel map-reduce views", () => {
   it("ships versioned CouchDB-compatible core, relation, target, message, and event views", () => {

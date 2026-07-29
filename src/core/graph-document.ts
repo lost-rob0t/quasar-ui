@@ -252,12 +252,9 @@ function addIssue(
   errors.push({ code, path, message });
 }
 
-function validateTimestamp(
-  errors: GraphValidationIssue[],
-  value: unknown,
-  path: string
-): void {
-  if (!isTimestamp(value)) addIssue(errors, "invalid-timestamp", path, "must be an ISO-compatible timestamp");
+function validateTimestamp(errors: GraphValidationIssue[], value: unknown, path: string): void {
+  if (!isTimestamp(value))
+    addIssue(errors, "invalid-timestamp", path, "must be an ISO-compatible timestamp");
 }
 
 function validatePropertyDefinitions(
@@ -318,7 +315,12 @@ function validateNode(
   if (isRecord(value.properties) && typeof value.type === "string") {
     const definition: NodeTypeDefinition | undefined = registry.getNodeType(value.type);
     if (definition) {
-      validatePropertyDefinitions(errors, value.properties, definition.properties, `${path}.properties`);
+      validatePropertyDefinitions(
+        errors,
+        value.properties,
+        definition.properties,
+        `${path}.properties`
+      );
     }
   }
 
@@ -359,7 +361,12 @@ function validateEdgeShape(
 
   const definition = typeof value.type === "string" ? registry.getEdgeType(value.type) : undefined;
   if (definition && isRecord(value.properties)) {
-    validatePropertyDefinitions(errors, value.properties, definition.properties, `${path}.properties`);
+    validatePropertyDefinitions(
+      errors,
+      value.properties,
+      definition.properties,
+      `${path}.properties`
+    );
   }
 
   return { edge: value, definition };
@@ -377,8 +384,10 @@ function validateEndpointConstraints(
 
   const sourceType = nodeTypes.get(edge.source);
   const targetType = nodeTypes.get(edge.target);
-  if (!sourceType) addIssue(errors, "dangling-edge", `${path}.source`, `node ${edge.source} does not exist`);
-  if (!targetType) addIssue(errors, "dangling-edge", `${path}.target`, `node ${edge.target} does not exist`);
+  if (!sourceType)
+    addIssue(errors, "dangling-edge", `${path}.source`, `node ${edge.source} does not exist`);
+  if (!targetType)
+    addIssue(errors, "dangling-edge", `${path}.target`, `node ${edge.target} does not exist`);
   if (!sourceType || !targetType || !definition?.endpoints) return;
 
   const { sourceTypes, targetTypes, allowSelf } = definition.endpoints;
@@ -403,11 +412,7 @@ function validateEndpointConstraints(
   }
 }
 
-function validateView(
-  errors: GraphValidationIssue[],
-  value: unknown,
-  nodeIds: Set<string>
-): void {
+function validateView(errors: GraphValidationIssue[], value: unknown, nodeIds: Set<string>): void {
   if (!isRecord(value)) {
     addIssue(errors, "invalid-view", "view", "must be an object");
     return;
@@ -427,7 +432,12 @@ function validateView(
         addIssue(errors, "invalid-view", "view.viewport.zoom", "must be a positive finite number");
       }
       if (!isFinitePosition(value.viewport.pan)) {
-        addIssue(errors, "invalid-view", "view.viewport.pan", "must contain finite x and y numbers");
+        addIssue(
+          errors,
+          "invalid-view",
+          "view.viewport.pan",
+          "must contain finite x and y numbers"
+        );
       }
     }
   }
@@ -437,7 +447,12 @@ function validateView(
     const seen = new Set<string>();
     value.selectedIds.forEach((id, index) => {
       if (!isStableIdentifier(id)) {
-        addIssue(errors, "invalid-identifier", `view.selectedIds[${index}]`, "must be a stable identifier");
+        addIssue(
+          errors,
+          "invalid-identifier",
+          `view.selectedIds[${index}]`,
+          "must be a stable identifier"
+        );
       } else if (!nodeIds.has(id)) {
         addIssue(errors, "invalid-view", `view.selectedIds[${index}]`, `node ${id} does not exist`);
       } else if (seen.has(id)) {
@@ -477,9 +492,17 @@ export function validateGraphDocument(
       !Array.isArray(value.metadata.typeLibraryRefs) ||
       value.metadata.typeLibraryRefs.some((item) => typeof item !== "string" || !item.trim())
     ) {
-      addIssue(errors, "invalid-graph", "metadata.typeLibraryRefs", "must be an array of non-empty strings");
+      addIssue(
+        errors,
+        "invalid-graph",
+        "metadata.typeLibraryRefs",
+        "must be an array of non-empty strings"
+      );
     }
-    if (!Array.isArray(value.metadata.tags) || value.metadata.tags.some((item) => typeof item !== "string")) {
+    if (
+      !Array.isArray(value.metadata.tags) ||
+      value.metadata.tags.some((item) => typeof item !== "string")
+    ) {
       addIssue(errors, "invalid-graph", "metadata.tags", "must be an array of strings");
     }
   }

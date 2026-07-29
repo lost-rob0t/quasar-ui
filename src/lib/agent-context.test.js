@@ -11,12 +11,15 @@ describe("agent context", () => {
       data: {},
       sources: []
     }));
-    const context = buildAgentContext({
-      documents,
-      selectionIds: ["person:10"],
-      targetIds: [],
-      dataset: "alpha"
-    }, { maxDocuments: 5 });
+    const context = buildAgentContext(
+      {
+        documents,
+        selectionIds: ["person:10"],
+        targetIds: [],
+        dataset: "alpha"
+      },
+      { maxDocuments: 5 }
+    );
     expect(context.documents).toHaveLength(1);
     expect(context.documents[0].id).toBe("person:10");
   });

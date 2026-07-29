@@ -60,9 +60,22 @@ function SyncBadge() {
   const { syncStatus, serverStatus, queueStatus } = useQuasar();
   return (
     <div className="connection-badges">
-      <span className={`sync-badge sync-${syncStatus.state}`} title={`CouchDB: ${syncStatus.message}`}>db {syncStatus.state}</span>
-      {serverStatus.state !== "offline" && <span className={`sync-badge sync-${serverStatus.state}`} title={serverStatus.message}>api {serverStatus.state}</span>}
-      {queueStatus.state !== "offline" && <span className={`sync-badge sync-${queueStatus.state}`} title={queueStatus.message}>queue {queueStatus.state}</span>}
+      <span
+        className={`sync-badge sync-${syncStatus.state}`}
+        title={`CouchDB: ${syncStatus.message}`}
+      >
+        db {syncStatus.state}
+      </span>
+      {serverStatus.state !== "offline" && (
+        <span className={`sync-badge sync-${serverStatus.state}`} title={serverStatus.message}>
+          api {serverStatus.state}
+        </span>
+      )}
+      {queueStatus.state !== "offline" && (
+        <span className={`sync-badge sync-${queueStatus.state}`} title={queueStatus.message}>
+          queue {queueStatus.state}
+        </span>
+      )}
     </div>
   );
 }
@@ -95,7 +108,12 @@ function InstallButton() {
   }
 
   return (
-    <button className="button install-button" type="button" onClick={install} title="Install Quasar">
+    <button
+      className="button install-button"
+      type="button"
+      onClick={install}
+      title="Install Quasar"
+    >
       <Download size={17} />
       <span>Install</span>
     </button>
@@ -105,7 +123,12 @@ function InstallButton() {
 function NavigationLinks({ mobile = false }) {
   const links = mobile ? mobileNavigation : navigation;
   return links.map(({ to, label, mobileLabel, Icon, end }) => (
-    <NavLink key={to} to={to} end={end} className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
+    <NavLink
+      key={to}
+      to={to}
+      end={end}
+      className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+    >
       <Icon size={mobile ? 21 : 18} aria-hidden="true" />
       <span>{mobile ? mobileLabel : label}</span>
     </NavLink>
@@ -130,8 +153,15 @@ function SidebarGraphs({ graphs, activeGraph, switchGraph, createGraph }) {
       <div className="sidebar-section-label">Graphs</div>
       <div className="sidebar-graph-list" aria-label="Workspace graphs">
         {graphs.map((graph) => (
-          <div key={graph.id} className={graph.id === activeGraph?.id ? "sidebar-graph-row active" : "sidebar-graph-row"}>
-            <button type="button" onClick={() => switchGraph(graph.id)} title={graph.name}>{graph.name}</button>
+          <div
+            key={graph.id}
+            className={
+              graph.id === activeGraph?.id ? "sidebar-graph-row active" : "sidebar-graph-row"
+            }
+          >
+            <button type="button" onClick={() => switchGraph(graph.id)} title={graph.name}>
+              {graph.name}
+            </button>
             {graph.id === activeGraph?.id && <span aria-label="Current graph">•</span>}
           </div>
         ))}
@@ -191,20 +221,41 @@ function WorkbenchShell({ children }) {
             <strong>Quasar</strong>
             <span>StarIntel workspace</span>
           </div>
-          <button className="icon-button sidebar-collapse" type="button" onClick={toggleSidebar} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
+          <button
+            className="icon-button sidebar-collapse"
+            type="button"
+            onClick={toggleSidebar}
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
             {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </button>
         </div>
         <div className="sidebar-section-label">Navigation</div>
-        <nav aria-label="Primary navigation"><NavigationLinks /></nav>
-        {graphRoute && <SidebarGraphs graphs={graphs} activeGraph={activeGraph} switchGraph={switchGraph} createGraph={createGraph} />}
+        <nav aria-label="Primary navigation">
+          <NavigationLinks />
+        </nav>
+        {graphRoute && (
+          <SidebarGraphs
+            graphs={graphs}
+            activeGraph={activeGraph}
+            switchGraph={switchGraph}
+            createGraph={createGraph}
+          />
+        )}
         <div className="sidebar-foot">
-          <div><Database size={15} /> {documents.length} documents</div>
-          <div><SyncBadge /></div>
+          <div>
+            <Database size={15} /> {documents.length} documents
+          </div>
+          <div>
+            <SyncBadge />
+          </div>
           <small>Offline-first · v0.9.0</small>
           <div className="sidebar-user">
             <UserRound size={18} />
-            <span><strong>unseen</strong><small>Admin</small></span>
+            <span>
+              <strong>unseen</strong>
+              <small>Admin</small>
+            </span>
           </div>
         </div>
       </aside>
@@ -222,19 +273,53 @@ function WorkbenchShell({ children }) {
           </button>
           <form className="global-search" onSubmit={submitSearch} role="search">
             <Search size={17} aria-hidden="true" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search workspace" placeholder="Search everything…" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              aria-label="Search workspace"
+              placeholder="Search everything…"
+            />
           </form>
           <div className="top-actions">
             <SyncBadge />
             <InstallButton />
-            <NavLink className="button graph-agent-top-action" to="/agents?tab=run"><Sparkles size={16} /> AI Agent</NavLink>
-            <NavLink className="icon-button" to="/documents/new" title="Create document" aria-label="Create document"><Plus size={18} /></NavLink>
-            <button className="icon-button" type="button" title="Filter" aria-label="Filter"><Filter size={17} /></button>
-            <button className="icon-button" type="button" title="Help" aria-label="Help"><CircleHelp size={17} /></button>
-            <button className="icon-button" disabled={!canUndo} onClick={() => undo().catch((error) => setNotice({ kind: "error", message: error.message }))} title="Undo" aria-label="Undo">
+            <NavLink className="button graph-agent-top-action" to="/agents?tab=run">
+              <Sparkles size={16} /> AI Agent
+            </NavLink>
+            <NavLink
+              className="icon-button"
+              to="/documents/new"
+              title="Create document"
+              aria-label="Create document"
+            >
+              <Plus size={18} />
+            </NavLink>
+            <button className="icon-button" type="button" title="Filter" aria-label="Filter">
+              <Filter size={17} />
+            </button>
+            <button className="icon-button" type="button" title="Help" aria-label="Help">
+              <CircleHelp size={17} />
+            </button>
+            <button
+              className="icon-button"
+              disabled={!canUndo}
+              onClick={() =>
+                undo().catch((error) => setNotice({ kind: "error", message: error.message }))
+              }
+              title="Undo"
+              aria-label="Undo"
+            >
               <Undo2 size={18} />
             </button>
-            <button className="icon-button" disabled={!canRedo} onClick={() => redo().catch((error) => setNotice({ kind: "error", message: error.message }))} title="Redo" aria-label="Redo">
+            <button
+              className="icon-button"
+              disabled={!canRedo}
+              onClick={() =>
+                redo().catch((error) => setNotice({ kind: "error", message: error.message }))
+              }
+              title="Redo"
+              aria-label="Redo"
+            >
               <Redo2 size={18} />
             </button>
           </div>
@@ -243,7 +328,9 @@ function WorkbenchShell({ children }) {
         {notice && (
           <div className={`notice notice-${notice.kind || "info"}`} role="status">
             <span>{notice.message}</span>
-            <button onClick={() => setNotice(null)} aria-label="Dismiss notification">×</button>
+            <button onClick={() => setNotice(null)} aria-label="Dismiss notification">
+              ×
+            </button>
           </div>
         )}
 
@@ -266,7 +353,9 @@ function NotFound() {
     <section className="empty-state">
       <CircleAlert size={32} />
       <h1>Route not found</h1>
-      <NavLink className="button primary" to="/">Open dashboard</NavLink>
+      <NavLink className="button primary" to="/">
+        Open dashboard
+      </NavLink>
     </section>
   );
 }

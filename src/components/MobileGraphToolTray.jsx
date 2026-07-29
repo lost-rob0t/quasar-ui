@@ -72,9 +72,7 @@ export default function MobileGraphToolTray() {
   const location = useLocation();
   const navigate = useNavigate();
   const graphRoute = location.pathname === "/graph";
-  const [mobile, setMobile] = useState(
-    () => window.matchMedia?.(MOBILE_QUERY).matches ?? false
-  );
+  const [mobile, setMobile] = useState(() => window.matchMedia?.(MOBILE_QUERY).matches ?? false);
   const [stage, setStage] = useState(null);
   const [open, setOpen] = useState(false);
   const [datasetOpen, setDatasetOpen] = useState(false);
@@ -111,9 +109,7 @@ export default function MobileGraphToolTray() {
         setFocusDisabled(Boolean(hiddenGraphAction("Focus selection")?.disabled));
         setRemoveDisabled(Boolean(hiddenGraphAction("Remove from graph")?.disabled));
         setDeleteDisabled(Boolean(hiddenGraphAction("Delete selected documents")?.disabled));
-        setLabelsOn(
-          hiddenGraphAction("Toggle labels")?.getAttribute("aria-pressed") === "true"
-        );
+        setLabelsOn(hiddenGraphAction("Toggle labels")?.getAttribute("aria-pressed") === "true");
       });
     };
 

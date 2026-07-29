@@ -5,8 +5,10 @@ import { useLocation } from "react-router-dom";
 import { useQuasar } from "../store";
 
 function isStandalone() {
-  return window.matchMedia?.("(display-mode: standalone)").matches
-    || window.navigator.standalone === true;
+  return (
+    window.matchMedia?.("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true
+  );
 }
 
 export default function PwaInstallBridge() {
@@ -46,7 +48,7 @@ export default function PwaInstallBridge() {
       frame = requestAnimationFrame(() => {
         frame = 0;
         const next = document.querySelector(".graph-stage");
-        setStage((current) => current === next ? current : next);
+        setStage((current) => (current === next ? current : next));
       });
     };
     const observer = new MutationObserver(sync);
@@ -64,7 +66,8 @@ export default function PwaInstallBridge() {
     if (!installPrompt) {
       setNotice({
         kind: "info",
-        message: "The browser install prompt is not ready. Use the browser menu and choose Install Quasar or Add to Home Screen."
+        message:
+          "The browser install prompt is not ready. Use the browser menu and choose Install Quasar or Add to Home Screen."
       });
       return;
     }

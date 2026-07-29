@@ -37,14 +37,17 @@ const person = {
 
 describe("actor manifests", () => {
   it("requires an ID and bounded selection contract", () => {
-    expect(() => normalizeActorManifest({ label: "Missing", source: "() => ({ documents: [] })" }))
-      .toThrow("Actor id is required");
-    expect(() => normalizeActorManifest({
-      id: "test.actor",
-      source: "() => ({ documents: [] })",
-      minSelection: 4,
-      maxSelection: 2
-    })).toThrow("Actor maxSelection");
+    expect(() =>
+      normalizeActorManifest({ label: "Missing", source: "() => ({ documents: [] })" })
+    ).toThrow("Actor id is required");
+    expect(() =>
+      normalizeActorManifest({
+        id: "test.actor",
+        source: "() => ({ documents: [] })",
+        minSelection: 4,
+        maxSelection: 2
+      })
+    ).toThrow("Actor maxSelection");
   });
 
   it("explains selection and dtype applicability", () => {
@@ -71,7 +74,9 @@ describe("actor manifests", () => {
 
   it("recognizes bundled actors by both identity and source", () => {
     expect(BUILTIN_ACTORS.every(isBuiltinActor)).toBe(true);
-    expect(isBuiltinActor({ ...BUILTIN_ACTORS[0], source: "() => ({ documents: [] })" })).toBe(false);
+    expect(isBuiltinActor({ ...BUILTIN_ACTORS[0], source: "() => ({ documents: [] })" })).toBe(
+      false
+    );
   });
 
   it("preserves declared runtime capabilities for the host actor boundary", () => {
@@ -82,8 +87,9 @@ describe("actor manifests", () => {
     });
     expect(actor.runtime).toBe("quasar.browser-js.v1");
     expect(actor.capabilities).toEqual(["network.fetch"]);
-    expect(BUILTIN_ACTORS.find((item) => item.id === "quasar.actor.city-legistar-calendar")?.capabilities)
-      .toEqual(["network.fetch"]);
+    expect(
+      BUILTIN_ACTORS.find((item) => item.id === "quasar.actor.city-legistar-calendar")?.capabilities
+    ).toEqual(["network.fetch"]);
   });
 
   it("ships executable worker function sources", () => {
@@ -99,12 +105,9 @@ describe("username actors", () => {
     const result = generateUsernameCandidatesActor({ selection: [person] });
     const candidates = result.documents.filter((document) => document.dtype === "entity");
 
-    expect(candidates.map((document) => document.data.name)).toEqual(expect.arrayContaining([
-      "jqdoe",
-      "janedoe",
-      "jane.doe",
-      "jdoe"
-    ]));
+    expect(candidates.map((document) => document.data.name)).toEqual(
+      expect.arrayContaining(["jqdoe", "janedoe", "jane.doe", "jdoe"])
+    );
     expect(result.documents).toHaveLength(candidates.length * 2);
     result.documents.forEach((document) => expect(() => assertDocument(document)).not.toThrow());
   });
@@ -176,10 +179,12 @@ describe("operator actors", () => {
       data: { target: "Columbus", actor: "quasar.actor.city-legistar-calendar" }
     };
     const selected = actorsForTarget(BUILTIN_ACTORS, target);
-    expect(selected.map((actor) => actor.id)).toEqual(expect.arrayContaining([
-      "quasar.actor.target-input-expansion",
-      "quasar.actor.city-legistar-calendar"
-    ]));
+    expect(selected.map((actor) => actor.id)).toEqual(
+      expect.arrayContaining([
+        "quasar.actor.target-input-expansion",
+        "quasar.actor.city-legistar-calendar"
+      ])
+    );
   });
 
   it("expands URL target inputs into canonical entities and relations", () => {
@@ -193,7 +198,11 @@ describe("operator actors", () => {
     const entity = result.documents.find((document) => document.dtype === "entity");
     const relation = result.documents.find((document) => document.dtype === "relation");
     expect(entity.data).toMatchObject({ etype: "url", website: "https://example.com/path" });
-    expect(relation.data).toMatchObject({ subject: target._id, object: entity._id, predicate: "targets" });
+    expect(relation.data).toMatchObject({
+      subject: target._id,
+      object: entity._id,
+      predicate: "targets"
+    });
     result.documents.forEach((document) => expect(() => assertDocument(document)).not.toThrow());
   });
 
@@ -211,8 +220,11 @@ describe("operator actors", () => {
 
   it("resolves generic city and Legistar URL inputs", () => {
     expect(resolveLegistarClient({ data: { target: "Columbus, Ohio" } })).toBe("columbus");
-    expect(resolveLegistarClient({ data: { target: "https://webapi.legistar.com/v1/newyork/events" } })).toBe("newyork");
-    expect(resolveLegistarClient({ data: { target: "https://chicago.legistar.com/Calendar.aspx" } })).toBe("chicago");
+    expect(
+      resolveLegistarClient({ data: { target: "https://webapi.legistar.com/v1/newyork/events" } })
+    ).toBe("newyork");
+    expect(
+      resolveLegistarClient({ data: { target: "https://chicago.legistar.com/Calendar.aspx" } })
+    ).toBe("chicago");
   });
-
 });

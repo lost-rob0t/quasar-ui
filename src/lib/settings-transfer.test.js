@@ -22,11 +22,15 @@ describe("settings transfer", () => {
   });
 
   it("accepts a versioned Quasar settings file", () => {
-    expect(parseSettingsImport(JSON.stringify({
-      type: "quasar-settings",
-      version: 1,
-      settings: { theme: "paper", serverToken: "drop-me" }
-    }))).toEqual({ theme: "paper" });
+    expect(
+      parseSettingsImport(
+        JSON.stringify({
+          type: "quasar-settings",
+          version: 1,
+          settings: { theme: "paper", serverToken: "drop-me" }
+        })
+      )
+    ).toEqual({ theme: "paper" });
   });
 
   it("rejects unrelated JSON", () => {

@@ -45,15 +45,7 @@ function fieldValue(event, field) {
   return event.target.value;
 }
 
-function MelissaFields({
-  actor,
-  form,
-  installed,
-  onChange,
-  onSave,
-  onClear,
-  onInstall
-}) {
+function MelissaFields({ actor, form, installed, onChange, onSave, onClear, onInstall }) {
   const definition = actorConfigurationDefinition(actor);
   const primary = definition.fields.slice(0, 9);
   const advanced = definition.fields.slice(9);
@@ -61,9 +53,7 @@ function MelissaFields({
   const renderField = (field) => (
     <label
       className={
-        field.key === "licenseKey" || field.key === "proxyTemplate"
-          ? "field full"
-          : "field"
+        field.key === "licenseKey" || field.key === "proxyTemplate" ? "field full" : "field"
       }
       key={field.key}
     >
@@ -74,9 +64,7 @@ function MelissaFields({
       {field.type === "select" ? (
         <select
           value={form[field.key] ?? ""}
-          onChange={(event) =>
-            onChange(field.key, fieldValue(event, field))
-          }
+          onChange={(event) => onChange(field.key, fieldValue(event, field))}
         >
           {(field.options || []).map((option) => (
             <option key={option}>{option}</option>
@@ -84,21 +72,13 @@ function MelissaFields({
         </select>
       ) : (
         <input
-          type={
-            field.type === "secret"
-              ? "password"
-              : field.type === "number"
-                ? "number"
-                : "text"
-          }
+          type={field.type === "secret" ? "password" : field.type === "number" ? "number" : "text"}
           min={field.min}
           max={field.max}
           value={form[field.key] ?? ""}
           placeholder={field.placeholder || ""}
           autoComplete={field.type === "secret" ? "off" : undefined}
-          onChange={(event) =>
-            onChange(field.key, fieldValue(event, field))
-          }
+          onChange={(event) => onChange(field.key, fieldValue(event, field))}
         />
       )}
     </label>
@@ -114,9 +94,7 @@ function MelissaFields({
           <p className="muted">{definition.description}</p>
         </div>
         <div className="connection-badges">
-          <span
-            className={`sync-badge sync-${installed ? "active" : "offline"}`}
-          >
+          <span className={`sync-badge sync-${installed ? "active" : "offline"}`}>
             {installed ? "pack installed" : "pack not installed"}
           </span>
           <span
@@ -124,9 +102,7 @@ function MelissaFields({
               String(form.licenseKey || "").trim() ? "active" : "offline"
             }`}
           >
-            {String(form.licenseKey || "").trim()
-              ? "configured"
-              : "API key required"}
+            {String(form.licenseKey || "").trim() ? "configured" : "API key required"}
           </span>
         </div>
       </div>
@@ -152,32 +128,18 @@ function MelissaFields({
 
 export default function ActorConfigurationBridge() {
   const location = useLocation();
-  const {
-    actors = [],
-    settings,
-    persistSettings,
-    setNotice
-  } = useQuasar();
+  const { actors = [], settings, persistSettings, setNotice } = useQuasar();
   const [host, setHost] = useState(null);
   const [melissaForm, setMelissaForm] = useState({});
   const [selectedActorId, setSelectedActorId] = useState("");
   const [jsonText, setJsonText] = useState("{}");
 
-  const installedMelissaActor = useMemo(
-    () => actors.find(isMelissaActor) || null,
-    [actors]
-  );
+  const installedMelissaActor = useMemo(() => actors.find(isMelissaActor) || null, [actors]);
   const melissaActor = installedMelissaActor || MELISSA_ACTORS[0];
   const melissaInstalled = Boolean(installedMelissaActor);
-  const ordinaryActors = useMemo(
-    () => actors.filter((actor) => !isMelissaActor(actor)),
-    [actors]
-  );
+  const ordinaryActors = useMemo(() => actors.filter((actor) => !isMelissaActor(actor)), [actors]);
   const selectedActor = useMemo(
-    () =>
-      ordinaryActors.find((actor) => actor.id === selectedActorId) ||
-      ordinaryActors[0] ||
-      null,
+    () => ordinaryActors.find((actor) => actor.id === selectedActorId) || ordinaryActors[0] || null,
     [ordinaryActors, selectedActorId]
   );
 
@@ -213,9 +175,7 @@ export default function ActorConfigurationBridge() {
     if (selectedActor.id !== selectedActorId) {
       setSelectedActorId(selectedActor.id);
     }
-    setJsonText(
-      JSON.stringify(loadActorConfiguration(selectedActor), null, 2)
-    );
+    setJsonText(JSON.stringify(loadActorConfiguration(selectedActor), null, 2));
   }, [selectedActor, selectedActorId]);
 
   function saveMelissa() {
@@ -250,9 +210,7 @@ export default function ActorConfigurationBridge() {
       });
       setNotice({
         kind: "success",
-        message: melissaInstalled
-          ? "Melissa actor pack refreshed"
-          : "Melissa actor pack installed"
+        message: melissaInstalled ? "Melissa actor pack refreshed" : "Melissa actor pack installed"
       });
     } catch (error) {
       setNotice({ kind: "error", message: error.message });
@@ -302,8 +260,7 @@ export default function ActorConfigurationBridge() {
           </h2>
           <p className="muted">
             Configuration stays in this browser and is passed to actor code as{" "}
-            <code>context.configuration</code>. It is not included in settings
-            exports.
+            <code>context.configuration</code>. It is not included in settings exports.
           </p>
         </div>
       </div>
@@ -312,9 +269,7 @@ export default function ActorConfigurationBridge() {
         actor={melissaActor}
         form={melissaForm}
         installed={melissaInstalled}
-        onChange={(key, value) =>
-          setMelissaForm((current) => ({ ...current, [key]: value }))
-        }
+        onChange={(key, value) => setMelissaForm((current) => ({ ...current, [key]: value }))}
         onSave={saveMelissa}
         onClear={clearMelissa}
         onInstall={installMelissa}
@@ -324,9 +279,7 @@ export default function ActorConfigurationBridge() {
         <div className="section-heading">
           <div>
             <h3>Other actor configuration</h3>
-            <p className="muted">
-              Store arbitrary JSON for bundled or custom actors.
-            </p>
+            <p className="muted">Store arbitrary JSON for bundled or custom actors.</p>
           </div>
         </div>
         <label className="field">

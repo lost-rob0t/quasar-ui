@@ -90,7 +90,10 @@ export default function MobileGestureMenu({ open, onOpenChange }) {
       </button>
 
       {open && (
-        <div className="mobile-gesture-backdrop" onPointerDown={(event) => event.target === event.currentTarget && onOpenChange(false)}>
+        <div
+          className="mobile-gesture-backdrop"
+          onPointerDown={(event) => event.target === event.currentTarget && onOpenChange(false)}
+        >
           <section
             className="mobile-gesture-sheet"
             role="dialog"
@@ -103,14 +106,35 @@ export default function MobileGestureMenu({ open, onOpenChange }) {
           >
             <header>
               <span className="mobile-gesture-grip" aria-hidden="true" />
-              <strong><Menu size={17} /> Menu</strong>
-              <button className="icon-button" type="button" aria-label="Close navigation" onClick={() => onOpenChange(false)}>
+              <strong>
+                <Menu size={17} /> Menu
+              </strong>
+              <button
+                className="icon-button"
+                type="button"
+                aria-label="Close navigation"
+                onClick={() => onOpenChange(false)}
+              >
                 <X size={18} />
               </button>
             </header>
             <div className="mobile-gesture-actions" aria-label="History actions">
-              <button className="button" type="button" disabled={!canUndo} onClick={() => runHistory(undo)}><Undo2 size={18} /> Undo</button>
-              <button className="button" type="button" disabled={!canRedo} onClick={() => runHistory(redo)}><Redo2 size={18} /> Redo</button>
+              <button
+                className="button"
+                type="button"
+                disabled={!canUndo}
+                onClick={() => runHistory(undo)}
+              >
+                <Undo2 size={18} /> Undo
+              </button>
+              <button
+                className="button"
+                type="button"
+                disabled={!canRedo}
+                onClick={() => runHistory(redo)}
+              >
+                <Redo2 size={18} /> Redo
+              </button>
             </div>
             <nav className="mobile-gesture-grid" aria-label="Mobile navigation">
               {navigation.map(({ to, label, Icon, end }) => (
@@ -118,7 +142,9 @@ export default function MobileGestureMenu({ open, onOpenChange }) {
                   key={to}
                   to={to}
                   end={end}
-                  className={({ isActive }) => isActive ? "mobile-gesture-link active" : "mobile-gesture-link"}
+                  className={({ isActive }) =>
+                    isActive ? "mobile-gesture-link active" : "mobile-gesture-link"
+                  }
                   onClick={() => onOpenChange(false)}
                 >
                   <Icon size={22} aria-hidden="true" />

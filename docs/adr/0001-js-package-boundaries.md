@@ -15,17 +15,17 @@ The repository contains typed package entrypoints plus legacy JavaScript feature
 
 The application is split into these zones:
 
-| Zone | Responsibility | May depend on |
-| --- | --- | --- |
-| `core` | Canonical types, command values, validation contracts | nothing platform-specific |
-| `storage` | Local canonical persistence and workspace persistence | `core` |
-| `graph` | `GraphAdapter`, layouts, renderer translation | `core` |
-| `actions` | Reversible commands, batches, actors, worker plans | `core` |
-| `projections` | Pure graph, table, statistics, map, and timeline projections | `core` |
-| `integrations` | Optional server, CouchDB, queue, and provider adapters | `core`, `actions` |
-| `components` | Generic UI and view components | `core`, `graph`, `actions`, `projections` |
-| `app` | Composition, routing, providers, feature wiring | every runtime zone except `testing` |
-| `testing` | Fixtures and test-only helpers | any zone |
+| Zone           | Responsibility                                               | May depend on                             |
+| -------------- | ------------------------------------------------------------ | ----------------------------------------- |
+| `core`         | Canonical types, command values, validation contracts        | nothing platform-specific                 |
+| `storage`      | Local canonical persistence and workspace persistence        | `core`                                    |
+| `graph`        | `GraphAdapter`, layouts, renderer translation                | `core`                                    |
+| `actions`      | Reversible commands, batches, actors, worker plans           | `core`                                    |
+| `projections`  | Pure graph, table, statistics, map, and timeline projections | `core`                                    |
+| `integrations` | Optional server, CouchDB, queue, and provider adapters       | `core`, `actions`                         |
+| `components`   | Generic UI and view components                               | `core`, `graph`, `actions`, `projections` |
+| `app`          | Composition, routing, providers, feature wiring              | every runtime zone except `testing`       |
+| `testing`      | Fixtures and test-only helpers                               | any zone                                  |
 
 Dependencies point downward toward `core`. A lower zone cannot import a UI or composition zone. Package implementation files cannot reach into `src/lib`; a package `index.ts` may temporarily bridge one legacy module while that module is migrated.
 

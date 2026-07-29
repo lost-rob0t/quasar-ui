@@ -9,7 +9,8 @@ import { useQuasar } from "../store";
 
 function includesDocument(document, query) {
   if (!query) return true;
-  const text = `${document._id} ${document.dataset} ${document.dtype} ${document.title || ""} ${document.summary || ""} ${JSON.stringify(document.data)} ${JSON.stringify(document.sources || [])}`.toLowerCase();
+  const text =
+    `${document._id} ${document.dataset} ${document.dtype} ${document.title || ""} ${document.summary || ""} ${JSON.stringify(document.data)} ${JSON.stringify(document.sources || [])}`.toLowerCase();
   return text.includes(query.toLowerCase());
 }
 
@@ -61,7 +62,9 @@ function DatasetsPage({ documents, query, setQuery }) {
           <h1>Datasets</h1>
           <p>Browse the datasets represented in the local StarIntel corpus.</p>
         </div>
-        <Link className="button primary" to="/documents/new"><Plus size={16} /> Add document</Link>
+        <Link className="button primary" to="/documents/new">
+          <Plus size={16} /> Add document
+        </Link>
       </div>
 
       <div className="filter-bar">
@@ -71,21 +74,36 @@ function DatasetsPage({ documents, query, setQuery }) {
           aria-label="Search datasets"
           placeholder="Search datasets"
         />
-        <span className="result-count">{visible.length} / {rows.length}</span>
+        <span className="result-count">
+          {visible.length} / {rows.length}
+        </span>
       </div>
 
       <div className="table-panel">
         <table>
-          <thead><tr><th>Dataset</th><th>Documents</th><th>Object types</th><th>Updated</th><th>Actions</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Dataset</th>
+              <th>Documents</th>
+              <th>Object types</th>
+              <th>Updated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
           <tbody>
             {visible.map((row) => (
               <tr key={row.name}>
-                <td><strong>{row.name}</strong></td>
+                <td>
+                  <strong>{row.name}</strong>
+                </td>
                 <td>{row.documents}</td>
                 <td>{row.types.join(", ") || "—"}</td>
                 <td>{row.updatedAt ? new Date(row.updatedAt).toLocaleString() : "—"}</td>
                 <td>
-                  <Link className="button small" to={`/documents?dataset=${encodeURIComponent(row.name)}`}>
+                  <Link
+                    className="button small"
+                    to={`/documents?dataset=${encodeURIComponent(row.name)}`}
+                  >
                     Open documents
                   </Link>
                 </td>
@@ -106,25 +124,42 @@ export function DocumentsPage() {
   const dtype = params.get("dtype") || "";
   const dataset = params.get("dataset") || "";
   const group = params.get("group") || "";
-  const datasets = useMemo(() => [...new Set(documents.map((document) => document.dataset).filter(Boolean))].sort(), [documents]);
-  const visible = useMemo(() => documents.filter((document) =>
-    (!dtype || document.dtype === dtype)
-    && (!dataset || document.dataset === dataset)
-    && includesDocument(document, query)
-  ), [documents, dtype, dataset, query]);
+  const datasets = useMemo(
+    () => [...new Set(documents.map((document) => document.dataset).filter(Boolean))].sort(),
+    [documents]
+  );
+  const visible = useMemo(
+    () =>
+      documents.filter(
+        (document) =>
+          (!dtype || document.dtype === dtype) &&
+          (!dataset || document.dataset === dataset) &&
+          includesDocument(document, query)
+      ),
+    [documents, dtype, dataset, query]
+  );
 
   const set = (key, value) => {
     const next = new URLSearchParams(params);
-    if (value) next.set(key, value); else next.delete(key);
+    if (value) next.set(key, value);
+    else next.delete(key);
     setParams(next);
   };
 
   async function removeDocument(document) {
     const deleteIds = connectedDocumentIds(documents, [document._id]);
-    if (!window.confirm(`Delete ${document._id} and ${deleteIds.length - 1} connected relation document(s)?`)) return;
+    if (
+      !window.confirm(
+        `Delete ${document._id} and ${deleteIds.length - 1} connected relation document(s)?`
+      )
+    )
+      return;
     try {
       await execute(
-        operation.batch(deleteIds.map((item) => operation.remove(item)), "Delete corpus documents"),
+        operation.batch(
+          deleteIds.map((item) => operation.remove(item)),
+          "Delete corpus documents"
+        ),
         `Delete ${deleteIds.length} corpus document(s)`
       );
     } catch (error) {
@@ -133,7 +168,9 @@ export function DocumentsPage() {
   }
 
   if (group === "dataset") {
-    return <DatasetsPage documents={documents} query={query} setQuery={(value) => set("q", value)} />;
+    return (
+      <DatasetsPage documents={documents} query={query} setQuery={(value) => set("q", value)} />
+    );
   }
 
   return (
@@ -145,41 +182,87 @@ export function DocumentsPage() {
           <p>Search and inspect the local StarIntel v0.9 corpus.</p>
         </div>
         <div className="button-row">
-          <button className="button" onClick={() => downloadText("starintel-documents.jsonl", documentsToJsonl(visible))}><Download size={16} /> Export visible</button>
-          <Link className="button primary" to="/documents/new"><Plus size={16} /> Add document</Link>
+          <button
+            className="button"
+            onClick={() => downloadText("starintel-documents.jsonl", documentsToJsonl(visible))}
+          >
+            <Download size={16} /> Export visible
+          </button>
+          <Link className="button primary" to="/documents/new">
+            <Plus size={16} /> Add document
+          </Link>
         </div>
       </div>
 
       <div className="filter-bar">
-        <input value={query} onChange={(event) => set("q", event.target.value)} placeholder="Search all document fields" />
+        <input
+          value={query}
+          onChange={(event) => set("q", event.target.value)}
+          placeholder="Search all document fields"
+        />
         <select value={dtype} onChange={(event) => set("dtype", event.target.value)}>
           <option value="">All dtypes</option>
-          {dtypes.map((name) => <option key={name} value={name}>{name}</option>)}
+          {dtypes.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
         </select>
         <select value={dataset} onChange={(event) => set("dataset", event.target.value)}>
           <option value="">All datasets</option>
-          {datasets.map((name) => <option key={name} value={name}>{name}</option>)}
+          {datasets.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
         </select>
-        <span className="result-count">{visible.length} / {documents.length}</span>
+        <span className="result-count">
+          {visible.length} / {documents.length}
+        </span>
       </div>
 
       <div className="table-panel">
         <table>
-          <thead><tr><th>Document</th><th>Type</th><th>Dataset</th><th>Updated</th><th>Evidence</th><th>Actions</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Document</th>
+              <th>Type</th>
+              <th>Dataset</th>
+              <th>Updated</th>
+              <th>Evidence</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
           <tbody>
             {visible.map((document) => (
               <tr key={document._id}>
                 <td>
-                  <Link className="document-link" to={`/documents/${encodeURIComponent(document._id)}`}>{documentLabel(document)}</Link>
+                  <Link
+                    className="document-link"
+                    to={`/documents/${encodeURIComponent(document._id)}`}
+                  >
+                    {documentLabel(document)}
+                  </Link>
                   <code>{document._id}</code>
                   {document.summary && <small>{document.summary}</small>}
                 </td>
-                <td><span className={`dtype dtype-${document.dtype}`}>{document.dtype}</span></td>
+                <td>
+                  <span className={`dtype dtype-${document.dtype}`}>{document.dtype}</span>
+                </td>
                 <td>{document.dataset}</td>
                 <td>{new Date(document.date_updated).toLocaleString()}</td>
-                <td>{document.evidence?.length || 0} evidence · {document.sources?.length || 0} sources</td>
                 <td>
-                  <button className="icon-button danger" type="button" aria-label={`Delete ${documentLabel(document)}`} title="Delete document" onClick={() => removeDocument(document)}>
+                  {document.evidence?.length || 0} evidence · {document.sources?.length || 0}{" "}
+                  sources
+                </td>
+                <td>
+                  <button
+                    className="icon-button danger"
+                    type="button"
+                    aria-label={`Delete ${documentLabel(document)}`}
+                    title="Delete document"
+                    onClick={() => removeDocument(document)}
+                  >
                     <Trash2 size={15} />
                   </button>
                 </td>
@@ -194,7 +277,12 @@ export function DocumentsPage() {
 }
 
 function KeyValue({ label, children }) {
-  return <div className="key-value"><span>{label}</span><strong>{children || "—"}</strong></div>;
+  return (
+    <div className="key-value">
+      <span>{label}</span>
+      <strong>{children || "—"}</strong>
+    </div>
+  );
 }
 
 export function DocumentPage() {
@@ -204,14 +292,31 @@ export function DocumentPage() {
   const document = documents.find((item) => item._id === id);
   const website = safeExternalUrl(document?.data?.website);
 
-  if (!document) return <section className="empty-state"><h1>Document not found</h1><code>{id}</code><Link className="button" to="/documents">Back to documents</Link></section>;
+  if (!document)
+    return (
+      <section className="empty-state">
+        <h1>Document not found</h1>
+        <code>{id}</code>
+        <Link className="button" to="/documents">
+          Back to documents
+        </Link>
+      </section>
+    );
 
   async function remove() {
     const deleteIds = connectedDocumentIds(documents, [document._id]);
-    if (!window.confirm(`Delete ${document._id} and ${deleteIds.length - 1} connected relation document(s)?`)) return;
+    if (
+      !window.confirm(
+        `Delete ${document._id} and ${deleteIds.length - 1} connected relation document(s)?`
+      )
+    )
+      return;
     try {
       await execute(
-        operation.batch(deleteIds.map((item) => operation.remove(item)), "Delete corpus documents"),
+        operation.batch(
+          deleteIds.map((item) => operation.remove(item)),
+          "Delete corpus documents"
+        ),
         `Delete ${deleteIds.length} corpus document(s)`
       );
       navigate("/documents");
@@ -224,17 +329,34 @@ export function DocumentPage() {
     <article>
       <div className="page-heading document-heading">
         <div>
-          <Link className="back-link" to="/documents"><ArrowLeft size={15} /> Documents</Link>
-          <span className="eyebrow">{document.dtype} · {document.dataset}</span>
+          <Link className="back-link" to="/documents">
+            <ArrowLeft size={15} /> Documents
+          </Link>
+          <span className="eyebrow">
+            {document.dtype} · {document.dataset}
+          </span>
           <h1>{documentLabel(document)}</h1>
           <code>{document._id}</code>
           {document.summary && <p>{document.summary}</p>}
         </div>
         <div className="button-row">
-          <Link className="button" to={`/graph?node=${encodeURIComponent(document._id)}`}><Network size={16} /> Graph</Link>
-          {website && <a className="button" href={website} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Open website</a>}
-          <Link className="button primary" to={`/documents/${encodeURIComponent(document._id)}/edit`}><Edit3 size={16} /> Edit</Link>
-          <button className="button danger" onClick={remove}><Trash2 size={16} /> Delete</button>
+          <Link className="button" to={`/graph?node=${encodeURIComponent(document._id)}`}>
+            <Network size={16} /> Graph
+          </Link>
+          {website && (
+            <a className="button" href={website} target="_blank" rel="noreferrer">
+              <ExternalLink size={16} /> Open website
+            </a>
+          )}
+          <Link
+            className="button primary"
+            to={`/documents/${encodeURIComponent(document._id)}/edit`}
+          >
+            <Edit3 size={16} /> Edit
+          </Link>
+          <button className="button danger" onClick={remove}>
+            <Trash2 size={16} /> Delete
+          </button>
         </div>
       </div>
 
@@ -247,7 +369,12 @@ export function DocumentPage() {
         <KeyValue label="Updated">{new Date(document.date_updated).toLocaleString()}</KeyValue>
       </div>
 
-      {document.description && <section className="panel"><h2>Description</h2><p className="prose">{document.description}</p></section>}
+      {document.description && (
+        <section className="panel">
+          <h2>Description</h2>
+          <p className="prose">{document.description}</p>
+        </section>
+      )}
 
       <section className="panel">
         <h2>Typed data</h2>
@@ -256,21 +383,31 @@ export function DocumentPage() {
 
       <div className="two-column">
         <section className="panel">
-          <h2>Sources <span>{document.sources?.length || 0}</span></h2>
+          <h2>
+            Sources <span>{document.sources?.length || 0}</span>
+          </h2>
           {(document.sources || []).map((source, index) => (
             <div className="record-list-item" key={source.source_id || source.url || index}>
               <strong>{source.title || source.name || source.url || `Source ${index + 1}`}</strong>
               <small>{source.publisher || source.organization || source.kind}</small>
-              {(source.url || source.uri) && <a href={source.url || source.uri} target="_blank" rel="noreferrer">Open source</a>}
+              {(source.url || source.uri) && (
+                <a href={source.url || source.uri} target="_blank" rel="noreferrer">
+                  Open source
+                </a>
+              )}
             </div>
           ))}
           {!document.sources?.length && <p className="muted">No sources.</p>}
         </section>
         <section className="panel">
-          <h2>Evidence <span>{document.evidence?.length || 0}</span></h2>
+          <h2>
+            Evidence <span>{document.evidence?.length || 0}</span>
+          </h2>
           {(document.evidence || []).map((evidence, index) => (
             <div className="record-list-item" key={evidence.evidence_id || index}>
-              <strong>{evidence.claim || evidence.observation || evidence.kind || `Evidence ${index + 1}`}</strong>
+              <strong>
+                {evidence.claim || evidence.observation || evidence.kind || `Evidence ${index + 1}`}
+              </strong>
               <small>{evidence.role || evidence.status}</small>
               {evidence.excerpt && <p>{evidence.excerpt}</p>}
             </div>

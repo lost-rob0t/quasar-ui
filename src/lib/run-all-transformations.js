@@ -13,9 +13,7 @@ function actorRecords(document) {
 
 function transformationActors(document) {
   const extension = document?.extensions?.[TRANSFORMATION_RUN_EXTENSION];
-  return extension?.actors && typeof extension.actors === "object"
-    ? extension.actors
-    : {};
+  return extension?.actors && typeof extension.actors === "object" ? extension.actors : {};
 }
 
 function relationEndpoints(document) {
@@ -111,11 +109,7 @@ export function transformationBatches(actorManifest, candidates) {
   return batches;
 }
 
-export function mergeTransformationDocuments(
-  currentDocuments,
-  nextDocuments,
-  removedIds = []
-) {
+export function mergeTransformationDocuments(currentDocuments, nextDocuments, removedIds = []) {
   const removed = new Set(removedIds || []);
   const merged = new Map(
     (currentDocuments || [])

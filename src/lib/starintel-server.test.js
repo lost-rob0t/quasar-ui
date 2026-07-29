@@ -10,20 +10,30 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("starintel-server client", () => {
   it("normalizes server URLs and auth headers", () => {
-    expect(starIntelServerInternals.serverUrl({ serverUrl: "http://localhost:5000/" }, "/")).toBe("http://localhost:5000/");
+    expect(starIntelServerInternals.serverUrl({ serverUrl: "http://localhost:5000/" }, "/")).toBe(
+      "http://localhost:5000/"
+    );
     expect(starIntelServerInternals.authorization({ serverToken: "token" })).toBe("Bearer token");
   });
 
   it("falls back to the legacy capability seed", async () => {
-    const fetch = vi.fn()
+    const fetch = vi
+      .fn()
       .mockResolvedValueOnce(new Response("missing", { status: 404 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({
-        doc_spec_version: "0.7.3",
-        "default-dataset": "starintel"
-      }), { status: 200 }));
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            doc_spec_version: "0.7.3",
+            "default-dataset": "starintel"
+          }),
+          { status: 200 }
+        )
+      );
     vi.stubGlobal("fetch", fetch);
 
-    await expect(probeStarIntelServer({ serverUrl: "http://localhost:5000" })).resolves.toMatchObject({
+    await expect(
+      probeStarIntelServer({ serverUrl: "http://localhost:5000" })
+    ).resolves.toMatchObject({
       mode: "legacy",
       capabilities: { schemaRevision: "0.7.3", dataset: "starintel" }
     });

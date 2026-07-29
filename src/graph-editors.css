@@ -23,9 +23,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: .75rem;
+  gap: 0.75rem;
   min-height: 48px;
-  padding: .55rem .65rem;
+  padding: 0.55rem 0.65rem;
   border-bottom: 1px solid var(--line);
 }
 
@@ -33,25 +33,25 @@
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  font-size: .95rem;
+  font-size: 0.95rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .graph-compact-form {
   display: grid;
-  gap: .65rem;
+  gap: 0.65rem;
   max-height: calc(min(680px, 100dvh - 16px) - 49px);
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: .7rem;
+  padding: 0.7rem;
 }
 
 .graph-editor-type-heading,
 .graph-reference-readonly {
   display: grid;
-  gap: .15rem;
-  padding: .6rem;
+  gap: 0.15rem;
+  padding: 0.6rem;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
@@ -65,20 +65,20 @@
 .graph-editor-type-heading strong,
 .graph-reference-readonly strong {
   color: var(--white);
-  font-size: .78rem;
+  font-size: 0.78rem;
 }
 
 .graph-editor-type-heading span,
 .graph-reference-readonly span,
 .graph-reference-readonly code {
   color: var(--muted);
-  font-size: .66rem;
+  font-size: 0.66rem;
 }
 
 .graph-editor-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .6rem;
+  gap: 0.6rem;
 }
 
 .graph-editor-fields .field,
@@ -91,9 +91,9 @@
 .graph-relation-grid .field small,
 .graph-compact-form > .field small {
   display: block;
-  margin: .16rem 0 .35rem;
+  margin: 0.16rem 0 0.35rem;
   color: var(--muted);
-  font-size: .64rem;
+  font-size: 0.64rem;
   line-height: 1.25;
 }
 
@@ -115,11 +115,11 @@
   position: absolute;
   z-index: 130;
   inset-inline: 0;
-  top: calc(100% + .35rem);
+  top: calc(100% + 0.35rem);
   display: grid;
-  gap: .4rem;
+  gap: 0.4rem;
   max-height: min(420px, 55dvh);
-  padding: .45rem;
+  padding: 0.45rem;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
   border-radius: 9px;
@@ -134,9 +134,9 @@
 .graph-picker-search {
   display: flex;
   align-items: center;
-  gap: .4rem;
+  gap: 0.4rem;
   min-height: 40px;
-  padding: 0 .5rem;
+  padding: 0 0.5rem;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: var(--surface);
@@ -155,7 +155,7 @@
 
 .graph-picker-options {
   display: grid;
-  gap: .18rem;
+  gap: 0.18rem;
   min-height: 0;
   max-height: min(330px, 42dvh);
   overflow-y: auto;
@@ -175,8 +175,8 @@
 
 .graph-picker-options > button {
   display: grid;
-  gap: .12rem;
-  padding: .48rem .55rem;
+  gap: 0.12rem;
+  padding: 0.48rem 0.55rem;
 }
 
 .graph-picker-options > button:hover,
@@ -199,7 +199,7 @@
 .graph-picker-options strong,
 .graph-picker-options code {
   overflow: hidden;
-  font-size: .74rem;
+  font-size: 0.74rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -208,20 +208,20 @@
 .graph-picker-options span,
 .graph-picker-empty {
   color: var(--muted);
-  font-size: .62rem;
+  font-size: 0.62rem;
   line-height: 1.35;
 }
 
 .graph-picker-empty {
-  padding: .85rem;
+  padding: 0.85rem;
   text-align: center;
 }
 
 .graph-select-trigger {
   display: grid;
-  gap: .1rem;
+  gap: 0.1rem;
   min-height: 44px;
-  padding: .45rem .55rem;
+  padding: 0.45rem 0.55rem;
   border-color: var(--line);
   background: var(--surface);
 }
@@ -235,20 +235,20 @@
 }
 
 .graph-select-trigger span {
-  font-size: .76rem;
+  font-size: 0.76rem;
 }
 
 .graph-select-trigger code {
-  font-size: .61rem;
+  font-size: 0.61rem;
 }
 
 .predicate-add-action {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: .35rem;
+  gap: 0.35rem;
   min-height: 38px;
-  padding: .4rem;
+  padding: 0.4rem;
   border-color: var(--line);
   background: var(--surface);
   text-align: center;
@@ -256,8 +256,8 @@
 
 .custom-predicate-form {
   display: grid;
-  gap: .5rem;
-  padding-top: .45rem;
+  gap: 0.5rem;
+  padding-top: 0.45rem;
   border-top: 1px solid var(--line);
 }
 
@@ -274,24 +274,24 @@
 .graph-relation-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: .6rem;
+  gap: 0.6rem;
 }
 
 .graph-editor-secondary-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: .4rem;
+  gap: 0.4rem;
 }
 
 .graph-editor-actions {
   position: sticky;
-  bottom: -.7rem;
+  bottom: -0.7rem;
   z-index: 8;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
-  gap: .4rem;
-  margin: .1rem -.7rem -.7rem;
-  padding: .65rem .7rem max(.65rem, env(safe-area-inset-bottom));
+  gap: 0.4rem;
+  margin: 0.1rem -0.7rem -0.7rem;
+  padding: 0.65rem 0.7rem max(0.65rem, env(safe-area-inset-bottom));
   border-top: 1px solid var(--line);
   background: color-mix(in srgb, var(--panel) 94%, transparent);
   backdrop-filter: blur(12px);
@@ -324,7 +324,7 @@
 
   .graph-compact-form {
     max-height: calc(min(88dvh, 100dvh - env(safe-area-inset-top)) - 49px);
-    padding-inline: max(.7rem, env(safe-area-inset-left)) max(.7rem, env(safe-area-inset-right));
+    padding-inline: max(0.7rem, env(safe-area-inset-left)) max(0.7rem, env(safe-area-inset-right));
   }
 
   .graph-editor-fields,
@@ -336,7 +336,8 @@
   .predicate-popover,
   .graph-select-popover {
     position: fixed;
-    inset: auto max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    inset: auto max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
     max-height: min(66dvh, 560px);
   }
 

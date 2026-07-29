@@ -41,8 +41,22 @@ describe("predicate catalog", () => {
 
   it("prioritizes recent and dataset predicates", () => {
     const catalog = [
-      { id: "alpha", label: "Alpha", aliases: [], sourceTypes: ["*"], targetTypes: ["*"], common: true },
-      { id: "beta", label: "Beta", aliases: [], sourceTypes: ["*"], targetTypes: ["*"], common: false }
+      {
+        id: "alpha",
+        label: "Alpha",
+        aliases: [],
+        sourceTypes: ["*"],
+        targetTypes: ["*"],
+        common: true
+      },
+      {
+        id: "beta",
+        label: "Beta",
+        aliases: [],
+        sourceTypes: ["*"],
+        targetTypes: ["*"],
+        common: false
+      }
     ];
     const results = searchPredicates(catalog, { recentIds: ["beta"], datasetIds: ["beta"] });
     expect(results[0].id).toBe("beta");
@@ -50,15 +64,33 @@ describe("predicate catalog", () => {
 
   it("filters source and target compatibility", () => {
     const catalog = [
-      { id: "employed_by", label: "Employed by", aliases: [], sourceTypes: ["person"], targetTypes: ["org"] },
-      { id: "located_in", label: "Located in", aliases: [], sourceTypes: ["org"], targetTypes: ["location"] }
+      {
+        id: "employed_by",
+        label: "Employed by",
+        aliases: [],
+        sourceTypes: ["person"],
+        targetTypes: ["org"]
+      },
+      {
+        id: "located_in",
+        label: "Located in",
+        aliases: [],
+        sourceTypes: ["org"],
+        targetTypes: ["location"]
+      }
     ];
-    expect(searchPredicates(catalog, { sourceType: "person", targetType: "org" }).map((item) => item.id)).toEqual(["employed_by"]);
+    expect(
+      searchPredicates(catalog, { sourceType: "person", targetType: "org" }).map((item) => item.id)
+    ).toEqual(["employed_by"]);
   });
 
   it("normalizes and validates custom predicates", () => {
     expect(normalizeCustomPredicateId("  Employed By  ")).toBe("employed_by");
-    expect(validateCustomPredicateId("employed_by")).toEqual({ valid: true, id: "employed_by", message: "" });
+    expect(validateCustomPredicateId("employed_by")).toEqual({
+      valid: true,
+      id: "employed_by",
+      message: ""
+    });
     expect(validateCustomPredicateId("9bad predicate").valid).toBe(false);
   });
 

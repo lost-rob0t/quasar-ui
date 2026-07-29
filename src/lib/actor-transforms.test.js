@@ -7,10 +7,18 @@ import {
 } from "./actor-transforms";
 
 class MemoryStorage {
-  constructor() { this.values = new Map(); }
-  getItem(key) { return this.values.has(key) ? this.values.get(key) : null; }
-  setItem(key, value) { this.values.set(key, String(value)); }
-  removeItem(key) { this.values.delete(key); }
+  constructor() {
+    this.values = new Map();
+  }
+  getItem(key) {
+    return this.values.has(key) ? this.values.get(key) : null;
+  }
+  setItem(key, value) {
+    this.values.set(key, String(value));
+  }
+  removeItem(key) {
+    this.values.delete(key);
+  }
 }
 
 let previousStorage;
@@ -83,7 +91,8 @@ describe("actor transform results", () => {
     const actor = {
       id: "test.actor",
       label: "Test actor",
-      source: "(context) => ({ operations: [{ op: 'remove_document', id: context.configuration.removeId }] })"
+      source:
+        "(context) => ({ operations: [{ op: 'remove_document', id: context.configuration.removeId }] })"
     };
     saveActorConfiguration(actor, { removeId: "x" });
     const wrapped = actorWithTransformEnvelope(actor);
@@ -108,15 +117,19 @@ describe("actor transform results", () => {
       title: "Created org",
       data: { name: "Created org" }
     };
-    const transform = buildActorTransform({
-      operations: [
-        { op: "update_document", document: updated },
-        { op: "create_document", document: created },
-        { op: "create_relation", document: relation },
-        { op: "remove_document", id: created._id },
-        { op: "remove_relation", id: relation._id }
-      ]
-    }, [org], "Actor: test");
+    const transform = buildActorTransform(
+      {
+        operations: [
+          { op: "update_document", document: updated },
+          { op: "create_document", document: created },
+          { op: "create_relation", document: relation },
+          { op: "remove_document", id: created._id },
+          { op: "remove_relation", id: relation._id }
+        ]
+      },
+      [org],
+      "Actor: test"
+    );
 
     expect(transform.command.type).toBe("batch");
     expect(transform.command.operations).toHaveLength(5);
@@ -133,29 +146,50 @@ describe("actor transform results", () => {
   });
 
   it("preflights the whole plan before returning a mutation command", () => {
-    expect(() => buildActorTransform({
-      operations: [{ op: "create_document", document: org }]
-    }, [org])).toThrow("cannot create existing document");
+    expect(() =>
+      buildActorTransform(
+        {
+          operations: [{ op: "create_document", document: org }]
+        },
+        [org]
+      )
+    ).toThrow("cannot create existing document");
 
-    expect(() => buildActorTransform({
-      operations: [{ op: "update_document", document: org }]
-    }, [])).toThrow("cannot update missing document");
+    expect(() =>
+      buildActorTransform(
+        {
+          operations: [{ op: "update_document", document: org }]
+        },
+        []
+      )
+    ).toThrow("cannot update missing document");
 
-    expect(() => buildActorTransform({
-      operations: [{ op: "remove_relation", id: org._id }]
-    }, [org])).toThrow("cannot remove non-relation");
+    expect(() =>
+      buildActorTransform(
+        {
+          operations: [{ op: "remove_relation", id: org._id }]
+        },
+        [org]
+      )
+    ).toThrow("cannot remove non-relation");
   });
 
   it("rejects unsupported operation names and malformed documents", () => {
-    expect(() => normalizeActorTransformResult({
-      operations: [{ op: "mutate_cytoscape", id: org._id }]
-    })).toThrow("Unsupported actor operation");
+    expect(() =>
+      normalizeActorTransformResult({
+        operations: [{ op: "mutate_cytoscape", id: org._id }]
+      })
+    ).toThrow("Unsupported actor operation");
 
-    expect(() => normalizeActorTransformResult({
-      operations: [{
-        op: "create_document",
-        document: { ...org, dtype: "not-a-real-dtype" }
-      }]
-    })).toThrow("Invalid StarIntel v0.9 document");
+    expect(() =>
+      normalizeActorTransformResult({
+        operations: [
+          {
+            op: "create_document",
+            document: { ...org, dtype: "not-a-real-dtype" }
+          }
+        ]
+      })
+    ).toThrow("Invalid StarIntel v0.9 document");
   });
 });

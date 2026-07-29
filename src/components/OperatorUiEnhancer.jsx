@@ -65,8 +65,9 @@ function prepareGraphControls() {
 
 function prepareRadialMenus() {
   document.querySelectorAll(".graph-context-menu").forEach((menu) => {
-    const isBlankCanvasRoot = menu.classList.contains("canvas-actions")
-      && Boolean(menu.querySelector(".graph-context-palette"));
+    const isBlankCanvasRoot =
+      menu.classList.contains("canvas-actions") &&
+      Boolean(menu.querySelector(".graph-context-palette"));
     menu.classList.toggle("radial-root", isBlankCanvasRoot);
     if (!isBlankCanvasRoot || menu.dataset.radialPositioned === "true") return;
 
@@ -100,20 +101,22 @@ function updatePersistentSecretCopy() {
       node.textContent = node.textContent.replace("set for this session", "saved on this device");
     }
   });
-  document.querySelectorAll(".agent-editor .muted, .agent-editor .button-row + *").forEach((node) => {
-    if (node.textContent.includes("Keys stay in this browser session")) {
-      node.textContent = node.textContent.replace(
-        "Keys stay in this browser session",
-        "Keys stay in this browser on this device"
-      );
-    }
-    if (node.textContent.includes("Brave key set for this session")) {
-      node.textContent = node.textContent.replace(
-        "Brave key set for this session",
-        "Brave key saved on this device"
-      );
-    }
-  });
+  document
+    .querySelectorAll(".agent-editor .muted, .agent-editor .button-row + *")
+    .forEach((node) => {
+      if (node.textContent.includes("Keys stay in this browser session")) {
+        node.textContent = node.textContent.replace(
+          "Keys stay in this browser session",
+          "Keys stay in this browser on this device"
+        );
+      }
+      if (node.textContent.includes("Brave key set for this session")) {
+        node.textContent = node.textContent.replace(
+          "Brave key set for this session",
+          "Brave key saved on this device"
+        );
+      }
+    });
 }
 
 function prepareUi() {
@@ -125,13 +128,15 @@ function prepareUi() {
 }
 
 function toolbarButton(label) {
-  return [...document.querySelectorAll(".graph-toolbar .button.small")]
-    .find((candidate) => candidate.textContent.trim() === label);
+  return [...document.querySelectorAll(".graph-toolbar .button.small")].find(
+    (candidate) => candidate.textContent.trim() === label
+  );
 }
 
 function headingButton(label) {
-  return [...document.querySelectorAll(".graph-heading-actions button")]
-    .find((candidate) => candidate.textContent.trim() === label);
+  return [...document.querySelectorAll(".graph-heading-actions button")].find(
+    (candidate) => candidate.textContent.trim() === label
+  );
 }
 
 function selectControl(label) {
@@ -151,8 +156,9 @@ function navigationButton() {
 }
 
 function labelsInput() {
-  return [...document.querySelectorAll(".graph-toolbar .checkbox input")]
-    .find((input) => input.closest("label")?.textContent.includes("Labels"));
+  return [...document.querySelectorAll(".graph-toolbar .checkbox input")].find((input) =>
+    input.closest("label")?.textContent.includes("Labels")
+  );
 }
 
 function optionLabel(select) {
@@ -160,7 +166,9 @@ function optionLabel(select) {
 }
 
 function shortLabel(value, fallback) {
-  const text = String(value || fallback || "").replace(/\s*[·—].*$/, "").trim();
+  const text = String(value || fallback || "")
+    .replace(/\s*[·—].*$/, "")
+    .trim();
   return text.length > 9 ? `${text.slice(0, 8)}…` : text;
 }
 
@@ -204,7 +212,7 @@ export default function OperatorUiEnhancer() {
     const sync = () => {
       prepareUi();
       const nextStage = graphRoute ? document.querySelector(".graph-stage") : null;
-      setGraphStage((current) => current === nextStage ? current : nextStage);
+      setGraphStage((current) => (current === nextStage ? current : nextStage));
       setFocusDisabled(Boolean(toolbarButton("Focus")?.disabled));
       setRemoveDisabled(Boolean(headingButton("Remove from graph")?.disabled));
       setDeleteDisabled(Boolean(headingButton("Delete selected documents")?.disabled));
@@ -365,22 +373,45 @@ export default function OperatorUiEnhancer() {
               setNativeInputValue(searchControl(), event.target.value);
             }}
           />
-          <button type="button" aria-label="Close graph search" onClick={() => setSearchOpen(false)}>
+          <button
+            type="button"
+            aria-label="Close graph search"
+            onClick={() => setSearchOpen(false)}
+          >
             <X size={17} aria-hidden="true" />
           </button>
         </label>
       )}
 
       <div className="graph-canvas-actions" aria-label="Graph actions">
-        <button type="button" className="graph-canvas-action" aria-label="Add graph document" title="Add graph document" onClick={() => headingButton("Add graph document")?.click()}>
+        <button
+          type="button"
+          className="graph-canvas-action"
+          aria-label="Add graph document"
+          title="Add graph document"
+          onClick={() => headingButton("Add graph document")?.click()}
+        >
           <Plus size={18} aria-hidden="true" />
           <span>Add</span>
         </button>
-        <button type="button" className="graph-canvas-action" aria-label="Fit graph" title="Fit graph" onClick={() => toolbarButton("Fit")?.click()}>
+        <button
+          type="button"
+          className="graph-canvas-action"
+          aria-label="Fit graph"
+          title="Fit graph"
+          onClick={() => toolbarButton("Fit")?.click()}
+        >
           <Maximize2 size={18} aria-hidden="true" />
           <span>Fit</span>
         </button>
-        <button type="button" className="graph-canvas-action" aria-label="Focus selection" title="Focus selection" disabled={focusDisabled} onClick={() => toolbarButton("Focus")?.click()}>
+        <button
+          type="button"
+          className="graph-canvas-action"
+          aria-label="Focus selection"
+          title="Focus selection"
+          disabled={focusDisabled}
+          onClick={() => toolbarButton("Focus")?.click()}
+        >
           <Focus size={18} aria-hidden="true" />
           <span>Focus</span>
         </button>

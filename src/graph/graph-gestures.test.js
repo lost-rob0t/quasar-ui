@@ -9,26 +9,21 @@ import {
 
 describe("graph gestures", () => {
   it("detects a relation drop when node boxes overlap", () => {
-    expect(boxesOverlap(
-      { x1: 10, y1: 10, x2: 30, y2: 30 },
-      { x1: 28, y1: 18, x2: 48, y2: 38 }
-    )).toBe(true);
+    expect(
+      boxesOverlap({ x1: 10, y1: 10, x2: 30, y2: 30 }, { x1: 28, y1: 18, x2: 48, y2: 38 })
+    ).toBe(true);
   });
 
   it("allows a small drop target margin", () => {
-    expect(boxesOverlap(
-      { x1: 10, y1: 10, x2: 30, y2: 30 },
-      { x1: 38, y1: 10, x2: 58, y2: 30 },
-      8
-    )).toBe(true);
+    expect(
+      boxesOverlap({ x1: 10, y1: 10, x2: 30, y2: 30 }, { x1: 38, y1: 10, x2: 58, y2: 30 }, 8)
+    ).toBe(true);
   });
 
   it("rejects separated node boxes", () => {
-    expect(boxesOverlap(
-      { x1: 10, y1: 10, x2: 30, y2: 30 },
-      { x1: 60, y1: 60, x2: 80, y2: 80 },
-      8
-    )).toBe(false);
+    expect(
+      boxesOverlap({ x1: 10, y1: 10, x2: 30, y2: 30 }, { x1: 60, y1: 60, x2: 80, y2: 80 }, 8)
+    ).toBe(false);
   });
 
   it("uses a larger relation target for touch dragging", () => {
@@ -37,10 +32,12 @@ describe("graph gestures", () => {
   });
 
   it("normalizes a right-drag rectangle in every direction", () => {
-    expect(selectionBoxFromPoints(
-      { x: 80, y: 70 },
-      { x: 20, y: 10 }
-    )).toEqual({ x1: 20, y1: 10, x2: 80, y2: 70 });
+    expect(selectionBoxFromPoints({ x: 80, y: 70 }, { x: 20, y: 10 })).toEqual({
+      x1: 20,
+      y1: 10,
+      x2: 80,
+      y2: 70
+    });
   });
 
   it("left or right click selection replaces every other selected node", () => {
@@ -74,8 +71,12 @@ describe("graph gestures", () => {
         visible: () => true,
         renderedBoundingBox: () => bounds,
         selected: () => selected,
-        select: vi.fn(() => { selected = true; }),
-        unselect: vi.fn(() => { selected = false; })
+        select: vi.fn(() => {
+          selected = true;
+        }),
+        unselect: vi.fn(() => {
+          selected = false;
+        })
       };
     };
 
@@ -86,7 +87,9 @@ describe("graph gestures", () => {
     const cy = {
       nodes: () => nodes,
       $: vi.fn(() => ({
-        get length() { return nodes.filter((node) => node.selected()).length; },
+        get length() {
+          return nodes.filter((node) => node.selected()).length;
+        },
         unselect: () => nodes.filter((node) => node.selected()).forEach((node) => node.unselect())
       })),
       batch: vi.fn((callback) => callback())

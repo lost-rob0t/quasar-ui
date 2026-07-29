@@ -1,15 +1,7 @@
 import { assertStableIdentifier } from "./identifiers";
 
 export type PropertyValueType =
-  | "any"
-  | "boolean"
-  | "date"
-  | "number"
-  | "number[]"
-  | "object"
-  | "string"
-  | "string[]"
-  | "url";
+  "any" | "boolean" | "date" | "number" | "number[]" | "object" | "string" | "string[]" | "url";
 
 export interface TypePropertyDefinition {
   key: string;
@@ -68,21 +60,25 @@ function validateProperties(typeId: string, properties: readonly TypePropertyDef
   const keys = new Set<string>();
   for (const property of properties) {
     assertStableIdentifier(property.key, `property key for ${typeId}`);
-    if (!property.label.trim()) throw new TypeRegistryError(`property ${property.key} on ${typeId} requires a label`);
-    if (keys.has(property.key)) throw new TypeRegistryError(`duplicate property ${property.key} on ${typeId}`);
+    if (!property.label.trim())
+      throw new TypeRegistryError(`property ${property.key} on ${typeId} requires a label`);
+    if (keys.has(property.key))
+      throw new TypeRegistryError(`duplicate property ${property.key} on ${typeId}`);
     keys.add(property.key);
   }
 }
 
 function validateNodeType(definition: NodeTypeDefinition): void {
   assertStableIdentifier(definition.id, "node type id");
-  if (!definition.label.trim()) throw new TypeRegistryError(`node type ${definition.id} requires a label`);
+  if (!definition.label.trim())
+    throw new TypeRegistryError(`node type ${definition.id} requires a label`);
   validateProperties(definition.id, definition.properties);
 }
 
 function validateEdgeType(definition: EdgeTypeDefinition): void {
   assertStableIdentifier(definition.id, "edge type id");
-  if (!definition.label.trim()) throw new TypeRegistryError(`edge type ${definition.id} requires a label`);
+  if (!definition.label.trim())
+    throw new TypeRegistryError(`edge type ${definition.id} requires a label`);
   validateProperties(definition.id, definition.properties);
   for (const sourceType of definition.endpoints?.sourceTypes ?? []) {
     assertStableIdentifier(sourceType, `source type for ${definition.id}`);
@@ -182,7 +178,10 @@ export function propertyValueMatches(value: unknown, valueType: PropertyValueTyp
     case "number":
       return typeof value === "number" && Number.isFinite(value);
     case "number[]":
-      return Array.isArray(value) && value.every((item) => typeof item === "number" && Number.isFinite(item));
+      return (
+        Array.isArray(value) &&
+        value.every((item) => typeof item === "number" && Number.isFinite(item))
+      );
     case "object":
       return Boolean(value) && typeof value === "object" && !Array.isArray(value);
     case "string":

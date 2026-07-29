@@ -19,19 +19,14 @@ const RUN_ALL_ID = "quasar.run-all-transformations";
 function browserActorsSection() {
   return (
     [...document.querySelectorAll(".graph-inspector > section")].find((section) =>
-      section
-        .querySelector(":scope > h2")
-        ?.textContent?.trim()
-        .startsWith("Browser actors")
+      section.querySelector(":scope > h2")?.textContent?.trim().startsWith("Browser actors")
     ) || null
   );
 }
 
 function createHost(section) {
   if (!section) return null;
-  const existing = section.querySelector(
-    ":scope > .run-all-transformations-host"
-  );
+  const existing = section.querySelector(":scope > .run-all-transformations-host");
   if (existing) return existing;
   const host = document.createElement("div");
   host.className = "run-all-transformations-host";
@@ -53,13 +48,7 @@ function runId() {
   return `${RUN_ALL_ID}:${suffix}`;
 }
 
-function summaryMessage({
-  actorRuns,
-  actorsTouched,
-  produced,
-  failures,
-  skipped
-}) {
+function summaryMessage({ actorRuns, actorsTouched, produced, failures, skipped }) {
   const base = `Ran ${actorRuns} transformation batch${
     actorRuns === 1 ? "" : "es"
   } across ${actorsTouched} actor${
@@ -81,15 +70,7 @@ function summaryMessage({
 
 export default function RunAllTransformationsBridge() {
   const location = useLocation();
-  const {
-    documents,
-    actors,
-    runActor,
-    execute,
-    settings,
-    setNotice,
-    activeGraph
-  } = useQuasar();
+  const { documents, actors, runActor, execute, settings, setNotice, activeGraph } = useQuasar();
   const [host, setHost] = useState(null);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState(null);
@@ -99,8 +80,7 @@ export default function RunAllTransformationsBridge() {
     [activeGraph, documents]
   );
   const inputCount = useMemo(
-    () =>
-      scopeDocuments.filter((document) => document?.dtype !== "relation").length,
+    () => scopeDocuments.filter((document) => document?.dtype !== "relation").length,
     [scopeDocuments]
   );
 
@@ -145,8 +125,7 @@ export default function RunAllTransformationsBridge() {
           });
           continue;
         }
-        const customDisabled =
-          !isBuiltinActor(actor) && !settings?.actorsEnabled;
+        const customDisabled = !isBuiltinActor(actor) && !settings?.actorsEnabled;
         if (customDisabled) {
           reports.push({
             actorId: actor.id,
@@ -165,9 +144,7 @@ export default function RunAllTransformationsBridge() {
           continue;
         }
 
-        const actorScope = corpus.filter((document) =>
-          scopeIds.has(document._id)
-        );
+        const actorScope = corpus.filter((document) => scopeIds.has(document._id));
         const candidates = transformationCandidates(actor, actorScope, corpus);
         const batches = transformationBatches(actor, candidates);
         if (!batches.length) {
@@ -185,17 +162,9 @@ export default function RunAllTransformationsBridge() {
               quiet: true,
               runId: currentRunId
             });
-            const produced = Array.isArray(actorResult?.documents)
-              ? actorResult.documents
-              : [];
-            const removedIds = Array.isArray(actorResult?.removedIds)
-              ? actorResult.removedIds
-              : [];
-            corpus = mergeTransformationDocuments(
-              corpus,
-              produced,
-              removedIds
-            );
+            const produced = Array.isArray(actorResult?.documents) ? actorResult.documents : [];
+            const removedIds = Array.isArray(actorResult?.removedIds) ? actorResult.removedIds : [];
+            corpus = mergeTransformationDocuments(corpus, produced, removedIds);
             removedIds.forEach((id) => scopeIds.delete(id));
             produced.forEach((document) => {
               if (!document?._id) return;
@@ -203,21 +172,13 @@ export default function RunAllTransformationsBridge() {
               outputIds.add(document._id);
             });
 
-            const corpusById = new Map(
-              corpus.map((document) => [document._id, document])
-            );
+            const corpusById = new Map(corpus.map((document) => [document._id, document]));
             const removed = new Set(removedIds);
             const markedInputs = batch
               .filter((document) => !removed.has(document._id))
               .map((document) => corpusById.get(document._id) || document)
               .map((document) =>
-                assertDocument(
-                  recordTransformationRun(
-                    document,
-                    actor.id,
-                    currentRunId
-                  )
-                )
+                assertDocument(recordTransformationRun(document, actor.id, currentRunId))
               );
             if (markedInputs.length) {
               await execute(
@@ -247,18 +208,11 @@ export default function RunAllTransformationsBridge() {
         }
       }
 
-      const completed = reports.filter(
-        (report) => report.status === "completed"
-      );
+      const completed = reports.filter((report) => report.status === "completed");
       const failures = reports.filter((report) => report.status === "failed");
       const skipped = reports.filter((report) => report.status === "skipped");
-      const actorsTouched = new Set(
-        completed.map((report) => report.actorId)
-      ).size;
-      const produced = completed.reduce(
-        (total, report) => total + report.produced,
-        0
-      );
+      const actorsTouched = new Set(completed.map((report) => report.actorId)).size;
+      const produced = completed.reduce((total, report) => total + report.produced, 0);
       const message = summaryMessage({
         actorRuns: completed.length,
         actorsTouched,
@@ -305,25 +259,16 @@ export default function RunAllTransformationsBridge() {
       >
         <Play size={14} />
         <span>
-          <strong>
-            {running
-              ? "Running all Transformations…"
-              : "Run all Transformations"}
-          </strong>
+          <strong>{running ? "Running all Transformations…" : "Run all Transformations"}</strong>
           <small>
-            {inputCount} active-graph input{inputCount === 1 ? "" : "s"} ·
-            outputs feed later actors
+            {inputCount} active-graph input{inputCount === 1 ? "" : "s"} · outputs feed later actors
           </small>
         </span>
       </button>
       {result && (
-        <div
-          className="actor-result run-all-transformations-result"
-          role="status"
-        >
+        <div className="actor-result run-all-transformations-result" role="status">
           <strong>
-            {result.produced} document{result.produced === 1 ? "" : "s"}{" "}
-            returned
+            {result.produced} document{result.produced === 1 ? "" : "s"} returned
           </strong>
           <span>{result.message}</span>
         </div>

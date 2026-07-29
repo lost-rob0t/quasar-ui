@@ -18,7 +18,10 @@ test("opens the local workspace without a backend", async ({ page }) => {
     "title",
     "CouchDB: Local only"
   );
-  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", "/manifest.webmanifest");
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
+    "href",
+    "/manifest.webmanifest"
+  );
   expect(failedApplicationRequests).toEqual([]);
 
   await page.getByRole("link", { name: "Settings" }).click();
@@ -27,7 +30,9 @@ test("opens the local workspace without a backend", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Install/update map-reduce views" })).toBeVisible();
 });
 
-test("creates a graph node through the compact editor and preserves its full-editor draft", async ({ page }) => {
+test("creates a graph node through the compact editor and preserves its full-editor draft", async ({
+  page
+}) => {
   await page.goto("/graph");
 
   await expect(page.getByRole("heading", { name: "Start a blank graph" })).toBeVisible();
@@ -46,7 +51,9 @@ test("creates a graph node through the compact editor and preserves its full-edi
   await expect(compactEditor.getByText("Fields for person")).toBeVisible();
   await expect(compactEditor.getByRole("button", { name: "Add field" })).toBeVisible();
   await expect(compactEditor.getByRole("button", { name: "Inspect JSON" })).toBeVisible();
-  await expect(compactEditor.getByRole("button", { name: "Generate empty document" })).toBeVisible();
+  await expect(
+    compactEditor.getByRole("button", { name: "Generate empty document" })
+  ).toBeVisible();
   await compactEditor.getByLabel(/^First Name/).fill("Jane");
   await compactEditor.getByLabel(/^Last Name/).fill("Doe");
   await compactEditor.getByLabel(/^Display Name/).fill("Jane Doe");
@@ -86,7 +93,9 @@ test.describe("responsive application shell", () => {
     await expect(page.locator(".graph-list-panel")).toBeHidden();
     await expect(page.locator(".graph-inspector")).toBeVisible();
     await expect(page.locator(".topbar .mobile-menu-button")).toBeHidden();
-    await expect(page.locator(".graph-stage").getByRole("button", { name: "Open menu" })).toBeVisible();
+    await expect(
+      page.locator(".graph-stage").getByRole("button", { name: "Open menu" })
+    ).toBeVisible();
     await expect(page.getByRole("tablist", { name: "Open graphs" })).toBeVisible();
     await expect(page.getByLabel("Graph statistics")).toBeVisible();
     await expect(page.getByLabel("Graph workspace dock")).toBeVisible();
@@ -101,7 +110,8 @@ test.describe("responsive application shell", () => {
     expect(stage).not.toBeNull();
     expect(inspector).not.toBeNull();
     expect(dock).not.toBeNull();
-    if (!stage || !inspector || !dock) throw new Error("Desktop workspace panels must be measurable");
+    if (!stage || !inspector || !dock)
+      throw new Error("Desktop workspace panels must be measurable");
     expect(stage.x).toBeGreaterThan(0);
     expect(stage.y).toBeGreaterThan(0);
     expect(stage.width).toBeGreaterThan(0);
@@ -129,8 +139,14 @@ test.describe("responsive application shell", () => {
     const mobileNavigation = page.getByRole("navigation", { name: "Mobile navigation" });
     await expect(mobileNavigation).toBeVisible();
     await expect(mobileNavigation.getByText("Graph")).toBeVisible();
-    await expect(page.locator(".dashboard-empty-page > .page-heading")).toHaveCSS("text-align", "center");
-    await expect(page.locator(".dashboard-empty .button-row")).toHaveCSS("justify-content", "center");
+    await expect(page.locator(".dashboard-empty-page > .page-heading")).toHaveCSS(
+      "text-align",
+      "center"
+    );
+    await expect(page.locator(".dashboard-empty .button-row")).toHaveCSS(
+      "justify-content",
+      "center"
+    );
     const viewport = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth

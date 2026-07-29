@@ -31,26 +31,30 @@ export function startRabbitMqIngest(configuration, handlers = {}) {
 
   client.onConnect = () => {
     handlers.onStatus?.({ state: "active", message: `Listening on ${destination}` });
-    client.subscribe(destination, async (message) => {
-      try {
-        const documents = documentsFromQueuePayload(message.body);
-        const result = await handlers.onDocuments?.(documents, {
-          messageId: message.headers["message-id"] || message.headers["amqp-message-id"] || null,
-          destination,
-          headers: message.headers
-        });
-        message.ack();
-        handlers.onDelivery?.({ state: "accepted", count: result?.count ?? documents.length });
-      } catch (error) {
-        message.nack({ requeue: "false" });
-        handlers.onDelivery?.({ state: "rejected", count: 0, error: error.message });
-        handlers.onError?.(error);
+    client.subscribe(
+      destination,
+      async (message) => {
+        try {
+          const documents = documentsFromQueuePayload(message.body);
+          const result = await handlers.onDocuments?.(documents, {
+            messageId: message.headers["message-id"] || message.headers["amqp-message-id"] || null,
+            destination,
+            headers: message.headers
+          });
+          message.ack();
+          handlers.onDelivery?.({ state: "accepted", count: result?.count ?? documents.length });
+        } catch (error) {
+          message.nack({ requeue: "false" });
+          handlers.onDelivery?.({ state: "rejected", count: 0, error: error.message });
+          handlers.onError?.(error);
+        }
+      },
+      {
+        ack: "client-individual",
+        "prefetch-count": String(configuration.rabbitPrefetch || 25),
+        ...(configuration.rabbitQueueName ? { "x-queue-name": configuration.rabbitQueueName } : {})
       }
-    }, {
-      ack: "client-individual",
-      "prefetch-count": String(configuration.rabbitPrefetch || 25),
-      ...(configuration.rabbitQueueName ? { "x-queue-name": configuration.rabbitQueueName } : {})
-    });
+    );
   };
   client.onStompError = (frame) => {
     const error = new Error(frame.headers.message || frame.body || "RabbitMQ STOMP error");

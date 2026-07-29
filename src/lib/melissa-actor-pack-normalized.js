@@ -182,16 +182,11 @@ export const MELISSA_ACTORS = Object.freeze(
   )
 );
 
-export const MELISSA_ACTOR_IDS = Object.freeze(
-  MELISSA_ACTORS.map((actor) => actor.id)
-);
+export const MELISSA_ACTOR_IDS = Object.freeze(MELISSA_ACTORS.map((actor) => actor.id));
 
 export function mergeMelissaActors(actors = []) {
   const ids = new Set(MELISSA_ACTOR_IDS);
-  return [
-    ...actors.filter((actor) => !ids.has(actor?.id)),
-    ...MELISSA_ACTORS
-  ];
+  return [...actors.filter((actor) => !ids.has(actor?.id)), ...MELISSA_ACTORS];
 }
 
 export function removeMelissaActors(actors = []) {

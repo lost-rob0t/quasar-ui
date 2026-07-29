@@ -4,19 +4,19 @@ Quasar ships an installable Melissa actor pack for browser-side person, business
 
 ## Included actors
 
-| Actor | Melissa service | Main output |
-| --- | --- | --- |
-| Melissa person search | Personator Search | Person or organization matches plus structured address, phone, and email documents |
-| Melissa people and business search | People Business Search | Partial person and business matches |
-| Melissa consumer verify and append | Personator Consumer | Check, Verify, Append, and Move results |
-| Melissa identity check | Personator Identity | Check and Screen results |
-| Melissa reverse geocoder | Reverse GeoCoder | Nearby `location` documents |
-| Melissa property lookup | Property | `asset` property records, locations, owners, and relations |
-| Melissa global address verification | Global Address | Corrected and geocoded `location` documents |
-| Melissa global name | Global Name | Parsed `person` or `org` documents |
-| Melissa global phone | Global Phone | Validated `phone` documents |
-| Melissa global email | Global Email | Validated `email` documents |
-| Melissa global IP | Global IP | IP entities and related geolocation documents |
+| Actor                               | Melissa service        | Main output                                                                        |
+| ----------------------------------- | ---------------------- | ---------------------------------------------------------------------------------- |
+| Melissa person search               | Personator Search      | Person or organization matches plus structured address, phone, and email documents |
+| Melissa people and business search  | People Business Search | Partial person and business matches                                                |
+| Melissa consumer verify and append  | Personator Consumer    | Check, Verify, Append, and Move results                                            |
+| Melissa identity check              | Personator Identity    | Check and Screen results                                                           |
+| Melissa reverse geocoder            | Reverse GeoCoder       | Nearby `location` documents                                                        |
+| Melissa property lookup             | Property               | `asset` property records, locations, owners, and relations                         |
+| Melissa global address verification | Global Address         | Corrected and geocoded `location` documents                                        |
+| Melissa global name                 | Global Name            | Parsed `person` or `org` documents                                                 |
+| Melissa global phone                | Global Phone           | Validated `phone` documents                                                        |
+| Melissa global email                | Global Email           | Validated `email` documents                                                        |
+| Melissa global IP                   | Global IP              | IP entities and related geolocation documents                                      |
 
 ## Configuration
 

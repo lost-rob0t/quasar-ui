@@ -25,10 +25,8 @@ const DOCK_TABS = [
 ];
 
 function documentTimestamp(document) {
-  const value = document?.date_updated
-    || document?.updatedAt
-    || document?.date_added
-    || document?.createdAt;
+  const value =
+    document?.date_updated || document?.updatedAt || document?.date_added || document?.createdAt;
   const time = value ? new Date(value).getTime() : 0;
   return Number.isFinite(time) ? time : 0;
 }
@@ -46,12 +44,14 @@ function relativeTime(timestamp) {
 }
 
 function documentName(document) {
-  return document?.title
-    || document?.name
-    || document?.data?.name
-    || document?.data?.label
-    || document?._id
-    || "Untitled document";
+  return (
+    document?.title ||
+    document?.name ||
+    document?.data?.name ||
+    document?.data?.label ||
+    document?._id ||
+    "Untitled document"
+  );
 }
 
 function Metric({ label, value, tone = "" }) {
@@ -91,13 +91,20 @@ export default function GraphWorkspaceChrome() {
     const datasets = new Set(scope.map((document) => document.dataset).filter(Boolean)).size;
     const reviewed = scope.filter((document) => document.verification?.verified === true).length;
     const reviewedPercent = scope.length ? Math.round((reviewed / scope.length) * 100) : 0;
-    const lastUpdated = scope.reduce((latest, document) => Math.max(latest, documentTimestamp(document)), 0);
+    const lastUpdated = scope.reduce(
+      (latest, document) => Math.max(latest, documentTimestamp(document)),
+      0
+    );
     return { nodes, edges, datasets, reviewedPercent, lastUpdated };
   }, [scope]);
 
-  const recentActivity = useMemo(() => [...scope]
-    .sort((left, right) => documentTimestamp(right) - documentTimestamp(left))
-    .slice(0, 5), [scope]);
+  const recentActivity = useMemo(
+    () =>
+      [...scope]
+        .sort((left, right) => documentTimestamp(right) - documentTimestamp(left))
+        .slice(0, 5),
+    [scope]
+  );
 
   useEffect(() => {
     document.body.classList.toggle("graph-viewport-full", fullViewport);
@@ -111,7 +118,9 @@ export default function GraphWorkspaceChrome() {
     };
   }, [fullViewport]);
 
-  const unreviewedCount = scope.filter((document) => document.verification?.verified !== true).length;
+  const unreviewedCount = scope.filter(
+    (document) => document.verification?.verified !== true
+  ).length;
   const activeRun = agentSystem.activeRun;
   const activeAgent = agentSystem.activeAgent;
 
@@ -153,7 +162,12 @@ export default function GraphWorkspaceChrome() {
               <span>{graph.name}</span>
             </button>
           ))}
-          <button className="graph-tab-add" type="button" onClick={addGraph} aria-label="Create graph">
+          <button
+            className="graph-tab-add"
+            type="button"
+            onClick={addGraph}
+            aria-label="Create graph"
+          >
             <Plus size={15} />
           </button>
           <button
@@ -199,14 +213,18 @@ export default function GraphWorkspaceChrome() {
         {dockTab === "agent" && (
           <div className="graph-agent-body">
             <aside className="graph-agent-identity">
-              <div className="graph-agent-avatar"><Bot size={26} /></div>
+              <div className="graph-agent-avatar">
+                <Bot size={26} />
+              </div>
               <div>
                 <strong>{activeAgent?.name || "Agent"}</strong>
                 <span className={`agent-status-${activeRun?.status || "idle"}`}>
                   {activeRun?.status || "idle"}
                 </span>
               </div>
-              <Link className="button small" to="/agents?tab=run"><MessageSquareCode size={14} /> Open chat</Link>
+              <Link className="button small" to="/agents?tab=run">
+                <MessageSquareCode size={14} /> Open chat
+              </Link>
             </aside>
             <div className="graph-agent-command-area">
               <form className="graph-agent-command" onSubmit={submit}>
@@ -217,15 +235,42 @@ export default function GraphWorkspaceChrome() {
                   aria-label="Ask the graph agent"
                   disabled={submitting}
                 />
-                <button className="icon-button primary" type="submit" aria-label="Run agent command" disabled={!prompt.trim() || submitting}>
+                <button
+                  className="icon-button primary"
+                  type="submit"
+                  aria-label="Run agent command"
+                  disabled={!prompt.trim() || submitting}
+                >
                   <Play size={17} />
                 </button>
               </form>
               <div className="graph-agent-suggestions">
-                <button type="button" onClick={() => setPrompt("Find the strongest undocumented connections in this graph")}>Find missing connections</button>
-                <button type="button" onClick={() => setPrompt("Show anomalies in the selected graph")}>Show anomalies</button>
-                <button type="button" onClick={() => setPrompt("Export the current subgraph as a new dataset")}>Export subgraph</button>
-                <button type="button" onClick={() => setPrompt("Run entity resolution on this graph")}>Run entity resolution</button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPrompt("Find the strongest undocumented connections in this graph")
+                  }
+                >
+                  Find missing connections
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrompt("Show anomalies in the selected graph")}
+                >
+                  Show anomalies
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrompt("Export the current subgraph as a new dataset")}
+                >
+                  Export subgraph
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrompt("Run entity resolution on this graph")}
+                >
+                  Run entity resolution
+                </button>
               </div>
               <footer>
                 <span>Model: {activeRun?.modelId || activeAgent?.modelId || "not configured"}</span>
@@ -239,8 +284,15 @@ export default function GraphWorkspaceChrome() {
         {dockTab === "console" && (
           <div className="graph-dock-message">
             <SquareTerminal size={20} />
-            <div><strong>Agent console</strong><span>Open the full console for run history, provider controls, skills, and MCP servers.</span></div>
-            <Link className="button small" to="/agents?tab=run">Open console</Link>
+            <div>
+              <strong>Agent console</strong>
+              <span>
+                Open the full console for run history, provider controls, skills, and MCP servers.
+              </span>
+            </div>
+            <Link className="button small" to="/agents?tab=run">
+              Open console
+            </Link>
           </div>
         )}
 
@@ -249,7 +301,12 @@ export default function GraphWorkspaceChrome() {
             {recentActivity.map((document) => (
               <Link key={document._id} to={`/documents/${encodeURIComponent(document._id)}`}>
                 <Activity size={14} />
-                <span><strong>{documentName(document)}</strong><small>{document.dtype || "document"} · {relativeTime(documentTimestamp(document))}</small></span>
+                <span>
+                  <strong>{documentName(document)}</strong>
+                  <small>
+                    {document.dtype || "document"} · {relativeTime(documentTimestamp(document))}
+                  </small>
+                </span>
               </Link>
             ))}
             {!recentActivity.length && <p>No activity in this graph yet.</p>}
@@ -259,7 +316,12 @@ export default function GraphWorkspaceChrome() {
         {dockTab === "issues" && (
           <div className="graph-dock-message warning">
             <TriangleAlert size={20} />
-            <div><strong>{unreviewedCount.toLocaleString()} records require review</strong><span>Use the reviewed filter and inspector to validate imported or generated records.</span></div>
+            <div>
+              <strong>{unreviewedCount.toLocaleString()} records require review</strong>
+              <span>
+                Use the reviewed filter and inspector to validate imported or generated records.
+              </span>
+            </div>
           </div>
         )}
       </section>
@@ -267,18 +329,25 @@ export default function GraphWorkspaceChrome() {
       <aside className="graph-recent-activity">
         <header>
           <strong>Recent activity</strong>
-          <button className="icon-button" type="button" aria-label="Filter activity"><Filter size={14} /></button>
+          <button className="icon-button" type="button" aria-label="Filter activity">
+            <Filter size={14} />
+          </button>
         </header>
         <div>
           {recentActivity.map((document) => (
             <Link key={document._id} to={`/documents/${encodeURIComponent(document._id)}`}>
               <Activity size={14} />
-              <span><strong>{documentName(document)}</strong><small>{relativeTime(documentTimestamp(document))}</small></span>
+              <span>
+                <strong>{documentName(document)}</strong>
+                <small>{relativeTime(documentTimestamp(document))}</small>
+              </span>
             </Link>
           ))}
           {!recentActivity.length && <p>No recent activity.</p>}
         </div>
-        <Link className="graph-activity-link" to="/documents">View all activity →</Link>
+        <Link className="graph-activity-link" to="/documents">
+          View all activity →
+        </Link>
       </aside>
     </div>
   );

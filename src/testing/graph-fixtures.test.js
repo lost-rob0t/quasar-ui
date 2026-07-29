@@ -55,10 +55,7 @@ describe("deterministic graph fixtures", () => {
     const invalid = invalidDocumentFixtures();
     const validation = validateDocumentBatch(invalid.map((item) => item.document));
 
-    expect(invalid.map((item) => item.name)).toEqual([
-      "unknown-dtype",
-      "missing-relation-object"
-    ]);
+    expect(invalid.map((item) => item.name)).toEqual(["unknown-dtype", "missing-relation-object"]);
     expect(validation.validated).toHaveLength(0);
     expect(validation.errors).toHaveLength(2);
   });

@@ -10,10 +10,26 @@ export const ACTOR_CONFIGURATION_STORAGE_KEY = "quasar:actor-configuration:v1";
 export const MELISSA_ACTOR_PREFIX = "quasar.actor.melissa-";
 
 export const MELISSA_CONFIGURATION_FIELDS = Object.freeze([
-  { key: "licenseKey", label: "Melissa API key", type: "secret", required: true, placeholder: "License or customer ID" },
-  { key: "transmissionReference", label: "Transmission reference", type: "text", placeholder: "Quasar" },
+  {
+    key: "licenseKey",
+    label: "Melissa API key",
+    type: "secret",
+    required: true,
+    placeholder: "License or customer ID"
+  },
+  {
+    key: "transmissionReference",
+    label: "Transmission reference",
+    type: "text",
+    placeholder: "Quasar"
+  },
   { key: "defaultCountry", label: "Default country", type: "text", placeholder: "US" },
-  { key: "consumerAction", label: "Consumer action", type: "select", options: ["Check", "Verify", "Append", "Move"] },
+  {
+    key: "consumerAction",
+    label: "Consumer action",
+    type: "select",
+    options: ["Check", "Verify", "Append", "Move"]
+  },
   { key: "identityAction", label: "Identity action", type: "select", options: ["Check", "Screen"] },
   { key: "maxRecords", label: "Search record limit", type: "number", min: 1, max: 100 },
   { key: "matchLevel", label: "Search match level", type: "number", min: 1, max: 10 },
@@ -27,7 +43,12 @@ export const MELISSA_CONFIGURATION_FIELDS = Object.freeze([
   { key: "phoneOptions", label: "Global Phone options", type: "text" },
   { key: "emailOptions", label: "Global Email options", type: "text" },
   { key: "ipColumns", label: "Global IP columns", type: "text" },
-  { key: "proxyTemplate", label: "CORS proxy template", type: "text", placeholder: "https://proxy.example/fetch?url={url}" }
+  {
+    key: "proxyTemplate",
+    label: "CORS proxy template",
+    type: "text",
+    placeholder: "https://proxy.example/fetch?url={url}"
+  }
 ]);
 
 function storage() {
@@ -98,7 +119,8 @@ export function actorConfigurationDefinition(actor) {
   return {
     id: actorConfigurationId(actor),
     label: actor?.label || actor?.id || "Actor",
-    description: actor?.description || "JSON configuration passed to the actor as context.configuration.",
+    description:
+      actor?.description || "JSON configuration passed to the actor as context.configuration.",
     fields: [],
     defaults: {}
   };

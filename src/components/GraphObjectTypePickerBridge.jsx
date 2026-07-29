@@ -8,7 +8,10 @@ export function knownGraphObjectTypes() {
   return [...new Set(dtypes)]
     .filter((objectType) => objectType && objectType !== "relation")
     .map((objectType) => ({ objectType, label: dtypeLabel(objectType) }))
-    .sort((left, right) => left.label.localeCompare(right.label) || left.objectType.localeCompare(right.objectType));
+    .sort(
+      (left, right) =>
+        left.label.localeCompare(right.label) || left.objectType.localeCompare(right.objectType)
+    );
 }
 
 function graphContextPosition(menu) {
@@ -39,9 +42,9 @@ export default function GraphObjectTypePickerBridge() {
   const objectTypes = useMemo(() => knownGraphObjectTypes(), []);
   const matches = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return objectTypes.filter(({ objectType, label }) => (
-      !needle || `${objectType} ${label}`.toLowerCase().includes(needle)
-    ));
+    return objectTypes.filter(
+      ({ objectType, label }) => !needle || `${objectType} ${label}`.toLowerCase().includes(needle)
+    );
   }, [objectTypes, query]);
 
   useEffect(() => {
@@ -96,7 +99,12 @@ export default function GraphObjectTypePickerBridge() {
                 autoFocus
               />
             </label>
-            <div id="graph-object-type-options" className="graph-picker-options" role="listbox" aria-label="Object types">
+            <div
+              id="graph-object-type-options"
+              className="graph-picker-options"
+              role="listbox"
+              aria-label="Object types"
+            >
               {matches.map(({ objectType, label }) => (
                 <button
                   key={objectType}
@@ -109,12 +117,16 @@ export default function GraphObjectTypePickerBridge() {
                   <code>{objectType}</code>
                 </button>
               ))}
-              {!matches.length && <span className="graph-picker-empty">No matching object types</span>}
+              {!matches.length && (
+                <span className="graph-picker-empty">No matching object types</span>
+              )}
             </div>
             <div className="form-actions graph-editor-actions">
               <span />
               <span />
-              <button className="button" type="button" onClick={() => setPicker(null)}>Cancel</button>
+              <button className="button" type="button" onClick={() => setPicker(null)}>
+                Cancel
+              </button>
             </div>
           </div>
         </GraphModalShell>

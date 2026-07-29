@@ -7,7 +7,11 @@ function call(name, args = {}, result = {}) {
 
 describe("agent loop detection", () => {
   it("detects identical calls", () => {
-    const history = [call("query_database", { text: "x" }), call("query_database", { text: "x" }), call("query_database", { text: "x" })];
+    const history = [
+      call("query_database", { text: "x" }),
+      call("query_database", { text: "x" }),
+      call("query_database", { text: "x" })
+    ];
     expect(detectAgentLoop(history)?.pattern).toBe("identical-tool-call");
   });
 
@@ -34,7 +38,12 @@ describe("agent loop detection", () => {
 
   it("detects no progress", () => {
     const state = fingerprint({ documents: ["same"] });
-    const history = [0, 1, 2].map((index) => ({ id: String(index), kind: "model", text: String(index), stateFingerprint: state }));
+    const history = [0, 1, 2].map((index) => ({
+      id: String(index),
+      kind: "model",
+      text: String(index),
+      stateFingerprint: state
+    }));
     expect(detectAgentLoop(history)?.pattern).toBe("no-progress");
   });
 });

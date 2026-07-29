@@ -1,5 +1,15 @@
 import { assertDocument } from "starintel_doc";
 
+export class PartialBatchCommitError extends Error {
+  constructor(report) {
+    super(`Batch rollback left ${report.saved.length} surviving document write(s)`);
+    this.name = "PartialBatchCommitError";
+    this.code = "PARTIAL_BATCH_COMMIT";
+    this.report = report;
+    this.applied = report;
+  }
+}
+
 function incomingWins(incoming, existing, replace) {
   if (replace) return true;
   const incomingVersion = Number(incoming.version || 0);
@@ -39,7 +49,9 @@ export function validateDocumentBatch(inputs, { origins = [] } = {}) {
           index,
           id: document._id,
           message: `Duplicate document ID in import batch; first seen at record ${previousIndex + 1}`,
-          validation: [{ path: "/_id", keyword: "unique", message: "must be unique within an import batch" }],
+          validation: [
+            { path: "/_id", keyword: "unique", message: "must be unique within an import batch" }
+          ],
           ...originFields(origins, index)
         });
         continue;
@@ -87,7 +99,11 @@ async function rollbackSuccessfulWrites(database, successful, existing) {
     return { surviving, errors, rolledBack: successful.length - surviving.length };
   } catch (error) {
     return {
-      surviving: successful.map(({ item, result }) => ({ index: item.index, id: result.id, rev: result.rev })),
+      surviving: successful.map(({ item, result }) => ({
+        index: item.index,
+        id: result.id,
+        rev: result.rev
+      })),
       errors: successful.map(({ item, result }) => ({
         index: item.index,
         id: result.id,
@@ -100,20 +116,23 @@ async function rollbackSuccessfulWrites(database, successful, existing) {
   }
 }
 
-export async function commitDocumentBatch(database, inputs, {
-  replace = false,
-  atomic = true,
-  origins = [],
-  prepared = null
-} = {}) {
+export async function commitDocumentBatch(
+  database,
+  inputs,
+  { replace = false, atomic = true, origins = [], prepared = null } = {}
+) {
   const preflight = prepared || validateDocumentBatch(inputs, { origins });
   if (atomic && preflight.errors.length) {
     return { saved: [], skipped: [], errors: preflight.errors, atomic, rolledBack: 0 };
   }
 
   const keys = preflight.validated.map(({ document }) => document._id);
-  const existingRows = keys.length ? await database.allDocs({ keys, include_docs: true }) : { rows: [] };
-  const existing = new Map(existingRows.rows.filter((row) => row.doc).map((row) => [row.id, row.doc]));
+  const existingRows = keys.length
+    ? await database.allDocs({ keys, include_docs: true })
+    : { rows: [] };
+  const existing = new Map(
+    existingRows.rows.filter((row) => row.doc).map((row) => [row.id, row.doc])
+  );
   const writes = [];
   const skipped = [];
 
@@ -179,13 +198,16 @@ export async function commitDocumentBatch(database, inputs, {
 
   if (atomic && writeErrors.length && successful.length) {
     const rollback = await rollbackSuccessfulWrites(database, successful, existing);
-    return {
+    const report = {
       saved: rollback.surviving,
       skipped,
       errors: [...preflight.errors, ...writeErrors, ...rollback.errors],
-      atomic,
+      atomic: false,
+      rollbackAttempted: true,
       rolledBack: rollback.rolledBack
     };
+    if (rollback.surviving.length) throw new PartialBatchCommitError(report);
+    return report;
   }
 
   return {

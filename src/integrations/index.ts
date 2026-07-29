@@ -1,9 +1,4 @@
-export type IntegrationStatus =
-  | "disabled"
-  | "connecting"
-  | "active"
-  | "degraded"
-  | "error";
+export type IntegrationStatus = "disabled" | "connecting" | "active" | "degraded" | "error";
 
 export interface IntegrationCapability {
   id: string;

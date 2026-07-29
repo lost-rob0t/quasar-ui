@@ -1,9 +1,6 @@
 import { assertDocument } from "starintel_doc";
 import { describe, expect, it, vi } from "vitest";
-import {
-  MELISSA_ACTORS,
-  MELISSA_ACTOR_PACK_VERSION
-} from "./melissa-actor-pack-normalized";
+import { MELISSA_ACTORS, MELISSA_ACTOR_PACK_VERSION } from "./melissa-actor-pack-normalized";
 
 const stamp = "2026-07-28T00:00:00.000Z";
 
@@ -110,24 +107,14 @@ describe("normalized Melissa actor pack", () => {
         "comp",
         "Example Industries"
       ],
-      [
-        "global-phone",
-        input({ dtype: "phone", title: "+16145551234" }),
-        "phone",
-        "+16145551234"
-      ],
+      ["global-phone", input({ dtype: "phone", title: "+16145551234" }), "phone", "+16145551234"],
       [
         "global-email",
         input({ dtype: "email", title: "person@example.com" }),
         "email",
         "person@example.com"
       ],
-      [
-        "global-ip",
-        input({ dtype: "ip", title: "203.0.113.10" }),
-        "ip",
-        "203.0.113.10"
-      ]
+      ["global-ip", input({ dtype: "ip", title: "203.0.113.10" }), "ip", "203.0.113.10"]
     ];
 
     for (const [service, document, parameter, expected] of cases) {
@@ -206,23 +193,13 @@ describe("normalized Melissa actor pack", () => {
     expect(person.data).not.toHaveProperty("company");
 
     const predicates = result.documents
-      .filter(
-        (document) =>
-          document.dtype === "relation" && document.data.subject === person._id
-      )
+      .filter((document) => document.dtype === "relation" && document.data.subject === person._id)
       .map((document) => document.data.predicate);
 
     expect(predicates).toEqual(
-      expect.arrayContaining([
-        "located-at",
-        "has-phone",
-        "has-email",
-        "associated-with"
-      ])
+      expect.arrayContaining(["located-at", "has-phone", "has-email", "associated-with"])
     );
-    result.documents.forEach((document) =>
-      expect(() => assertDocument(document)).not.toThrow()
-    );
+    result.documents.forEach((document) => expect(() => assertDocument(document)).not.toThrow());
   });
 
   it("rejects missing inputs before network requests for every validated service", async () => {
@@ -242,9 +219,9 @@ describe("normalized Melissa actor pack", () => {
 
     for (const service of services) {
       const runtime = api();
-      await expect(
-        implementation(service)({ selection: [input()] }, runtime)
-      ).rejects.toThrow("could not extract");
+      await expect(implementation(service)({ selection: [input()] }, runtime)).rejects.toThrow(
+        "could not extract"
+      );
       expect(runtime.network.fetch, service).not.toHaveBeenCalled();
     }
   });

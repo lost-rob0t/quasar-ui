@@ -1,11 +1,6 @@
 export const SETTINGS_EXPORT_VERSION = 1;
 
-const SECRET_KEYS = new Set([
-  "couchPassword",
-  "serverPassword",
-  "serverToken",
-  "rabbitPassword"
-]);
+const SECRET_KEYS = new Set(["couchPassword", "serverPassword", "serverToken", "rabbitPassword"]);
 
 export function exportableSettings(settings = {}) {
   return Object.fromEntries(

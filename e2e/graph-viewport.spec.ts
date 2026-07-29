@@ -37,14 +37,18 @@ test("desktop graph canvas pans and zooms", async ({ page }) => {
   await page.mouse.move(start.x + 120, start.y + 70, { steps: 10 });
   await page.mouse.up();
 
-  await expect.poll(async () => {
-    const current = await viewportState(canvas);
-    return Math.abs(current.panX - beforePan.panX) + Math.abs(current.panY - beforePan.panY);
-  }).toBeGreaterThan(40);
+  await expect
+    .poll(async () => {
+      const current = await viewportState(canvas);
+      return Math.abs(current.panX - beforePan.panX) + Math.abs(current.panY - beforePan.panY);
+    })
+    .toBeGreaterThan(40);
 
   const beforeZoom = await viewportState(canvas);
   await page.mouse.move(start.x, start.y);
   await page.mouse.wheel(0, -600);
 
-  await expect.poll(async () => (await viewportState(canvas)).zoom).toBeGreaterThan(beforeZoom.zoom);
+  await expect
+    .poll(async () => (await viewportState(canvas)).zoom)
+    .toBeGreaterThan(beforeZoom.zoom);
 });

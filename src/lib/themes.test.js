@@ -23,10 +23,20 @@ describe("themes", () => {
 
   it("keeps the dotfile Synthwave Outrun palette", () => {
     const theme = THEMES.find((item) => item.id === "synthwave-outrun");
-    expect(Object.values(theme.tokens).map((value) => value.toLowerCase())).toEqual(expect.arrayContaining([
-      "#170c32", "#202146", "#92406e", "#fba922", "#2de2e6",
-      "#f3f4f5", "#f6019d", "#62ff00", "#dd546e", "#9700cc"
-    ]));
+    expect(Object.values(theme.tokens).map((value) => value.toLowerCase())).toEqual(
+      expect.arrayContaining([
+        "#170c32",
+        "#202146",
+        "#92406e",
+        "#fba922",
+        "#2de2e6",
+        "#f3f4f5",
+        "#f6019d",
+        "#62ff00",
+        "#dd546e",
+        "#9700cc"
+      ])
+    );
   });
 
   it("applies theme tokens and falls back safely", () => {

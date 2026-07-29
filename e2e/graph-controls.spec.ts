@@ -11,7 +11,9 @@ async function graphSnapshot(canvas: Locator): Promise<GraphSnapshot> {
   return canvas.evaluate((element) => {
     const graphElement = element as HTMLElement & {
       __quasarGraphAdapter?: {
-        nodes: () => { first: () => { length: number; renderedPosition: () => { x: number; y: number } } };
+        nodes: () => {
+          first: () => { length: number; renderedPosition: () => { x: number; y: number } };
+        };
         pan: () => { x: number; y: number };
         zoom: () => number;
       };
@@ -40,7 +42,12 @@ function absolutePoint(origin: Point, point: Point): Point {
   return { x: origin.x + point.x, y: origin.y + point.y };
 }
 
-async function clickGraphPoint(page: Page, origin: Point, point: Point, button: "left" | "right" = "left") {
+async function clickGraphPoint(
+  page: Page,
+  origin: Point,
+  point: Point,
+  button: "left" | "right" = "left"
+) {
   const absolute = absolutePoint(origin, point);
   await page.mouse.click(absolute.x, absolute.y, { button });
 }
@@ -102,12 +109,12 @@ test("uses left click select, left drag pan, and right drag box select", async (
   await expect(selectionHeading).toContainText("0");
 
   const beforePan = await graphSnapshot(canvas);
-  const panStart = beforePan.node.x >= width / 2
-    ? { x: 180, y: height - 170 }
-    : { x: width - 180, y: height - 170 };
-  const panEnd = beforePan.node.x >= width / 2
-    ? { x: 480, y: height - 50 }
-    : { x: width - 480, y: height - 50 };
+  const panStart =
+    beforePan.node.x >= width / 2
+      ? { x: 180, y: height - 170 }
+      : { x: width - 180, y: height - 170 };
+  const panEnd =
+    beforePan.node.x >= width / 2 ? { x: 480, y: height - 50 } : { x: width - 480, y: height - 50 };
   const expectedShift = {
     x: panEnd.x - panStart.x,
     y: panEnd.y - panStart.y

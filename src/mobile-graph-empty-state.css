@@ -17,9 +17,9 @@
     grid-template-columns: minmax(0, 1fr);
     justify-content: center;
     justify-items: stretch;
-    gap: .65rem;
+    gap: 0.65rem;
     width: min(100%, 300px);
-    margin: .25rem auto 0;
+    margin: 0.25rem auto 0;
   }
 
   .graph-empty-state .button-row > .button {
