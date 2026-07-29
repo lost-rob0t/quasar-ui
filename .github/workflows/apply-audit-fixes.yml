@@ -1,0 +1,58 @@
+name: Apply audit fixes
+
+on:
+  push:
+    branches:
+      - agent/audit-security-integrity-fixes
+    paths:
+      - scripts/apply-audit-fixes.py
+      - .github/workflows/apply-audit-fixes.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/audit-security-integrity-fixes
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: python3 scripts/apply-audit-fixes.py
+      - run: npm ci
+      - name: Format touched files
+        run: |
+          npx prettier --write \
+            src/lib/agent-records.js \
+            src/lib/provider-adapters.js \
+            src/components/AgentSystem.jsx \
+            src/lib/actors.js \
+            src/store.jsx \
+            src/lib/agent-web.js \
+            src/lib/document-batch.js \
+            src/lib/importer.js \
+            src/lib/agent-supervisor.js \
+            src/lib/agent-budget.js \
+            src/lib/agent-budget.test.js \
+            src/lib/agent-secrets.js \
+            public/sw.js \
+            public/sw-runtime.js \
+            src/lib/service-worker-runtime.test.js \
+            package.json \
+            .prettierignore
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+      - name: Commit applied fixes
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Apply audit security and integrity fixes"
+          git push origin HEAD:agent/audit-security-integrity-fixes
