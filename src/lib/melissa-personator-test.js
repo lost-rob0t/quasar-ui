@@ -1,4 +1,7 @@
-import { normalizeMelissaLicenseKey } from "./melissa-browser-config";
+import {
+  fetchMelissaDirect,
+  normalizeMelissaLicenseKey
+} from "./melissa-browser-config";
 
 export const MELISSA_PERSONATOR_TEST_RECORD = Object.freeze({
   full: "Melissa Data",
@@ -54,7 +57,7 @@ function transmissionCodes(value) {
 
 export async function testMelissaPersonatorSearch(
   licenseKey,
-  { fetchImpl = globalThis.fetch, record = MELISSA_PERSONATOR_TEST_RECORD } = {}
+  { fetchImpl = fetchMelissaDirect, record = MELISSA_PERSONATOR_TEST_RECORD } = {}
 ) {
   if (typeof fetchImpl !== "function") throw new Error("Browser fetch is unavailable");
 
@@ -76,7 +79,9 @@ export async function testMelissaPersonatorSearch(
   const transmissionResults = String(
     body?.TransmissionResults || body?.TransmissionResult || ""
   ).trim();
-  const errorCode = transmissionCodes(transmissionResults).find((code) => /^(?:GE|SE)\d{2}$/.test(code));
+  const errorCode = transmissionCodes(transmissionResults).find((code) =>
+    /^(?:GE|SE)\d{2}$/.test(code)
+  );
   const records = Array.isArray(body?.Records) ? body.Records : [];
 
   return {
