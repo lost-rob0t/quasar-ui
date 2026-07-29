@@ -18,7 +18,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: apply-performance-audit-fixes
+  group: apply-performance-audit-fixes-${{ github.event_name }}-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
