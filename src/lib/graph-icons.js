@@ -1,5 +1,6 @@
 const ICON_STROKE = "#f8fafc";
 
+// prettier-ignore
 const ICON_PATHS = Object.freeze({
   actor: '<rect x="5" y="7" width="14" height="11" rx="2"/><path d="M9 7V5h6v2M8 12h.01M16 12h.01M9 16h6"/>',
   address: '<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',
