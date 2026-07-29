@@ -41,6 +41,28 @@ describe("graph differential reconciliation", () => {
     cy.destroy();
   });
 
+  it("keeps the live dragged position during a document-only refresh", () => {
+    const cy = createCy([{ data: { id: "a", label: "Before" }, position: { x: 90, y: 120 } }]);
+    const result = reconcileGraphElements(cy, graph([
+      { data: { id: "a", label: "After" }, position: { x: 10, y: 20 } }
+    ]), { applyIncomingPositions: false });
+
+    expect(result.updated).toBe(1);
+    expect(cy.getElementById("a").data("label")).toBe("After");
+    expect(cy.getElementById("a").position()).toMatchObject({ x: 90, y: 120 });
+    cy.destroy();
+  });
+
+  it("applies saved positions when explicitly restoring a graph", () => {
+    const cy = createCy([{ data: { id: "a" }, position: { x: 90, y: 120 } }]);
+    reconcileGraphElements(cy, graph([
+      { data: { id: "a" }, position: { x: 10, y: 20 } }
+    ]), { applyIncomingPositions: true });
+
+    expect(cy.getElementById("a").position()).toMatchObject({ x: 10, y: 20 });
+    cy.destroy();
+  });
+
   it("removes obsolete edges before obsolete nodes", () => {
     const cy = createCy([
       { data: { id: "a" } },
