@@ -43,10 +43,10 @@ async function requestFor(service, document) {
 }
 
 describe("normalized Melissa actor pack", () => {
-  it("publishes version 3 actors", () => {
-    expect(MELISSA_ACTOR_PACK_VERSION).toBe(3);
+  it("publishes version 4 actors", () => {
+    expect(MELISSA_ACTOR_PACK_VERSION).toBe(4);
     expect(MELISSA_ACTORS).toHaveLength(11);
-    expect(MELISSA_ACTORS.every((actor) => actor.version === 3)).toBe(true);
+    expect(MELISSA_ACTORS.every((actor) => actor.version === 4)).toBe(true);
   });
 
   it("extracts canonical values and typed document titles for every service", async () => {
@@ -200,6 +200,48 @@ describe("normalized Melissa actor pack", () => {
       expect.arrayContaining(["located-at", "has-phone", "has-email", "associated-with"])
     );
     result.documents.forEach((document) => expect(() => assertDocument(document)).not.toThrow());
+  });
+
+  it("rejects service-level Melissa errors before creating documents", async () => {
+    const runtime = api({
+      TransmissionResults: "GE08",
+      Records: [
+        {
+          FullName: "Erica Porter",
+          Results: ""
+        }
+      ]
+    });
+
+    await expect(
+      implementation("personator-search")(
+        {
+          selection: [input({ dtype: "person", title: "Erica Porter" })]
+        },
+        runtime
+      )
+    ).rejects.toThrow("GE08 (product or service level not enabled)");
+  });
+
+  it("drops record-level Melissa error records", async () => {
+    const runtime = api({
+      Records: [
+        {
+          FullName: "Erica Porter",
+          Results: "UE01"
+        }
+      ]
+    });
+
+    const result = await implementation("personator-search")(
+      {
+        selection: [input({ dtype: "person", title: "Erica Porter" })]
+      },
+      runtime
+    );
+
+    expect(result.documents).toEqual([]);
+    expect(result.metrics.outputs).toBe(0);
   });
 
   it("rejects missing inputs before network requests for every validated service", async () => {

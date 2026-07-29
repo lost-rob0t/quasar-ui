@@ -8,7 +8,10 @@ export const DEFAULT_MELISSA_CONFIG = Object.freeze({
   identityAction: "Check",
   consumerOptions: "",
   consumerColumns: "",
-  personatorColumns: "",
+  personatorColumns:
+    "PreviousAddress,DateOfBirth,DateOfDeath,Email,MelissaIdentityKey,MoveDate,Phone,Suffix",
+  personatorOptions:
+    "SearchType:Auto,SearchConditions:progressive,RecordsPerPage:10,MaxEmail:10,MaxPhone:10",
   maxRecords: 10,
   matchLevel: 10,
   reverseDistance: 10,
@@ -65,7 +68,12 @@ export function normalizeMelissaConfig(value = {}) {
       : DEFAULT_MELISSA_CONFIG.identityAction,
     consumerOptions: String(input.consumerOptions || "").trim(),
     consumerColumns: String(input.consumerColumns || "").trim(),
-    personatorColumns: String(input.personatorColumns || "").trim(),
+    personatorColumns: String(
+      input.personatorColumns || DEFAULT_MELISSA_CONFIG.personatorColumns
+    ).trim(),
+    personatorOptions: String(
+      input.personatorOptions || DEFAULT_MELISSA_CONFIG.personatorOptions
+    ).trim(),
     maxRecords: finiteInteger(input.maxRecords, DEFAULT_MELISSA_CONFIG.maxRecords, 1, 100),
     matchLevel: finiteInteger(input.matchLevel, DEFAULT_MELISSA_CONFIG.matchLevel, 1, 10),
     reverseDistance: finiteInteger(
@@ -157,6 +165,7 @@ function configureMelissaUrl(url, config) {
     add(url, "act", config.identityAction);
   } else if (url.hostname === "personatorsearch.melissadata.net") {
     add(url, "cols", config.personatorColumns);
+    add(url, "opt", config.personatorOptions);
   } else if (url.hostname === "address.melissadata.net") {
     add(url, "opt", config.addressOptions);
   } else if (url.hostname === "globalname.melissadata.net") {
