@@ -65,7 +65,12 @@ async function readBoundedActorBody(response, signal) {
   return bytes;
 }
 
-function configureMelissaActorUrl(url, actor, configuration, trusted) {
+export function actorConfigurationForExecution(actor, trusted) {
+  if (isMelissaActor(actor) && !trusted) return {};
+  return loadActorConfiguration(actor);
+}
+
+export function configureMelissaActorUrl(url, actor, configuration, trusted) {
   if (!trusted || !isMelissaActor(actor) || !MELISSA_HOSTS.has(url.hostname.toLowerCase())) {
     return url;
   }
@@ -156,7 +161,7 @@ export async function runBrowserActor(
     throw new TypeError(`Actor timeout must be an integer from 1 to ${MAX_ACTOR_TIMEOUT_MS}`);
   }
 
-  const configuration = !isMelissaActor(actor) || trusted ? loadActorConfiguration(actor) : {};
+  const configuration = actorConfigurationForExecution(actor, trusted);
   const executionContext = { ...context, configuration };
   const services = {
     "documents.get": documentGetService,
