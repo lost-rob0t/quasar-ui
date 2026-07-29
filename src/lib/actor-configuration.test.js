@@ -68,10 +68,10 @@ describe("actor configuration", () => {
     expect(actorConfigurationStatus(second)).toMatchObject({ configured: true, missing: [] });
   });
 
-  it("reports the missing Melissa API key", () => {
+  it("reports the missing Melissa license key", () => {
     expect(actorConfigurationStatus({ id: "quasar.actor.melissa-global-ip" })).toMatchObject({
       configured: false,
-      missing: ["Melissa API key"]
+      missing: ["Melissa license key"]
     });
   });
 });

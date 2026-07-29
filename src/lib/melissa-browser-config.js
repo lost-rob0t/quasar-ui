@@ -38,6 +38,10 @@ const MELISSA_HOSTS = new Set([
   "globalip.melissadata.net"
 ]);
 
+const MELISSA_KEY_LABEL =
+  /^(?:melissa\s+)?(?:api\s+key|license\s+key(?:\s+using\s+credits)?|customer\s+id)\s*(?::|=|\r?\n)\s*/i;
+const INVISIBLE_KEY_CHARACTERS = /[\u200b-\u200d\u2060\ufeff]/g;
+
 let originalFetch = null;
 let installed = false;
 
@@ -47,10 +51,24 @@ function finiteInteger(value, fallback, minimum, maximum) {
   return Math.max(minimum, Math.min(parsed, maximum));
 }
 
+export function normalizeMelissaLicenseKey(value) {
+  let key = String(value ?? "")
+    .replace(INVISIBLE_KEY_CHARACTERS, "")
+    .trim();
+  key = key.replace(MELISSA_KEY_LABEL, "").trim();
+  if (
+    key.length >= 2 &&
+    ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'")))
+  ) {
+    key = key.slice(1, -1);
+  }
+  return key.replace(INVISIBLE_KEY_CHARACTERS, "").replace(/\s+/gu, "");
+}
+
 export function normalizeMelissaConfig(value = {}) {
   const input = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   return {
-    licenseKey: String(input.licenseKey || "").trim(),
+    licenseKey: normalizeMelissaLicenseKey(input.licenseKey),
     transmissionReference: String(
       input.transmissionReference || DEFAULT_MELISSA_CONFIG.transmissionReference
     )

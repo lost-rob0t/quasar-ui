@@ -4,6 +4,7 @@ import {
   installMelissaFetchInterceptor,
   loadMelissaConfig,
   MELISSA_CONFIG_STORAGE_KEY,
+  normalizeMelissaLicenseKey,
   saveMelissaConfig,
   uninstallMelissaFetchInterceptor
 } from "./melissa-browser-config";
@@ -67,6 +68,13 @@ describe("Melissa browser configuration", () => {
     expect(loadMelissaConfig().licenseKey).toBe("");
   });
 
+  it("normalizes copied credit-license text without changing key symbols", () => {
+    expect(
+      normalizeMelissaLicenseKey("\u200bLicense Key Using Credits:\n  CR+ED/IT== \ufeff")
+    ).toBe("CR+ED/IT==");
+    expect(normalizeMelissaLicenseKey('"CR+ED/IT=="')).toBe("CR+ED/IT==");
+  });
+
   it("injects credentials and service defaults only into Melissa requests", async () => {
     const fetchMock = vi.fn(async () => ({ ok: true }));
     globalThis.fetch = fetchMock;
@@ -90,6 +98,22 @@ describe("Melissa browser configuration", () => {
     expect(melissaUrl.searchParams.get("maxrecords")).toBe("25");
     expect(melissaUrl.searchParams.get("matchlevel")).toBe("8");
     expect(fetchMock.mock.calls[1][0]).toBe("https://example.com/data.json");
+  });
+
+  it("preserves and URL-encodes credit-license symbols exactly", async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true }));
+    globalThis.fetch = fetchMock;
+    saveMelissaConfig({ licenseKey: "License Key Using Credits: CR+ED/IT==" });
+    installMelissaFetchInterceptor();
+
+    await globalThis.fetch(
+      "https://personatorsearch.melissadata.net/WEB/doPersonatorSearch?last=Porter&format=JSON"
+    );
+
+    const requested = String(fetchMock.mock.calls[0][0]);
+    const url = new URL(requested);
+    expect(url.searchParams.get("id")).toBe("CR+ED/IT==");
+    expect(requested).toContain("id=CR%2BED%2FIT%3D%3D");
   });
 
   it("supports a persisted CORS proxy template", async () => {
