@@ -3,6 +3,12 @@ import fs from "node:fs/promises";
 const baselinePath = process.argv[2] || "benchmarks/baseline/graph-baseline.json";
 const candidatePath = process.argv[3] || "benchmarks/results/graph-final.json";
 const limit = Number(process.env.GRAPH_BENCH_REGRESSION_LIMIT || 0.1);
+const GATED_SCENARIOS = Object.freeze([
+  "small/mixed",
+  "medium/mixed",
+  "large/mixed",
+  "very-large/mixed"
+]);
 
 if (!Number.isFinite(limit) || limit < 0) {
   throw new TypeError("GRAPH_BENCH_REGRESSION_LIMIT must be a finite non-negative number");
@@ -50,16 +56,21 @@ function compareMetric(name, beforeValue, afterValue, direction = "lower") {
 const expected = resultMap(baseline, "Baseline");
 const actual = resultMap(candidate, "Candidate");
 
-for (const scenario of expected.keys()) {
+for (const scenario of GATED_SCENARIOS) {
+  if (!expected.has(scenario)) failures.push(`${scenario} reviewed baseline is missing`);
   if (!actual.has(scenario)) failures.push(`${scenario} candidate scenario is missing`);
 }
-for (const scenario of actual.keys()) {
-  if (!expected.has(scenario)) failures.push(`${scenario} has no reviewed baseline`);
+
+for (const scenario of expected.keys()) {
+  if (!GATED_SCENARIOS.includes(scenario)) {
+    failures.push(`${scenario} is not part of the declared regression scenario set`);
+  }
 }
 
-for (const [scenario, previous] of expected) {
+for (const scenario of GATED_SCENARIOS) {
+  const previous = expected.get(scenario);
   const result = actual.get(scenario);
-  if (!result) continue;
+  if (!previous || !result) continue;
   compareMetric(`${scenario} first usable`, previous.metrics.firstUsable?.median, result.metrics.firstUsable?.median);
   compareMetric(`${scenario} filter p95`, previous.metrics.filter?.p95, result.metrics.filter?.p95);
   compareMetric(`${scenario} selection p95`, previous.metrics.selection?.p95, result.metrics.selection?.p95);
