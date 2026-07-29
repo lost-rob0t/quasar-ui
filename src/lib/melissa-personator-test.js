@@ -12,6 +12,50 @@ export const MELISSA_PERSONATOR_TEST_RECORD = Object.freeze({
   postal: "92688"
 });
 
+const MELISSA_TRANSMISSION_ERRORS = Object.freeze({
+  GE01: {
+    message: "Empty request structure",
+    remediation: "Check that the request body or query parameters were created correctly."
+  },
+  GE04: {
+    message: "Empty license key",
+    remediation: "Paste the Melissa License Key Using Credits before testing."
+  },
+  GE05: {
+    message: "Invalid license key",
+    remediation: "Verify that the saved value is the exact License Key Using Credits."
+  },
+  GE06: {
+    message: "Disabled license key",
+    remediation: "Re-enable the key in Melissa or replace it with an active key."
+  },
+  GE07: {
+    message: "Invalid request",
+    remediation: "Inspect the request parameters and Melissa endpoint requirements."
+  },
+  GE08: {
+    message: "Product or account level not enabled",
+    remediation:
+      "Enable Personator Search for this Melissa account or use a license key entitled for Personator Search."
+  },
+  GE09: {
+    message: "Customer does not exist",
+    remediation: "Verify the Melissa account associated with the license key."
+  },
+  GE10: {
+    message: "Customer license disabled",
+    remediation: "Contact Melissa to restore or replace the disabled customer license."
+  },
+  GE14: {
+    message: "Out of credits",
+    remediation: "Add credits to the Melissa account before retrying."
+  },
+  SE01: {
+    message: "Melissa Cloud API internal error",
+    remediation: "Retry later and contact Melissa support if the error persists."
+  }
+});
+
 function keyFingerprint(value) {
   let state = 0x811c9dc5;
   for (const character of value) {
@@ -32,6 +76,18 @@ function errorDetails(error) {
     message: error?.message || String(error),
     stack: error?.stack || ""
   };
+}
+
+export function describeMelissaTransmissionError(code) {
+  const normalized = String(code || "").trim().toUpperCase();
+  return (
+    MELISSA_TRANSMISSION_ERRORS[normalized] || {
+      message: normalized ? `Unrecognized Melissa transmission error ${normalized}` : "",
+      remediation: normalized
+        ? "Inspect Melissa's current Personator Search result-code documentation."
+        : ""
+    }
+  );
 }
 
 export function describeMelissaLicenseKey(value) {
@@ -128,12 +184,18 @@ export async function testMelissaPersonatorSearch(
       /^(?:GE|SE)\d{2}$/.test(code)
     );
     const records = Array.isArray(body?.Records) ? body.Records : [];
+    const error = errorCode ? describeMelissaTransmissionError(errorCode) : null;
     const result = {
       ok: response.ok && !errorCode,
       httpStatus: response.status,
       transmissionResults: transmissionResults || "(missing)",
+      transmissionReference: String(body?.TransmissionReference || ""),
       errorCode: errorCode || "",
+      errorMessage: error?.message || "",
+      remediation: error?.remediation || "",
+      totalPages: Number(body?.TotalPages) || 0,
       totalRecords: Number(body?.TotalRecords ?? records.length) || 0,
+      returnedRecordObjects: records.length,
       version: String(body?.Version || ""),
       key,
       endpoint,
