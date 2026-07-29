@@ -34,6 +34,18 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Patch applicator replacement callback
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("scripts/apply-audit-fixes.py")
+          text = path.read_text(encoding="utf-8")
+          before = "next_text, count = re.subn(pattern, replacement, text, count=1, flags=re.S)"
+          after = "next_text, count = re.subn(pattern, lambda _match: replacement, text, count=1, flags=re.S)"
+          if text.count(before) != 1:
+              raise SystemExit("regex replacement helper was not found exactly once")
+          path.write_text(text.replace(before, after), encoding="utf-8")
+          PY
       - run: python3 scripts/apply-audit-fixes.py
       - run: npm ci
       - name: Format touched files
