@@ -46,6 +46,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Generate reviewed branch baseline
         env:
+          GRAPH_BENCH_BASELINE_ONLY: "1"
           GRAPH_BENCH_WARMUP_RUNS: "0"
           GRAPH_BENCH_MEASURED_RUNS: "3"
         run: npm run bench:graph:update
