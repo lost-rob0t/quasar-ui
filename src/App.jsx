@@ -32,7 +32,8 @@ import { DocumentPage, DocumentsPage } from "./components/Documents";
 import DocumentEditor from "./components/DocumentEditor";
 import { ImportPage, SettingsPage } from "./components/ImportSettings";
 import StatsPage from "./components/StatsPage";
-import { AgentBubble, AgentConsole, AgentSystemProvider } from "./components/AgentSystem";
+import { AgentBubble, AgentSystemProvider } from "./components/AgentSystem";
+import AgentHub from "./components/AgentHub";
 import MobileGestureMenu from "./components/MobileGestureMenu";
 
 const navigation = [
@@ -41,7 +42,7 @@ const navigation = [
   { to: "/documents?group=dataset", label: "Datasets", Icon: Layers3 },
   { to: "/documents", label: "Documents", mobileLabel: "Docs", Icon: TableProperties, end: true },
   { to: "/documents/new", label: "Add document", mobileLabel: "Add", Icon: FilePlus2 },
-  { to: "/agents", label: "Actors", Icon: Bot },
+  { to: "/agents", label: "Agents", Icon: Bot },
   { to: "/import", label: "Import", Icon: FolderInput },
   { to: "/settings", label: "Settings", mobileLabel: "Settings", Icon: Settings }
 ];
@@ -372,7 +373,7 @@ export default function App() {
           <Route path="/documents/:id" element={<DocumentPage />} />
           <Route path="/documents/:id/edit" element={<DocumentEditor mode="edit" />} />
           <Route path="/import" element={<ImportPage />} />
-          <Route path="/agents" element={<AgentConsole />} />
+          <Route path="/agents" element={<AgentHub />} />
           <Route path="/stats" element={<Navigate to="/" replace />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<NotFound />} />
