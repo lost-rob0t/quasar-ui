@@ -1,7 +1,4 @@
-import {
-  fetchMelissaDirect,
-  normalizeMelissaLicenseKey
-} from "./melissa-browser-config";
+import { fetchMelissaDirect, normalizeMelissaLicenseKey } from "./melissa-browser-config";
 
 export const MELISSA_PERSONATOR_TEST_RECORD = Object.freeze({
   full: "Melissa Data",
@@ -29,10 +26,7 @@ export function describeMelissaLicenseKey(value) {
   };
 }
 
-export function buildMelissaPersonatorTestUrl(
-  licenseKey,
-  record = MELISSA_PERSONATOR_TEST_RECORD
-) {
+export function buildMelissaPersonatorTestUrl(licenseKey, record = MELISSA_PERSONATOR_TEST_RECORD) {
   const normalized = normalizeMelissaLicenseKey(licenseKey);
   if (!normalized) throw new Error("Paste the Melissa License Key Using Credits before testing");
 
