@@ -5,9 +5,12 @@ function number(value, digits = 1) {
   return Number.isFinite(value) ? value.toFixed(digits) : "—";
 }
 
-function percent(before, after) {
+function improvement(before, after, direction = "lower") {
   if (!Number.isFinite(before) || !Number.isFinite(after) || before === 0) return "—";
-  return `${(((before - after) / before) * 100).toFixed(1)}%`;
+  const delta = direction === "lower"
+    ? (before - after) / Math.abs(before)
+    : (after - before) / Math.abs(before);
+  return `${(delta * 100).toFixed(1)}%`;
 }
 
 function scenarioKey(result) {
@@ -36,13 +39,13 @@ export function createMarkdownReport(report) {
     const before = baseline.get(key);
     if (!before) continue;
     const rows = [
-      ["First usable", before.metrics.firstUsable.median, after.metrics.firstUsable.median, after.metrics.firstUsable.p95, "ms"],
-      ["Filter", before.metrics.filter?.median, after.metrics.filter?.median, after.metrics.filter?.p95, "ms"],
-      ["Selection", before.metrics.selection?.median, after.metrics.selection?.median, after.metrics.selection?.p95, "ms"],
-      ["Viewport FPS", before.metrics.viewport?.medianFps, after.metrics.viewport?.medianFps, null, "fps"]
+      ["First usable", before.metrics.firstUsable.median, after.metrics.firstUsable.median, after.metrics.firstUsable.p95, "lower", "ms"],
+      ["Filter", before.metrics.filter?.median, after.metrics.filter?.median, after.metrics.filter?.p95, "lower", "ms"],
+      ["Selection", before.metrics.selection?.median, after.metrics.selection?.median, after.metrics.selection?.p95, "lower", "ms"],
+      ["Viewport FPS", before.metrics.viewport?.medianFps, after.metrics.viewport?.medianFps, null, "higher", "fps"]
     ];
-    for (const [label, beforeValue, afterValue, p95Value, unit] of rows) {
-      lines.push(`| ${key} | ${label} | ${number(beforeValue)} ${unit} | ${number(afterValue)} ${unit} | ${percent(beforeValue, afterValue)} | ${number(p95Value)} ${p95Value == null ? "" : unit} | — |`);
+    for (const [label, beforeValue, afterValue, p95Value, direction, unit] of rows) {
+      lines.push(`| ${key} | ${label} | ${number(beforeValue)} ${unit} | ${number(afterValue)} ${unit} | ${improvement(beforeValue, afterValue, direction)} | ${number(p95Value)} ${p95Value == null ? "" : unit} | — |`);
     }
   }
 

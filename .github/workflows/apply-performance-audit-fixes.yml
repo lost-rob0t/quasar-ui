@@ -1,0 +1,145 @@
+name: Apply performance audit fixes
+
+on:
+  pull_request:
+    branches:
+      - perf/large-graph-responsiveness
+    paths:
+      - scripts/apply-performance-audit-fixes.py
+      - .github/workflows/apply-performance-audit-fixes.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-performance-audit-fixes-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    if: github.head_ref == 'agent/performance-audit-fixes'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/performance-audit-fixes
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: npm
+      - run: python3 scripts/apply-performance-audit-fixes.py
+      - name: Keep the checked baseline deterministic
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, before, after, label):
+              file = Path(path)
+              text = file.read_text(encoding="utf-8")
+              if text.count(before) != 1:
+                  raise SystemExit(f"{label} was not found exactly once")
+              file.write_text(text.replace(before, after, 1), encoding="utf-8")
+
+          replace_once(
+              "scripts/bench-graph.mjs",
+              '["small", "medium", "large", "very-large", "stress"]',
+              '["small", "medium", "large", "very-large"]',
+              "baseline-only scenario list"
+          )
+          replace_once(
+              "scripts/bench-graph.mjs",
+              '''          includeIncremental: size !== "stress",
+                    graphSwitchIterations: size === "stress" ? 2 : isLarge ? 5 : 10''',
+              '''          includeIncremental: true,
+                    incrementalMode: "gated",
+                    graphSwitchIterations: isLarge ? 5 : 10''',
+              "baseline-only incremental policy"
+          )
+          replace_once(
+              "src/benchmark/graph-benchmark.js",
+              '''  includeIncremental = true,
+            interactionIterations = 10,''',
+              '''  includeIncremental = true,
+            incrementalMode = "full",
+            interactionIterations = 10,''',
+              "incremental mode parameter"
+          )
+          replace_once(
+              "src/benchmark/graph-benchmark.js",
+              '''  if (includeIncremental) {
+              metrics.incrementalDocuments = {};
+              metrics.incrementalElements = { add: {}, update: {}, remove: {} };
+              for (const count of [1, 10, 100]) {
+                metrics.incrementalDocuments[count] = await measureIncrementalDocuments(cy, fixture, strategy, count);
+                for (const operation of ["add", "update", "remove"]) {
+                  metrics.incrementalElements[operation][count] = await measureIncrementalElements(
+                    cy,
+                    graph,
+                    strategy,
+                    operation,
+                    count
+                  );
+                }
+              }
+            }''',
+              '''  if (includeIncremental) {
+              metrics.incrementalDocuments = {};
+              metrics.incrementalElements = { add: {}, update: {}, remove: {} };
+              if (incrementalMode === "gated") {
+                metrics.incrementalElements.update[100] = await measureIncrementalElements(
+                  cy,
+                  graph,
+                  strategy,
+                  "update",
+                  100
+                );
+              } else {
+                for (const count of [1, 10, 100]) {
+                  metrics.incrementalDocuments[count] = await measureIncrementalDocuments(cy, fixture, strategy, count);
+                  for (const operation of ["add", "update", "remove"]) {
+                    metrics.incrementalElements[operation][count] = await measureIncrementalElements(
+                      cy,
+                      graph,
+                      strategy,
+                      operation,
+                      count
+                    );
+                  }
+                }
+              }
+            }''',
+              "gated incremental measurement"
+          )
+          PY
+      - run: npm ci
+      - name: Format touched files
+        run: |
+          npx prettier --write \
+            src/benchmark/graph-benchmark.js \
+            src/components/GraphPage.jsx \
+            src/graph/graph-reconciler.js \
+            src/graph/graph-reconciler.test.js \
+            scripts/bench-graph.mjs \
+            scripts/bench-graph-compare.mjs \
+            scripts/bench-graph-report.mjs \
+            .github/workflows/graph-performance.yml
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Generate reviewed branch baseline
+        env:
+          GRAPH_BENCH_BASELINE_ONLY: "1"
+          GRAPH_BENCH_WARMUP_RUNS: "0"
+          GRAPH_BENCH_MEASURED_RUNS: "1"
+        run: npm run bench:graph:update
+      - name: Validate generated baseline
+        run: test -s benchmarks/baseline/graph-baseline.json
+      - name: Commit fixes and baseline
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Fix performance branch audit findings"
+          git push origin HEAD:agent/performance-audit-fixes
