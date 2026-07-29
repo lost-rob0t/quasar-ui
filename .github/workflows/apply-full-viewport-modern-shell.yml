@@ -1,0 +1,128 @@
+name: Apply full viewport shell regression fix
+
+on:
+  push:
+    branches:
+      - fix/full-viewport-modern-shell
+    paths:
+      - .github/workflows/apply-full-viewport-modern-shell.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/full-viewport-modern-shell
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Restore modern shell in full viewport
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          from pathlib import Path
+          import re
+
+          css_path = Path("src/graph-workspace-shell.css")
+          css = css_path.read_text()
+          pattern = re.compile(
+              r"  body\.graph-viewport-full:has\(\.graph-page\) \.app-shell \{.*?\n  \}\n\}\n\n@media \(min-width: 851px\) and \(max-width: 1180px\)",
+              re.S,
+          )
+          replacement = '''  body.graph-viewport-full:has(.graph-page) .app-shell {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          body.graph-viewport-full:has(.graph-page) .app-shell > .sidebar,
+          body.graph-viewport-full:has(.graph-page) .topbar {
+            display: none !important;
+          }
+
+          body.graph-viewport-full:has(.graph-page) .app-shell > .workbench {
+            grid-column: 1;
+            grid-template-rows: minmax(0, 1fr);
+          }
+
+          body.graph-viewport-full:has(.graph-page) .content {
+            padding: 86px 0 176px;
+          }
+        }
+
+        @media (min-width: 851px) and (max-width: 1180px)'''
+          css, count = pattern.subn(replacement, css, count=1)
+          if count != 1:
+              raise SystemExit(f"expected one full viewport block, replaced {count}")
+          css_path.write_text(css)
+
+          test_path = Path("e2e/graph-viewport.spec.ts")
+          test = test_path.read_text()
+          marker = 'test("full viewport keeps the modern graph workspace shell"'
+          if marker not in test:
+              test += r'''
+
+          test("full viewport keeps the modern graph workspace shell", async ({ page }) => {
+            await page.setViewportSize({ width: 1440, height: 900 });
+            await page.goto("/graph");
+
+            const canvas = page.locator(".graph-canvas");
+            const sidebar = page.locator(".app-shell > .sidebar");
+            const metrics = page.locator(".graph-workspace-metrics");
+            const dock = page.locator(".graph-agent-dock");
+            const inspector = page.locator(".graph-inspector");
+            const enter = page.getByRole("button", { name: "Enter full viewport" });
+
+            await expect(sidebar).toBeVisible();
+            await expect(metrics).toBeVisible();
+            await expect(dock).toBeVisible();
+            await expect(inspector).toBeVisible();
+            await expect(canvas).toBeVisible();
+
+            const before = await canvas.boundingBox();
+            expect(before).not.toBeNull();
+
+            await enter.click();
+            await expect(page.locator("body")).toHaveClass(/graph-viewport-full/);
+            await expect(sidebar).toBeHidden();
+            await expect(page.locator(".topbar")).toBeHidden();
+            await expect(metrics).toBeVisible();
+            await expect(dock).toBeVisible();
+            await expect(inspector).toBeVisible();
+            await expect(page.getByRole("button", { name: "Exit full viewport" })).toBeVisible();
+
+            const after = await canvas.boundingBox();
+            expect(after).not.toBeNull();
+            if (before && after) {
+              expect(after.width).toBeGreaterThan(before.width + 150);
+              expect(after.height).toBeGreaterThan(before.height + 40);
+            }
+
+            await page.keyboard.press("Escape");
+            await expect(page.locator("body")).not.toHaveClass(/graph-viewport-full/);
+            await expect(sidebar).toBeVisible();
+            await expect(page.getByRole("button", { name: "Enter full viewport" })).toBeVisible();
+          });
+          '''
+          test_path.write_text(test)
+          PY
+      - run: npm ci
+      - run: npx prettier --write src/graph-workspace-shell.css e2e/graph-viewport.spec.ts
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+      - name: Commit fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/apply-full-viewport-modern-shell.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Keep modern graph shell in full viewport"
+          git push origin HEAD:fix/full-viewport-modern-shell
