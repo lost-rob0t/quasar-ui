@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearMelissaConfig,
   fetchMelissaDirect,
+  inspectMelissaLicenseKey,
   installMelissaFetchInterceptor,
   loadMelissaConfig,
   MELISSA_CONFIG_STORAGE_KEY,
@@ -48,7 +49,7 @@ afterEach(() => {
 });
 
 describe("Melissa browser configuration", () => {
-  it("persists normalized configuration in browser storage", () => {
+  it("persists configuration in browser storage", () => {
     const saved = saveMelissaConfig({
       licenseKey: "TEST-KEY",
       defaultCountry: "ca",
@@ -69,15 +70,18 @@ describe("Melissa browser configuration", () => {
     expect(loadMelissaConfig().licenseKey).toBe("");
   });
 
-  it("normalizes copied credit-license text without changing key symbols", () => {
-    expect(
-      normalizeMelissaLicenseKey("\u200bLicense Key Using Credits:\n  CR+ED/IT== \ufeff")
-    ).toBe("CR+ED/IT==");
-    expect(normalizeMelissaLicenseKey("License Key Using Credits CR_EDIT_KEY")).toBe("CR_EDIT_KEY");
-    expect(normalizeMelissaLicenseKey("License Key Using Credits\nCopy\nCR_EDIT_KEY")).toBe(
-      "CR_EDIT_KEY"
-    );
-    expect(normalizeMelissaLicenseKey('"CR+ED/IT=="')).toBe("CR+ED/IT==");
+  it("preserves the exact license key instead of rewriting copied text", () => {
+    const exact = "License Key Using Credits:\nCopy\nCR+ED/IT==";
+
+    expect(normalizeMelissaLicenseKey(exact)).toBe(exact);
+    expect(normalizeMelissaLicenseKey('"CR+ED/IT=="')).toBe('"CR+ED/IT=="');
+    expect(normalizeMelissaLicenseKey(" CR_EDIT_KEY ")).toBe(" CR_EDIT_KEY ");
+    expect(inspectMelissaLicenseKey(" CR_EDIT_KEY\u200b ")).toEqual({
+      length: 15,
+      leadingOrTrailingWhitespace: true,
+      whitespaceCount: 2,
+      invisibleCount: 1
+    });
   });
 
   it("injects credentials and service defaults only into Melissa requests", async () => {
@@ -108,7 +112,7 @@ describe("Melissa browser configuration", () => {
   it("preserves and URL-encodes credit-license symbols exactly", async () => {
     const fetchMock = vi.fn(async () => ({ ok: true }));
     globalThis.fetch = fetchMock;
-    saveMelissaConfig({ licenseKey: "License Key Using Credits: CR+ED/IT==" });
+    saveMelissaConfig({ licenseKey: "CR+ED/IT==" });
     installMelissaFetchInterceptor();
 
     await globalThis.fetch(
