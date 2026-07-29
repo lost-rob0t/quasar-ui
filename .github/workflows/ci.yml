@@ -27,6 +27,8 @@ jobs:
           npx prettier --write docs/MELISSA_ACTORS.md
           npx prettier --write src/components/MelissaActorBridge.jsx
           npx prettier --write src/lib/melissa-personator-search.js
+          sed -i 's/dob: "1982-01-01"/dob: "1982-01-01T00:00:00.000Z"/' src/lib/melissa-actor-pack-runtime.test.js
+          npx prettier --write src/lib/melissa-actor-pack-runtime.test.js
       - name: Upload formatted Melissa sources
         uses: actions/upload-artifact@v7
         with:
@@ -35,6 +37,7 @@ jobs:
             docs/MELISSA_ACTORS.md
             src/components/MelissaActorBridge.jsx
             src/lib/melissa-personator-search.js
+            src/lib/melissa-actor-pack-runtime.test.js
           retention-days: 1
       - run: npm run format:check
       - run: npm run lint
