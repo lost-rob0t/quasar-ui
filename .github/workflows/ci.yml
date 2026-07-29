@@ -29,6 +29,8 @@ jobs:
       - run: npm run check:static
       - run: npm test
       - run: npm run build
+        env:
+          VITE_E2E: "true"
       - name: Validate application artifact
         shell: bash
         run: |
