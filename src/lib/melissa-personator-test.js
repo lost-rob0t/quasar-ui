@@ -1,4 +1,8 @@
-import { fetchMelissaDirect, normalizeMelissaLicenseKey } from "./melissa-browser-config";
+import {
+  fetchMelissaDirect,
+  inspectMelissaLicenseKey,
+  normalizeMelissaLicenseKey
+} from "./melissa-browser-config";
 
 export const MELISSA_PERSONATOR_TEST_RECORD = Object.freeze({
   full: "Melissa Data",
@@ -20,18 +24,19 @@ function keyFingerprint(value) {
 export function describeMelissaLicenseKey(value) {
   const licenseKey = normalizeMelissaLicenseKey(value);
   return {
-    length: licenseKey.length,
+    ...inspectMelissaLicenseKey(licenseKey),
     ending: licenseKey ? licenseKey.slice(-4) : "",
-    fingerprint: licenseKey ? keyFingerprint(licenseKey) : ""
+    fingerprint: licenseKey ? keyFingerprint(licenseKey) : "",
+    sentUnchanged: true
   };
 }
 
 export function buildMelissaPersonatorTestUrl(licenseKey, record = MELISSA_PERSONATOR_TEST_RECORD) {
-  const normalized = normalizeMelissaLicenseKey(licenseKey);
-  if (!normalized) throw new Error("Paste the Melissa License Key Using Credits before testing");
+  const exact = normalizeMelissaLicenseKey(licenseKey);
+  if (!exact) throw new Error("Paste the Melissa License Key Using Credits before testing");
 
   const url = new URL("https://personatorsearch.melissadata.net/WEB/doPersonatorSearch");
-  url.searchParams.set("id", normalized);
+  url.searchParams.set("id", exact);
   url.searchParams.set("format", "JSON");
   url.searchParams.set("t", "Quasar manual credential test");
   url.searchParams.set("full", String(record.full || ""));
