@@ -7,9 +7,7 @@ import {
 
 describe("manual Personator Search credential test", () => {
   it("places the exact normalized credit key in the documented request", () => {
-    const url = buildMelissaPersonatorTestUrl(
-      "License Key Using Credits:\nCopy\nCR+ED/IT=="
-    );
+    const url = buildMelissaPersonatorTestUrl("License Key Using Credits:\nCopy\nCR+ED/IT==");
 
     expect(url.origin + url.pathname).toBe(
       "https://personatorsearch.melissadata.net/WEB/doPersonatorSearch"
@@ -24,16 +22,17 @@ describe("manual Personator Search credential test", () => {
   });
 
   it("reports the service response without exposing the full key", async () => {
-    const fetchImpl = vi.fn(async () =>
-      new Response(
-        JSON.stringify({
-          TransmissionResults: "US01",
-          TotalRecords: "1",
-          Version: "test",
-          Records: [{ RecordID: "1" }]
-        }),
-        { status: 200, headers: { "content-type": "application/json" } }
-      )
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            TransmissionResults: "US01",
+            TotalRecords: "1",
+            Version: "test",
+            Records: [{ RecordID: "1" }]
+          }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        )
     );
 
     const result = await testMelissaPersonatorSearch("CR+ED/IT==", { fetchImpl });
@@ -51,11 +50,12 @@ describe("manual Personator Search credential test", () => {
   });
 
   it("reports GE05 as a rejected exact credential", async () => {
-    const fetchImpl = vi.fn(async () =>
-      new Response(JSON.stringify({ TransmissionResults: "GE05", Records: [] }), {
-        status: 200,
-        headers: { "content-type": "application/json" }
-      })
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ TransmissionResults: "GE05", Records: [] }), {
+          status: 200,
+          headers: { "content-type": "application/json" }
+        })
     );
 
     await expect(testMelissaPersonatorSearch("CREDIT-KEY", { fetchImpl })).resolves.toMatchObject({
