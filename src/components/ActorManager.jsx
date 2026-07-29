@@ -67,14 +67,7 @@ function insertIndent(event, value, onChange) {
 }
 
 export default function ActorManager() {
-  const {
-    actors,
-    persistSettings,
-    runActor,
-    selectedIds,
-    settings = {},
-    setNotice
-  } = useQuasar();
+  const { actors, persistSettings, runActor, selectedIds, settings = {}, setNotice } = useQuasar();
   const customActors = Array.isArray(settings.actors) ? settings.actors : [];
   const allActors = useMemo(() => [...BUILTIN_ACTORS, ...customActors], [customActors]);
   const [query, setQuery] = useState("");
@@ -83,16 +76,18 @@ export default function ActorManager() {
   const [draft, setDraft] = useState(() => actorDraft(allActors[0] || defaultActor()));
   const [status, setStatus] = useState({ kind: "idle", message: "" });
 
-  const selectedActor = selectedId === NEW_ACTOR
-    ? null
-    : allActors.find((actor) => actor.id === selectedId) || null;
+  const selectedActor =
+    selectedId === NEW_ACTOR ? null : allActors.find((actor) => actor.id === selectedId) || null;
   const builtin = Boolean(selectedActor && isBuiltinActor(selectedActor));
   const editable = !builtin;
   const filteredActors = allActors.filter((actor) => {
     const needle = query.trim().toLowerCase();
     if (!needle) return true;
-    return [actor.id, actor.label, actor.description]
-      .some((value) => String(value || "").toLowerCase().includes(needle));
+    return [actor.id, actor.label, actor.description].some((value) =>
+      String(value || "")
+        .toLowerCase()
+        .includes(needle)
+    );
   });
 
   useEffect(() => {
@@ -153,10 +148,12 @@ export default function ActorManager() {
   }
 
   async function duplicateActor() {
-    const source = selectedActor || normalizeActorManifest({
-      ...JSON.parse(draft.config),
-      source: draft.source
-    });
+    const source =
+      selectedActor ||
+      normalizeActorManifest({
+        ...JSON.parse(draft.config),
+        source: draft.source
+      });
     const suffix = crypto.randomUUID().slice(0, 8);
     const copy = normalizeActorManifest({
       ...source,
@@ -213,12 +210,7 @@ export default function ActorManager() {
           <button className="button" type="button" onClick={duplicateActor}>
             <Copy size={16} /> Clone
           </button>
-          <button
-            className="button primary"
-            type="button"
-            disabled={!editable}
-            onClick={saveActor}
-          >
+          <button className="button primary" type="button" disabled={!editable} onClick={saveActor}>
             <Save size={16} /> Save
           </button>
         </div>
@@ -246,7 +238,10 @@ export default function ActorManager() {
               onClick={createActor}
             >
               <Plus size={15} />
-              <span><strong>New actor</strong><small>Unsaved manifest</small></span>
+              <span>
+                <strong>New actor</strong>
+                <small>Unsaved manifest</small>
+              </span>
             </button>
             {filteredActors.map((actor) => {
               const readonly = isBuiltinActor(actor);
@@ -379,7 +374,10 @@ export default function ActorManager() {
                 />
                 <span>
                   <strong>Enable custom actor definitions</strong>
-                  <small>Custom manifests remain blocked from execution until the opaque-origin sandbox is available.</small>
+                  <small>
+                    Custom manifests remain blocked from execution until the opaque-origin sandbox
+                    is available.
+                  </small>
                 </span>
               </label>
               <div className="actor-security-note">
@@ -387,15 +385,20 @@ export default function ActorManager() {
                 <div>
                   <strong>Execution boundary</strong>
                   <p>
-                    Quasar stores custom actor code locally, but only trusted built-ins can execute in the current runtime.
+                    Quasar stores custom actor code locally, but only trusted built-ins can execute
+                    in the current runtime.
                   </p>
                 </div>
               </div>
               <dl className="actor-runtime-details">
-                <dt>Selected documents</dt><dd>{selectedIds.length}</dd>
-                <dt>Loaded actors</dt><dd>{actors.length}</dd>
-                <dt>Custom definitions</dt><dd>{customActors.length}</dd>
-                <dt>Runtime state</dt><dd>{settings.actorsEnabled ? "definitions enabled" : "definitions disabled"}</dd>
+                <dt>Selected documents</dt>
+                <dd>{selectedIds.length}</dd>
+                <dt>Loaded actors</dt>
+                <dd>{actors.length}</dd>
+                <dt>Custom definitions</dt>
+                <dd>{customActors.length}</dd>
+                <dt>Runtime state</dt>
+                <dd>{settings.actorsEnabled ? "definitions enabled" : "definitions disabled"}</dd>
               </dl>
             </div>
           )}
