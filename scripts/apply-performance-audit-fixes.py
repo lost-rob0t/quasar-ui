@@ -153,6 +153,69 @@ if (!Number.isInteger(WARMUP_RUNS) || !Number.isInteger(MEASURED_RUNS)) {
 }''',
     "benchmark run configuration"
 )
+text = replace_once(
+    text,
+    '''const profile = process.env.GRAPH_BENCH_PROFILE || "full";''',
+    '''const profile = process.env.GRAPH_BENCH_PROFILE || "full";
+const baselineOnly = process.env.GRAPH_BENCH_BASELINE_ONLY === "1";''',
+    "baseline-only mode"
+)
+text = replace_once(
+    text,
+    '''    const sizes = profile === "quick" ? ["small", "medium"] : ["small", "medium", "large", "very-large"];''',
+    '''    if (baselineOnly) {
+      const finalResults = [];
+      for (const size of ["small", "medium", "large", "very-large", "stress"]) {
+        const isLarge = ["large", "very-large", "stress"].includes(size);
+        console.log(`benchmark baseline-only final ${size}/mixed`);
+        finalResults.push(await runMeasured(page, {
+          size,
+          shape: "mixed",
+          strategy: "reconcile",
+          detailMode: "adaptive",
+          layoutMode: "size-aware",
+          interactionIterations: size === "stress" ? 2 : isLarge ? 3 : 8,
+          viewportFrames: isLarge ? 60 : 90,
+          includeIncremental: size !== "stress",
+          graphSwitchIterations: size === "stress" ? 2 : isLarge ? 5 : 10
+        }, null, context));
+      }
+      const browserVersion = await browser.version();
+      const commit = process.env.GITHUB_SHA || process.env.GRAPH_BENCH_COMMIT || "working-tree";
+      const baseline = {
+        schemaVersion: 1,
+        generatedAt: new Date().toISOString(),
+        environment: {
+          commit,
+          browserVersion,
+          platform: `${os.platform()} ${os.release()} ${os.arch()}`,
+          cpu: os.cpus()[0]?.model || "unknown",
+          logicalCpuCount: os.cpus().length,
+          totalMemoryBytes: os.totalmem(),
+          viewport: VIEWPORT,
+          deviceScaleFactor: DEVICE_SCALE_FACTOR
+        },
+        methodology: {
+          warmupRuns: WARMUP_RUNS,
+          measuredRuns: MEASURED_RUNS,
+          reported: "median and p95",
+          fixtureSeed: 0x5eed1234,
+          profile: "baseline-only"
+        },
+        iterations: { final: finalResults }
+      };
+      await fs.mkdir("benchmarks/baseline", { recursive: true });
+      await fs.writeFile(
+        "benchmarks/baseline/graph-baseline.json",
+        `${JSON.stringify(baseline, null, 2)}\n`
+      );
+      console.log("benchmarks/baseline/graph-baseline.json");
+      return;
+    }
+
+    const sizes = profile === "quick" ? ["small", "medium"] : ["small", "medium", "large", "very-large"];''',
+    "baseline-only execution"
+)
 path.write_text(text, encoding="utf-8")
 
 # Remove the one-shot files from the final branch commit.
