@@ -36,6 +36,7 @@ jobs:
             src/components/GraphPage.jsx \
             src/graph/graph-reconciler.js \
             src/graph/graph-reconciler.test.js \
+            scripts/bench-graph.mjs \
             scripts/bench-graph-compare.mjs \
             scripts/bench-graph-report.mjs \
             .github/workflows/graph-performance.yml
@@ -44,6 +45,9 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - name: Generate reviewed branch baseline
+        env:
+          GRAPH_BENCH_WARMUP_RUNS: "0"
+          GRAPH_BENCH_MEASURED_RUNS: "3"
         run: npm run bench:graph:update
       - name: Validate generated baseline
         run: test -s benchmarks/baseline/graph-baseline.json
