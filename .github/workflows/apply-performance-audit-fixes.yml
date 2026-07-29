@@ -1,12 +1,6 @@
 name: Apply performance audit fixes
 
 on:
-  push:
-    branches:
-      - agent/performance-audit-fixes
-    paths:
-      - scripts/apply-performance-audit-fixes.py
-      - .github/workflows/apply-performance-audit-fixes.yml
   pull_request:
     branches:
       - perf/large-graph-responsiveness
@@ -18,12 +12,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: apply-performance-audit-fixes-${{ github.event_name }}-${{ github.run_id }}
-  cancel-in-progress: false
+  group: apply-performance-audit-fixes-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   apply:
-    if: github.actor != 'github-actions[bot]' && (github.event_name != 'pull_request' || github.head_ref == 'agent/performance-audit-fixes')
+    if: github.head_ref == 'agent/performance-audit-fixes'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
