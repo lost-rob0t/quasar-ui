@@ -1,4 +1,4 @@
-export const CACHE_NAME = "quasar-runtime-v3";
+export const CACHE_NAME = "quasar-runtime-v4";
 export const APP_SHELL = ["./", "./index.html", "./manifest.webmanifest"];
 
 const IMMUTABLE_ASSET =
