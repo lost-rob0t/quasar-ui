@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildMelissaPersonatorTestUrl,
   describeMelissaLicenseKey,
+  describeMelissaTransmissionError,
   testMelissaPersonatorSearch
 } from "./melissa-personator-test";
 
@@ -52,6 +53,7 @@ describe("manual Personator Search credential test", () => {
       httpStatus: 200,
       transmissionResults: "US01",
       totalRecords: 1,
+      returnedRecordObjects: 1,
       version: "test",
       key: {
         length: 10,
@@ -131,7 +133,59 @@ describe("manual Personator Search credential test", () => {
     ).resolves.toMatchObject({
       ok: false,
       errorCode: "GE05",
+      errorMessage: "Invalid license key",
       transmissionResults: "GE05"
+    });
+  });
+
+  it("decodes GE08 and preserves response counters", async () => {
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn()
+    };
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            TransmissionResults: "GE08",
+            TransmissionReference: "Quasar manual credential test",
+            TotalPages: "0",
+            TotalRecords: "0",
+            Version: "9.2.5.1158",
+            Records: [{ RecordID: "", Results: "" }]
+          }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        )
+    );
+
+    const result = await testMelissaPersonatorSearch("CREDIT-KEY", { fetchImpl, logger });
+
+    expect(result).toMatchObject({
+      ok: false,
+      httpStatus: 200,
+      transmissionResults: "GE08",
+      transmissionReference: "Quasar manual credential test",
+      errorCode: "GE08",
+      errorMessage: "Product or account level not enabled",
+      remediation:
+        "Enable Personator Search for this Melissa account or use a license key entitled for Personator Search.",
+      totalPages: 0,
+      totalRecords: 0,
+      returnedRecordObjects: 1,
+      version: "9.2.5.1158"
+    });
+    expect(logger.warn).toHaveBeenCalledWith(
+      "[Melissa Personator Test] credential rejected",
+      expect.objectContaining({ errorCode: "GE08", returnedRecordObjects: 1 })
+    );
+  });
+
+  it("describes known transmission errors", () => {
+    expect(describeMelissaTransmissionError("ge08")).toEqual({
+      message: "Product or account level not enabled",
+      remediation:
+        "Enable Personator Search for this Melissa account or use a license key entitled for Personator Search."
     });
   });
 
