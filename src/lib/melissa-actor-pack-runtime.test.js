@@ -129,7 +129,7 @@ describe("Melissa runtime actor pack", () => {
       fname: "Erica",
       mname: "A",
       lname: "Porter",
-      dob: "1982-01-01"
+      dob: "1982-01-01T00:00:00.000Z"
     });
     expect(person.data.external_ids).toEqual(
       expect.arrayContaining([
