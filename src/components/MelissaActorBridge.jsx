@@ -1,5 +1,8 @@
 import { useEffect, useRef } from "react";
-import { installMelissaActorPack, MELISSA_ACTOR_PACK_VERSION } from "../lib/melissa-actor-installation";
+import {
+  installMelissaActorPack,
+  MELISSA_ACTOR_PACK_VERSION
+} from "../lib/melissa-actor-installation";
 import { installMelissaFetchInterceptor } from "../lib/melissa-browser-config";
 import { useQuasar } from "../store";
 
