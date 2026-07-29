@@ -70,9 +70,7 @@ describe("Melissa browser configuration", () => {
 
   it("normalizes copied credit-license text without changing key symbols", () => {
     expect(
-      normalizeMelissaLicenseKey(
-        "\u200bLicense Key Using Credits:\n  CR+ED/IT== \ufeff"
-      )
+      normalizeMelissaLicenseKey("\u200bLicense Key Using Credits:\n  CR+ED/IT== \ufeff")
     ).toBe("CR+ED/IT==");
     expect(normalizeMelissaLicenseKey('"CR+ED/IT=="')).toBe("CR+ED/IT==");
   });
