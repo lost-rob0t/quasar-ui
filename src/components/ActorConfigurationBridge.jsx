@@ -9,11 +9,7 @@ import {
   loadActorConfiguration,
   saveActorConfiguration
 } from "../lib/actor-configuration";
-import {
-  MELISSA_ACTORS,
-  MELISSA_ACTOR_PACK_VERSION,
-  mergeMelissaActors
-} from "../lib/melissa-actor-pack";
+import { installMelissaActorPack, MELISSA_ACTORS } from "../lib/melissa-actor-installation";
 import { useQuasar } from "../store";
 
 function actorSettingsPanel() {
@@ -202,12 +198,7 @@ export default function ActorConfigurationBridge() {
 
   async function installMelissa() {
     try {
-      await persistSettings({
-        actors: mergeMelissaActors(settings?.actors || []),
-        actorsEnabled: true,
-        melissaActorPackInstalled: true,
-        melissaActorPackVersion: MELISSA_ACTOR_PACK_VERSION
-      });
+      await persistSettings(installMelissaActorPack(settings || {}));
       setNotice({
         kind: "success",
         message: melissaInstalled ? "Melissa actor pack refreshed" : "Melissa actor pack installed"
