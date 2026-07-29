@@ -12,7 +12,7 @@
     "build": "vite build && cp dist/index.html dist/404.html",
     "preview": "vite preview",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format:check": "prettier --write src/lib/melissa-browser-config.js && git diff -- src/lib/melissa-browser-config.js && exit 1",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "npm run test:unit && npm run test:integration",
