@@ -72,9 +72,7 @@ describe("Melissa browser configuration", () => {
     expect(
       normalizeMelissaLicenseKey("\u200bLicense Key Using Credits:\n  CR+ED/IT== \ufeff")
     ).toBe("CR+ED/IT==");
-    expect(normalizeMelissaLicenseKey("License Key Using Credits CR_EDIT_KEY")).toBe(
-      "CR_EDIT_KEY"
-    );
+    expect(normalizeMelissaLicenseKey("License Key Using Credits CR_EDIT_KEY")).toBe("CR_EDIT_KEY");
     expect(normalizeMelissaLicenseKey("License Key Using Credits\nCopy\nCR_EDIT_KEY")).toBe(
       "CR_EDIT_KEY"
     );
