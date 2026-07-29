@@ -1,8 +1,5 @@
 import { normalizeActorManifest } from "./actors-core";
-import {
-  browserActorManifestFromLegacy,
-  createBrowserActorRuntime
-} from "./browser-actor-runtime";
+import { browserActorManifestFromLegacy, createBrowserActorRuntime } from "./browser-actor-runtime";
 import { createOpaqueOriginBrowserActorRuntime } from "./opaque-origin-actor-runtime";
 
 const DEFAULT_ACTOR_TIMEOUT_MS = 30_000;

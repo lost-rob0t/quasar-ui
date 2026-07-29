@@ -391,8 +391,8 @@ export default function ActorManager() {
                 <div>
                   <strong>Execution boundary</strong>
                   <p>
-                    Custom code cannot access Quasar&apos;s origin, DOM, storage, or network directly.
-                    Declared capabilities are mediated by Quasar.
+                    Custom code cannot access Quasar&apos;s origin, DOM, storage, or network
+                    directly. Declared capabilities are mediated by Quasar.
                   </p>
                 </div>
               </div>
@@ -405,7 +405,9 @@ export default function ActorManager() {
                 <dd>{customActors.length}</dd>
                 <dt>Runtime state</dt>
                 <dd>
-                  {settings.actorsEnabled ? "custom execution enabled" : "custom execution disabled"}
+                  {settings.actorsEnabled
+                    ? "custom execution enabled"
+                    : "custom execution disabled"}
                 </dd>
               </dl>
             </div>

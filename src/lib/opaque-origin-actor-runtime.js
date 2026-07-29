@@ -428,11 +428,9 @@ export function createOpaqueOriginBrowserActorRuntime(options = {}) {
           "load",
           () => {
             try {
-              frame.contentWindow.postMessage(
-                { type: "quasar-actor-connect" },
-                "*",
-                [channel.port2]
-              );
+              frame.contentWindow.postMessage({ type: "quasar-actor-connect" }, "*", [
+                channel.port2
+              ]);
             } catch (error) {
               fail(error, "crashed");
             }
