@@ -77,7 +77,7 @@ describe("Melissa browser configuration", () => {
     expect(normalizeMelissaLicenseKey('"CR+ED/IT=="')).toBe('"CR+ED/IT=="');
     expect(normalizeMelissaLicenseKey(" CR_EDIT_KEY ")).toBe(" CR_EDIT_KEY ");
     expect(inspectMelissaLicenseKey(" CR_EDIT_KEY\u200b ")).toEqual({
-      length: 15,
+      length: 14,
       leadingOrTrailingWhitespace: true,
       whitespaceCount: 2,
       invisibleCount: 1
