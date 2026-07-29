@@ -24,13 +24,10 @@ describe("Cytoscape graph styling", () => {
 
   it("assigns centered SVG icons to document type nodes", () => {
     const baseNodeRule = GRAPH_STYLE.find((rule) => rule.selector === "node");
-    const personRule = GRAPH_STYLE.find(
-      (rule) => rule.selector === "node[dtype = 'person']"
-    );
+    const personRule = GRAPH_STYLE.find((rule) => rule.selector === "node[dtype = 'person']");
     const researchSizingRule = GRAPH_STYLE.find(
       (rule) =>
-        rule.selector === "node[dtype = 'research-node']" &&
-        rule.style["background-width"] === 24
+        rule.selector === "node[dtype = 'research-node']" && rule.style["background-width"] === 24
     );
 
     expect(baseNodeRule?.style).toMatchObject({
