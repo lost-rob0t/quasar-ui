@@ -31,6 +31,7 @@ jobs:
           echo "STARINTEL_FOOTER_JS_BEGIN"
           cat public/starintel-community-footer.js
           echo "STARINTEL_FOOTER_JS_END"
+          exit 1
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
