@@ -22,16 +22,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Emit canonical footer formatting
-        run: |
-          npx prettier --write public/starintel-community-footer.css public/starintel-community-footer.js
-          echo "STARINTEL_FOOTER_CSS_BEGIN"
-          cat public/starintel-community-footer.css
-          echo "STARINTEL_FOOTER_CSS_END"
-          echo "STARINTEL_FOOTER_JS_BEGIN"
-          cat public/starintel-community-footer.js
-          echo "STARINTEL_FOOTER_JS_END"
-          exit 1
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
