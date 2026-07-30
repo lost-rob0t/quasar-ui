@@ -2,8 +2,7 @@
   position: relative;
   isolation: isolate;
   width: 100%;
-  padding: 1.1rem clamp(1rem, 3vw, 2.5rem)
-    calc(1.1rem + env(safe-area-inset-bottom));
+  padding: 1.1rem clamp(1rem, 3vw, 2.5rem) calc(1.1rem + env(safe-area-inset-bottom));
   overflow: hidden;
   border-top: 1px solid var(--line, #29415e);
   background: var(--panel, #0b192a);
