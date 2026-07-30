@@ -17,8 +17,7 @@
     link.href = INVITE_URL;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
-    link.innerHTML =
-      `${CHAT_ICON}<span>${label}</span>` + '<span aria-hidden="true">↗</span>';
+    link.innerHTML = `${CHAT_ICON}<span>${label}</span>` + '<span aria-hidden="true">↗</span>';
     return link;
   }
 
