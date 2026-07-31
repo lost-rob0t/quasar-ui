@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   datasetScopeFromUrls,
-  normalizeDatasetScope,
+  datasetSelectionFromUrls,
   resolveDatasetScope
 } from "./dataset-url-scope";
 
@@ -28,20 +28,27 @@ describe("URL dataset scope", () => {
 
   it("does not trust a cross-origin referrer", () => {
     expect(
-      datasetScopeFromUrls({
+      datasetSelectionFromUrls({
         search: "?host=auto-dig",
         referrer: "https://example.test/quasar/?dataset=wef",
         origin: "https://starintel.test"
       })
-    ).toBeNull();
+    ).toEqual({ present: false, dataset: null });
   });
 
-  it("keeps complete-corpus as the all-datasets view", () => {
-    expect(normalizeDatasetScope("complete-corpus")).toBeNull();
+  it("keeps complete-corpus as an explicit all-datasets view", () => {
+    const selection = datasetSelectionFromUrls({
+      search: "?dataset=complete-corpus",
+      referrer: "https://starintel.test/quasar/?dataset=wef",
+      origin: "https://starintel.test"
+    });
+
+    expect(selection).toEqual({ present: true, dataset: null });
+    expect(resolveDatasetScope("palantir", selection)).toBeNull();
   });
 
   it("gives URL scope precedence over the dataset dropdown", () => {
-    expect(resolveDatasetScope("palantir", "wef")).toBe("wef");
-    expect(resolveDatasetScope("palantir", null)).toBe("palantir");
+    expect(resolveDatasetScope("palantir", { present: true, dataset: "wef" })).toBe("wef");
+    expect(resolveDatasetScope("palantir", { present: false, dataset: null })).toBe("palantir");
   });
 });
