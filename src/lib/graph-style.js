@@ -1,8 +1,32 @@
+import { DTYPE_ICON_KEYS, UNRESOLVED_GRAPH_ICON, documentTypeIcon } from "./graph-icons";
+
+const DOCUMENT_TYPE_ICON_STYLE = [
+  ...Object.keys(DTYPE_ICON_KEYS)
+    .filter((dtype) => dtype !== "relation")
+    .map((dtype) => ({
+      selector: `node[dtype = '${dtype}']`,
+      style: { "background-image": documentTypeIcon(dtype) }
+    })),
+  {
+    selector: "node[dtype = 'unresolved']",
+    style: { "background-image": UNRESOLVED_GRAPH_ICON }
+  }
+];
+
 export const GRAPH_STYLE = [
   {
     selector: "node",
     style: {
       "background-color": "data(color)",
+      "background-image": documentTypeIcon("document"),
+      "background-fit": "none",
+      "background-width": 20,
+      "background-height": 20,
+      "background-position-x": "50%",
+      "background-position-y": "48%",
+      "background-repeat": "no-repeat",
+      "background-clip": "node",
+      "background-image-containment": "inside",
       shape: "data(shape)",
       label: "data(label)",
       color: "#e5eef9",
@@ -19,12 +43,15 @@ export const GRAPH_STYLE = [
       "overlay-padding": 8
     }
   },
+  ...DOCUMENT_TYPE_ICON_STYLE,
   {
     selector: "node[dtype = 'research-node']",
     style: {
       label: "data(researchLabel)",
       width: 54,
       height: 54,
+      "background-width": 24,
+      "background-height": 24,
       "text-wrap": "wrap",
       "text-max-width": 150,
       "border-width": 4
