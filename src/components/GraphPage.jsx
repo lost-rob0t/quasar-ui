@@ -772,6 +772,12 @@ export default function GraphPage() {
     () => [...new Set(graph.edges.map((edge) => edge.data.predicate).filter(Boolean))].sort(),
     [graph.edges]
   );
+  const activeFilterLabels = [
+    query && `search “${query}”`,
+    dataset && `dataset “${dataset}”`,
+    dtype && `type “${dtype}”`,
+    predicate && `predicate “${predicate}”`
+  ].filter(Boolean);
   const graphDocumentIds = useMemo(
     () => new Set(graph.nodes.map((node) => node.data.id)),
     [graph.nodes]
@@ -970,6 +976,9 @@ export default function GraphPage() {
     setDtype("");
     setDataset("");
     setPredicate("");
+    const next = new URLSearchParams(params);
+    next.delete("dataset");
+    setParams(next, { replace: true });
   }
 
   function openQuickAdd(context = null, objectType = "entity") {
@@ -1569,16 +1578,18 @@ export default function GraphPage() {
               <Network size={38} />
               <h2>{scopedDocuments.length ? "No graph nodes match" : "Start a blank graph"}</h2>
               <p>
-                {graph.nodes.length
-                  ? "Change or clear the active filters."
-                  : reviewGroups.unreviewed.length
-                    ? `${reviewGroups.unreviewed.length.toLocaleString()} unreviewed document(s) are hidden by the current review filter.`
-                    : "Right-click anywhere to create the first node, or use an action below."}
+                {activeFilterLabels.length && scopedDocuments.length
+                  ? `Hidden by ${activeFilterLabels.join(", ")}.`
+                  : graph.nodes.length
+                    ? "No nodes remain after applying the current graph view."
+                    : reviewGroups.unreviewed.length
+                      ? `${reviewGroups.unreviewed.length.toLocaleString()} unreviewed document(s) are hidden by the current review filter.`
+                      : "Right-click anywhere to create the first node, or use an action below."}
               </p>
               <div className="button-row">
-                {graph.nodes.length && (
+                {activeFilterLabels.length > 0 && scopedDocuments.length > 0 && (
                   <button className="button small" onClick={clearFilters}>
-                    Clear filters
+                    Show all {scopedDocuments.length.toLocaleString()} documents
                   </button>
                 )}
                 {!graph.nodes.length && reviewGroups.unreviewed.length > 0 && (
