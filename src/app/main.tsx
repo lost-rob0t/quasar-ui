@@ -8,6 +8,7 @@ import GraphObjectTypePickerBridge from "../components/GraphObjectTypePickerBrid
 import MelissaActorBridge from "../components/MelissaActorBridge.jsx";
 import MobileGraphToolTray from "../components/MobileGraphToolTray.jsx";
 import OperatorUiEnhancer from "../components/OperatorUiEnhancer.jsx";
+import ProviderBrandIcons from "../components/ProviderBrandIcons.jsx";
 import PwaInstallBridge from "../components/PwaInstallBridge.jsx";
 import ReviewActorBridge from "../components/ReviewActorBridge.jsx";
 import RunAllTransformationsBridge from "../components/RunAllTransformationsBridge.jsx";
@@ -49,6 +50,7 @@ createRoot(rootElement).render(
       <QuasarProvider>
         <App />
         <OperatorUiEnhancer />
+        <ProviderBrandIcons />
         <PwaInstallBridge />
         <MelissaActorBridge />
         <ReviewActorBridge />
