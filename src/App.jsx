@@ -5,6 +5,7 @@ import {
   ChevronRight,
   CircleAlert,
   CircleHelp,
+  Code2,
   Database,
   Download,
   FilePlus2,
@@ -34,6 +35,7 @@ import { ImportPage, SettingsPage } from "./components/ImportSettings";
 import StatsPage from "./components/StatsPage";
 import { AgentBubble, AgentSystemProvider } from "./components/AgentSystem";
 import AgentHub from "./components/AgentHub";
+import ActorManager from "./components/ActorManager";
 import MobileGestureMenu from "./components/MobileGestureMenu";
 
 const navigation = [
@@ -41,8 +43,9 @@ const navigation = [
   { to: "/graph", label: "Graphs", mobileLabel: "Graph", Icon: Network },
   { to: "/documents?group=dataset", label: "Datasets", Icon: Layers3 },
   { to: "/documents", label: "Documents", mobileLabel: "Docs", Icon: TableProperties, end: true },
-  { to: "/documents/new", label: "Add document", mobileLabel: "Add", Icon: FilePlus2 },
+  { to: "/documents/new", label: "Add document", Icon: FilePlus2 },
   { to: "/agents", label: "Agents", Icon: Bot },
+  { to: "/actors", label: "Actors", mobileLabel: "Actors", Icon: Code2 },
   { to: "/import", label: "Import", Icon: FolderInput },
   { to: "/settings", label: "Settings", mobileLabel: "Settings", Icon: Settings }
 ];
@@ -328,6 +331,7 @@ function WorkbenchShell({ children }) {
 
         {notice && (
           <div className={`notice notice-${notice.kind || "info"}`} role="status">
+            <CircleAlert size={18} aria-hidden="true" />
             <span>{notice.message}</span>
             <button onClick={() => setNotice(null)} aria-label="Dismiss notification">
               ×
@@ -374,6 +378,7 @@ export default function App() {
           <Route path="/documents/:id/edit" element={<DocumentEditor mode="edit" />} />
           <Route path="/import" element={<ImportPage />} />
           <Route path="/agents" element={<AgentHub />} />
+          <Route path="/actors" element={<ActorManager />} />
           <Route path="/stats" element={<Navigate to="/" replace />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<NotFound />} />
