@@ -1,0 +1,25 @@
+name: Format document debug
+
+on:
+  push:
+    branches:
+      - feat/documents-search-pagination
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Print Prettier output
+        run: |
+          echo '---PRETTIER-START---'
+          npx prettier src/components/Documents.jsx
+          echo '---PRETTIER-END---'
