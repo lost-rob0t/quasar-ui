@@ -22,11 +22,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Print formatted Documents source
-        run: |
-          echo '---PRETTIER-START---'
-          npx prettier src/components/Documents.jsx
-          echo '---PRETTIER-END---'
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
