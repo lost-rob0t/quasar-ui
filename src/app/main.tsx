@@ -17,6 +17,7 @@ import { registerServiceWorker } from "../lib/service-worker-registration.js";
 import { initializeTheme } from "../lib/themes.js";
 import { routerBasename } from "./base-path";
 import "../styles.css";
+import "../document-search.css";
 import "../dashboard.css";
 import "../dashboard-theme.css";
 import "../mobile.css";
