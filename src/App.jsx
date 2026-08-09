@@ -63,6 +63,16 @@ function SyncBadge() {
     <div className="connection-badges">
       <span
         className={`sync-badge sync-${syncStatus.state}`}
+        style={
+          syncStatus.state === "offline"
+            ? {
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--danger)",
+                textAlign: "center"
+              }
+            : undefined
+        }
         title={`CouchDB: ${syncStatus.message}`}
       >
         db {syncStatus.state}
