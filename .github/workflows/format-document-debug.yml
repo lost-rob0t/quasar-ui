@@ -1,9 +1,7 @@
 name: Format document debug
 
 on:
-  push:
-    branches:
-      - feat/documents-search-pagination
+  pull_request:
 
 permissions:
   contents: read
