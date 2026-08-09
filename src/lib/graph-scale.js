@@ -56,7 +56,19 @@ export function graphRenderDecision(documents = [], limits = GRAPH_RENDER_LIMITS
   if (estimate.documents > limits.maxDocuments) exceeded.push("documents");
   if (estimate.nodes > limits.maxNodes) exceeded.push("nodes");
   if (estimate.elements > limits.maxElements) exceeded.push("elements");
-  return { allowed: exceeded.length === 0, exceeded, estimate, limits };
+
+  // These values used to be hard stop limits. That made valid investigation
+  // datasets impossible to open even when Cytoscape could render them. Keep
+  // them as scale telemetry only; layout policy is what protects the browser.
+  // Large graphs automatically avoid the expensive force-directed layout via
+  // safeInitialLayout(), while the complete element set remains inspectable.
+  return {
+    allowed: true,
+    mode: exceeded.length ? "large" : "standard",
+    exceeded,
+    estimate,
+    limits
+  };
 }
 
 export function safeInitialLayout(layout, nodeCount) {
