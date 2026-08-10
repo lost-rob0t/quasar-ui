@@ -29,7 +29,8 @@ export function loadActorConfiguration(actor) {
 }
 
 export function saveActorConfiguration(actor, value) {
-  const normalized = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const normalized =
+    value && typeof value === "object" && !Array.isArray(value) ? value : {};
   const id = actorConfigurationId(actor);
   if (!id) throw new TypeError("Actor id is required for configuration");
   const registry = readRegistry();
@@ -51,7 +52,8 @@ export function actorConfigurationDefinition(actor) {
     id: actorConfigurationId(actor),
     label: actor?.label || actor?.id || "Actor",
     description:
-      actor?.description || "JSON configuration passed to the browser actor as context.configuration.",
+      actor?.description ||
+      "JSON configuration passed to the browser actor as context.configuration.",
     fields: [],
     defaults: {}
   };
