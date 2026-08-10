@@ -1,4 +1,3 @@
-import { loadActorConfiguration } from "./actor-configuration";
 import { normalizeActorManifest } from "./actors-core";
 import { browserActorManifestFromLegacy, createBrowserActorRuntime } from "./browser-actor-runtime";
 import { createOpaqueOriginBrowserActorRuntime } from "./opaque-origin-actor-runtime";
@@ -50,10 +49,6 @@ async function readBoundedActorBody(response, signal) {
     offset += chunk.byteLength;
   }
   return bytes;
-}
-
-export function actorConfigurationForExecution(actor) {
-  return loadActorConfiguration(actor);
 }
 
 async function networkFetchService(payload, { signal }) {
@@ -132,8 +127,6 @@ export async function runBrowserActor(
     throw new TypeError(`Actor timeout must be an integer from 1 to ${MAX_ACTOR_TIMEOUT_MS}`);
   }
 
-  const configuration = actorConfigurationForExecution(actor);
-  const executionContext = { ...context, configuration };
   const services = {
     "documents.get": documentGetService,
     "documents.query": documentQueryService,
@@ -159,7 +152,7 @@ export async function runBrowserActor(
         )
       }
     }),
-    executionContext,
+    context,
     {
       timeoutMs: timeout,
       signal,
