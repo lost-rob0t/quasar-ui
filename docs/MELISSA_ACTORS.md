@@ -5,6 +5,8 @@ Melissa enrichment is owned by the Common Lisp `quasar` backend.
 The browser actor pack has been retired. Quasar UI no longer:
 
 - stores Melissa license keys in browser `localStorage`;
+- stores actor configuration in the browser;
+- injects `context.configuration` into browser actor execution;
 - intercepts browser `fetch` calls to inject Melissa credentials;
 - calls Melissa endpoints directly from browser actors;
 - installs `quasar.actor.melissa-*` actors into browser settings;
@@ -65,7 +67,9 @@ original requesting actor
 
 Every operation carries a stable request ID and the requesting Sento actor reference. Completion order is not assumed.
 
-## Credentials
+## Configuration and credentials
+
+Actor configuration and privileged credentials belong on the Quasar backend, not in browser storage or browser actor execution context.
 
 Configure Melissa credentials on the backend. The default Quasar startup path reads:
 
@@ -73,10 +77,15 @@ Configure Melissa credentials on the backend. The default Quasar startup path re
 QUASAR_MELISSA_LICENSE_KEY
 ```
 
-Do not put Melissa credentials in browser actor configuration.
+Browser actors that need privileged or configured behavior must cross the backend/control-plane boundary instead of receiving secrets or arbitrary configuration from `localStorage`.
 
 ## Legacy browser migration
 
-Quasar UI removes persisted `quasar.actor.melissa-*` browser actors and deletes the old `quasar:melissa-actor-config:v1` browser credential entry when the application starts.
+Quasar UI removes persisted `quasar.actor.melissa-*` browser actors and deletes both obsolete browser configuration stores when the application starts:
+
+```text
+quasar:melissa-actor-config:v1
+quasar:actor-configuration:v1
+```
 
 The migration code does not perform Melissa lookups; it only removes obsolete browser-owned state.
