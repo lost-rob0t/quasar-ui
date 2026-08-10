@@ -4,11 +4,15 @@ function storage() {
   return typeof localStorage === "undefined" ? null : localStorage;
 }
 
+function objectConfiguration(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value;
+}
+
 function readRegistry() {
   try {
     const raw = storage()?.getItem(ACTOR_CONFIGURATION_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    return objectConfiguration(raw ? JSON.parse(raw) : {});
   } catch {
     return {};
   }
@@ -24,13 +28,11 @@ export function actorConfigurationId(actor) {
 
 export function loadActorConfiguration(actor) {
   const id = actorConfigurationId(actor);
-  const value = readRegistry()[id];
-  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return objectConfiguration(readRegistry()[id]);
 }
 
 export function saveActorConfiguration(actor, value) {
-  const normalized =
-    value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const normalized = objectConfiguration(value);
   const id = actorConfigurationId(actor);
   if (!id) throw new TypeError("Actor id is required for configuration");
   const registry = readRegistry();
@@ -60,5 +62,9 @@ export function actorConfigurationDefinition(actor) {
 }
 
 export function actorConfigurationStatus(actor) {
-  return { configured: true, missing: [], configuration: loadActorConfiguration(actor) };
+  return {
+    configured: true,
+    missing: [],
+    configuration: loadActorConfiguration(actor)
+  };
 }
