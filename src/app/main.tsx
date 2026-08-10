@@ -2,7 +2,6 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "../App.jsx";
-import ActorConfigurationBridge from "../components/ActorConfigurationBridge.jsx";
 import GraphContextRadialBridge from "../components/GraphContextRadialBridge.jsx";
 import GraphObjectTypePickerBridge from "../components/GraphObjectTypePickerBridge.jsx";
 import MelissaActorMigrationBridge from "../components/MelissaActorMigrationBridge.jsx";
@@ -32,7 +31,6 @@ import "../graph-editors.css";
 import "../graph-editors-extra.css";
 import "../graph-workspace-shell.css";
 import "../graph-full-viewport-modern.css";
-import "../actor-configuration.css";
 import "../agent-tab-icons.css";
 import "../kinpaku-shell.css";
 
@@ -54,7 +52,6 @@ createRoot(rootElement).render(
         <PwaInstallBridge />
         <MelissaActorMigrationBridge />
         <ReviewActorBridge />
-        <ActorConfigurationBridge />
         <RunAllTransformationsBridge />
         <MobileGraphToolTray />
         <GraphContextRadialBridge />
