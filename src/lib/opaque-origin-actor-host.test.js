@@ -1,9 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { saveMelissaConfig } from "./melissa-browser-config";
-import {
-  actorConfigurationForExecution,
-  configureMelissaActorUrl
-} from "./opaque-origin-actor-host";
+import { saveActorConfiguration } from "./actor-configuration";
+import { actorConfigurationForExecution } from "./opaque-origin-actor-host";
 
 class MemoryStorage {
   constructor() {
@@ -41,39 +38,20 @@ afterEach(() => {
 });
 
 describe("browser actor host configuration", () => {
-  it("loads Melissa configuration and injects the exact credit key", () => {
-    const actor = { id: "quasar.actor.melissa-runtime-test" };
-    saveMelissaConfig({
-      licenseKey: "License Key Using Credits: CR+ED/IT==",
-      transmissionReference: "Quasar credit test"
+  it("loads actor-local configuration without service-specific mutation", () => {
+    const actor = { id: "quasar.actor.runtime-test" };
+    saveActorConfiguration(actor, {
+      endpoint: "https://example.test/api",
+      mode: "test"
     });
 
-    const configuration = actorConfigurationForExecution(actor, true);
-    const url = configureMelissaActorUrl(
-      new URL(
-        "https://personatorsearch.melissadata.net/WEB/doPersonatorSearch?last=Porter&format=JSON"
-      ),
-      actor,
-      configuration,
-      true
-    );
-
-    expect(configuration.transmissionReference).toBe("Quasar credit test");
-    expect(url.searchParams.get("id")).toBe("CR+ED/IT==");
-    expect(url.href).toContain("id=CR%2BED%2FIT%3D%3D");
+    expect(actorConfigurationForExecution(actor)).toEqual({
+      endpoint: "https://example.test/api",
+      mode: "test"
+    });
   });
 
-  it("does not expose shared Melissa credentials to untrusted actors", () => {
-    const actor = { id: "quasar.actor.melissa-untrusted" };
-    saveMelissaConfig({ licenseKey: "SECRET" });
-
-    expect(actorConfigurationForExecution(actor, false)).toEqual({});
-    const url = configureMelissaActorUrl(
-      new URL("https://personatorsearch.melissadata.net/WEB/doPersonatorSearch?last=Porter"),
-      actor,
-      {},
-      false
-    );
-    expect(url.searchParams.has("id")).toBe(false);
+  it("does not invent configuration for an unconfigured actor", () => {
+    expect(actorConfigurationForExecution({ id: "quasar.actor.unconfigured" })).toEqual({});
   });
 });
