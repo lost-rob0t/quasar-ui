@@ -1,72 +1,136 @@
 # Quasar UI
 
-Quasar is a browser-first, offline-first StarIntel investigation workspace. It follows the graph-document and reversible-operation boundaries from the Quasar designs in `starintel-auto-research`, while replacing the earlier CLOG/backend-first prototype assumption with a full JavaScript client.
+`quasar-ui` is the **browser user interface and standalone web edition** of
+Quasar. It provides the React/Vite/Cytoscape investigation workspace, mobile and
+PWA behavior, browser-local editing, imports/exports, local persistence, and a
+bounded browser-safe capability set.
 
-The [JavaScript-only deployment roadmap](docs/ROADMAP.md) defines the target architecture, dependency order, phase gates, and production-readiness decision. [ADR 0001](docs/adr/0001-js-package-boundaries.md) defines and enforces the package dependency direction. The implementation list below describes the current prototype and does not supersede the roadmap's IndexedDB-based target.
+It is **not** the complete Quasar or StarIntel runtime.
 
-## Current implementation
+The full deployment is layered:
 
-- strict TypeScript application entrypoint and package contracts
-- React and Vite application shell
-- Cytoscape investigation graph with Maltego-style selection and relationship navigation
-- hierarchical canvas, node, edge, and multi-selection context menus with action search
-- PouchDB canonical local corpus
-- separate PouchDB workspace/settings store
-- versioned CouchDB-compatible map-reduce views
-- optional push, pull, one-shot, or live CouchDB replication
-- optional starintel-server capability probing and target submission
-- optional RabbitMQ Web STOMP ingestion into local PouchDB and the active graph
-- canonical StarIntel v0.9 validation through `starintel_doc.js`
-- graph-created documents and relations
-- multiple saved graph workspaces with independent membership, layout, viewport, and selection
-- standalone manual document adder/editor
-- stable single-document routes at `/documents/:id`
-- searchable/filterable table view
-- single-file upload
-- bulk multi-file upload
-- JSON, JSONL, NDJSON, and CSV import
-- save-and-open graph navigation for newly imported records
-- dataset and actor manifest file resolution
-- statistics dashboard
-- JSONL export
-- transaction-level undo and redo
-- connection path finder
-- opt-in custom browser actors executed in Web Workers
-- persistent operator agents with editable roles and scoped memory
-- OpenRouter, OpenAI, Anthropic, OpenAI-compatible, and local provider adapters
-- permissioned database, graph, actor, and graph-mutation tools
-- Brave web search, bounded URL extraction, and remote MCP tools
-- persistent per-agent skills and MCP server assignments
-- direct custom graph building from document IDs or database queries
-- persisted autonomous runs with checkpoints, recovery, loop detection, budgets, and cost logs
-- draggable desktop/mobile agent bubble and full run console
-- runtime service worker for offline reopening
-- GitHub Actions CI and Pages deployment
+```text
+quasar-ui
+  browser UI / graph renderer / standalone subset
+        |
+        | typed commands, projections, capability discovery
+        v
+quasar
+  canonical Common Lisp control plane and runtime
+        |
+        | StarIntel APIs and service adapters
+        v
+starintel-server
+  persistent ingest / storage / search / routing / RabbitMQ
+        |
+        +-----------------------------+
+        |                             |
+        v                             v
+star-bbpd                       other actor services
+  external recon actors          collectors / analyzers / tools
+```
+
+`quasar-ui` remains useful without the backend stack, but standalone mode is a
+**subset deployment**, not capability parity. Features that require persistent
+Sento supervision, privileged host access, backend databases/search, distributed
+queues, long-running collectors, or external tool processes require the
+corresponding runtime/service.
+
+For the normative split, see
+[`docs/CAPABILITY-BOUNDARY.md`](docs/CAPABILITY-BOUNDARY.md).
+
+## Roles
+
+### Quasar UI
+
+This repository owns:
+
+- React/Vite application shell;
+- Cytoscape graph rendering and transient graph interaction;
+- browser document, graph, dataset, import, settings, statistics and agent UI;
+- mobile and PWA behavior;
+- browser-local standalone workspaces;
+- local imports/exports and supported browser persistence;
+- browser-safe bounded workers/actions;
+- display of capability discovery, runtime state, service results and errors.
+
+### Canonical Quasar runtime
+
+`lost-rob0t/quasar` owns the Common Lisp control plane for migrated operations,
+including canonical command/revision authority, persistent Sento supervision,
+privileged/local integrations, reconnect/replay behavior and runtime capability
+discovery.
+
+When this UI is connected to canonical Quasar, durable migrated mutations are
+requests to that runtime rather than competing browser-side commits.
+
+### StarIntel Server
+
+`lost-rob0t/starintel-server` owns persistent StarIntel backend functions such as
+document ingest, storage, querying/search, RabbitMQ routing and distributed
+service coordination where configured.
+
+### BBPD and other external services
+
+`lost-rob0t/star-bbpd` is a concrete external actor service. It consumes
+actor-specific RabbitMQ targets, runs Subfinder, Nmap, Httpx, Katana and DNS
+workflows, and publishes derived StarIntel documents, relations and actor events.
+
+The UI may submit targets and display BBPD state/results through StarIntel
+interfaces. That does not make BBPD a browser capability, and JavaScript does not
+need to reimplement those scanners.
+
+## Current browser implementation
+
+Current functionality includes:
+
+- strict TypeScript application entrypoint and package contracts;
+- React and Vite application shell;
+- Cytoscape investigation graph with relationship navigation and context menus;
+- local StarIntel document storage and saved graph workspaces;
+- canonical StarIntel v0.9 validation through `starintel_doc.js`;
+- document creation/editing and typed relation creation;
+- searchable/filterable document table;
+- JSON, JSONL, NDJSON and CSV import;
+- dataset and actor manifest resolution;
+- statistics dashboard;
+- JSONL export;
+- transaction-level undo/redo;
+- connection path finder;
+- browser actors in Web Workers;
+- persistent operator-agent UI with provider adapters and scoped memory;
+- permissioned database, graph, actor and graph-mutation tools;
+- optional Brave search, bounded URL extraction and MCP tools;
+- saved graph construction from document IDs or database queries;
+- run checkpoints, recovery, loop detection, budgets and cost logs;
+- desktop/mobile agent console;
+- service-worker based offline reopening;
+- GitHub Actions CI and Pages deployment.
+
+Some prototype integrations can talk directly to StarIntel services. The
+migration direction is to keep presentation in this repository while moving
+privileged, persistent or distributed behavior behind the canonical runtime and
+service capability boundaries.
 
 ## Data boundary
 
-Quasar stores canonical StarIntel documents directly in `quasar-starintel-v09`.
-The graph is a projection of that local corpus: it hydrates on startup and refreshes from the PouchDB changes feed. Import navigation carries only selection/focus state and does not create a second graph document store.
+The graph is a projection of StarIntel documents and workspace state. A renderer
+is never the authoritative database merely because it displays or edits a
+projection.
 
-Quasar-only state is stored separately in `quasar-ui-state-v1`:
+Standalone browser mode may own browser-local state. Connected mode must honor
+the canonical Quasar command/revision boundary for migrated operations.
 
-- graph positions
-- viewport
-- selected nodes
-- layout choice
-- saved graph definitions and active graph
-- CouchDB settings
-- StarIntel server and RabbitMQ Web STOMP settings
-- browser actor manifests
+Quasar-only UI state includes items such as:
 
-Only the StarIntel corpus database is replicated to CouchDB. UI state does not contaminate the StarIntel schema.
+- graph positions;
+- viewport and selection;
+- layout choice;
+- saved graph definitions;
+- browser settings;
+- standalone integration configuration.
 
-Quasar installs versioned `_design/starintel-*-v1` documents into the canonical
-corpus. Those views replicate to CouchDB, so local PouchDB and remote CouchDB
-queries share keys and reduce behavior. The statistics dashboard reads its
-review, dtype, and dataset distributions through these views.
-
-The initial **All documents** graph dynamically projects the complete local corpus. Additional graphs start blank and store only document IDs plus graph-local view state; creating or deleting a graph never duplicates or deletes canonical corpus documents.
+Canonical StarIntel documents must remain distinguishable from UI-only state.
 
 ## Routes
 
@@ -82,22 +146,18 @@ The initial **All documents** graph dynamically projects the complete local corp
 /agents
 ```
 
-The Pages build includes `404.html` as an SPA fallback so direct document routes remain loadable.
-
 ## Development
 
-From a clean checkout, install the pinned dependencies and start the local
-application at `http://localhost:5173` with one command:
-
-```bash
-npm ci && npm run dev
-```
-
-The individual validation and production commands are:
+From a clean checkout:
 
 ```bash
 npm ci
 npm run dev
+```
+
+Validation and production commands:
+
+```bash
 npm run check
 npm run typecheck
 npm run check:boundaries
@@ -108,23 +168,18 @@ npm run build
 ```
 
 Node.js 22.12 or newer and the committed npm lockfile define the reproducible
-toolchain. `npm run check` includes strict TypeScript validation plus syntax
-checks for the static service-worker runtime.
+toolchain.
 
 Development and production builds use root hosting by default. Set
-`VITE_BASE_PATH` to an absolute URL path when deploying below a site root:
+`VITE_BASE_PATH` for subpath deployments:
 
 ```bash
 VITE_BASE_PATH=/quasar-ui/ npm run build
 ```
 
-The Pages workflow builds with `VITE_BASE_PATH=/` because the configured
-`quasar.starintel.actor` custom domain serves the project at its origin root.
-The same normalized base path configures Vite assets, React Router, the web
-manifest, and service worker registration, so no backend or runtime URL
-rewriting is required.
+## Package direction
 
-The TypeScript package entrypoints establish the intended dependency areas:
+The TypeScript package boundaries are organized around:
 
 ```text
 src/app
@@ -138,81 +193,44 @@ src/components
 src/testing
 ```
 
-Existing JavaScript feature modules remain available behind those entrypoints
-while they are migrated incrementally; new package contracts and the browser
-entrypoint are type-checked with `strict: true`.
+Renderer, storage, runtime and provider integrations should remain adapters
+around stable graph/document and command contracts.
 
-The application pins the tested v0.9 runtime commit from `starintel_doc.js`:
+## Actors and agents
 
-```text
-github:lost-rob0t/starintel_doc.js#108310c1bcee403cb7e40dabfd3547a6b5228c51
-```
+Browser actors receive cloned input and return declarative transform plans. They
+must not mutate Cytoscape or persistence directly. Plans are validated and
+applied through the normal mutation path.
 
-The dependency and this documented revision must stay aligned so import diagnostics identify the validator actually bundled into the application.
+Browser workers are intentionally bounded. Long-running or privileged actors
+belong behind canonical Quasar/StarIntel service boundaries.
 
-## Import conventions
+The `/agents` UI manages roles, providers, memory, runs, tools, checkpoints,
+usage and cost. Provider and service availability should be exposed through
+capability discovery rather than assumed from the presence of a button.
 
-- `.json`: one document, an array, or an object containing `documents`/`docs`
-- `.jsonl` and `.ndjson`: one document per line
-- `.csv`: common envelope columns plus `data` JSON or `data.<field>` columns
-- StarIntel document imports: manifest records are stored as documents; their file references are not followed
-- bundle manifest imports: enable **Treat manifests as bundle instructions** and select every referenced file in the same bulk file picker
+See [`docs/AGENT_SYSTEM.md`](docs/AGENT_SYSTEM.md) for the agent contracts.
 
-Imports are atomic by default: every candidate and duplicate ID is checked before PouchDB writes. A failed PouchDB bulk result triggers compensating rollback, and the report preserves file, record, validation-path, and write-phase details. Existing IDs are replaced only when explicitly requested or when the incoming version/date is newer.
+## StarIntel connectivity
 
-Import reports also show the active `starintel_doc` schema revision and profile. Production navigation is network-first, while content-hashed assets remain cache-first; service-worker update checks bypass the HTTP cache and replace an obsolete application shell on reload.
+Connected deployments may expose StarIntel HTTP/WebSocket/RabbitMQ-backed
+services through typed adapters. The UI should fail closed when a capability is
+unavailable and preserve standalone editing when possible.
 
-## Browser actors
+The architectural rule is simple:
 
-Bundled actors are available by default; user-supplied actor code is disabled until explicitly enabled. An actor manifest contains:
+> **Quasar UI presents capabilities. Quasar and StarIntel services provide the
+> full runtime capability set.**
 
-```json
-{
-  "id": "quasar.actor.example",
-  "label": "Example actor",
-  "description": "Update the selected document.",
-  "version": 1,
-  "accepts": ["org", "person"],
-  "minSelection": 1,
-  "maxSelection": 1,
-  "source": "(context) => ({ operations: [{ op: 'update_document', document: { ...context.selection[0], title: 'Updated' } }], message: 'Updated selection' })"
-}
-```
+The standalone browser edition does not supersede the Common Lisp runtime or
+external StarIntel services.
 
-Actors receive cloned selection and corpus data. They return declarative transform plans rather than mutating Cytoscape or PouchDB directly. Supported operations are `create_document`, `update_document`, `upsert_document`, `remove_document`, `create_relation`, and `remove_relation`.
+## Roadmap
 
-Quasar validates the entire plan, checks create/update/remove preconditions against a projected corpus, and applies it as one undoable batch through the same mutation path as manual edits. Legacy actors that return `documents` remain compatible; each returned document is treated as an `upsert_document` transform.
+[`docs/ROADMAP.md`](docs/ROADMAP.md) is the delivery roadmap for the **web
+edition and standalone browser responsibilities**. It must not be read as a ban
+on the connected Common Lisp runtime path.
 
-The first built-ins generate username candidates from person/entity names and prepare `whatsmyname.app` enumeration links for existing or generated usernames. The live WhatsMyName check opens in its browser application because cross-origin profile sites cannot be reliably verified from a Quasar Web Worker.
-
-## Agents
-
-The floating agent bubble opens a bounded command panel from any route. The
-full `/agents` console manages agents, reusable roles, provider connections,
-structured memory, runs, tool logs, checkpoints, loop warnings, usage, and
-cost.
-
-Agents query the StarIntel database and graph through declared permissioned
-tools. They can search with Brave, fetch public URL content, call assigned MCP
-servers, build saved graphs, run existing actors, test generated actors in Web
-Workers, and apply validated graph plans through the normal history and undo
-path. Provider, Brave, and MCP keys remain session-scoped and are excluded from
-stored records and normal JSON exports.
-
-See [Agent system](docs/AGENT_SYSTEM.md) for provider, tool, permission, state
-machine, recovery, loop detection, budget, context, and actor-generation
-contracts.
-
-## StarIntel server and queue ingest
-
-The optional server adapter probes `/api/v1/capabilities` first. Until the
-expanded API is available, it falls back to current gserver metadata and
-`/new/target/:actor`. Submitted targets are canonical v0.9 target documents and
-are saved locally only after the server accepts them.
-
-The optional RabbitMQ listener uses Web STOMP. Deliveries may be a document, an
-array, `{ "document": ... }`, or `{ "documents": [...] }`. Every batch passes
-canonical validation and idempotent PouchDB persistence before its IDs are
-added to the active graph. Accepted and already-current documents are
-acknowledged; invalid deliveries are negatively acknowledged without requeue
-to avoid poison-message loops.
+For cross-repository authority and capability boundaries, use
+[`docs/CAPABILITY-BOUNDARY.md`](docs/CAPABILITY-BOUNDARY.md) and the canonical
+Quasar documentation.
