@@ -14,7 +14,7 @@ import ReviewActorBridge from "../components/ReviewActorBridge.jsx";
 import RunAllTransformationsBridge from "../components/RunAllTransformationsBridge.jsx";
 import { QuasarProvider } from "../store.jsx";
 import { registerServiceWorker } from "../lib/service-worker-registration.js";
-import { initializeTheme } from "./base-path";
+import { initializeTheme } from "../lib/themes.js";
 import { routerBasename } from "./base-path";
 import "../styles.css";
 import "../document-search.css";
