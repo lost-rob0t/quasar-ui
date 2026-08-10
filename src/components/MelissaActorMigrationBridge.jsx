@@ -3,14 +3,14 @@ import { useQuasar } from "../store";
 
 const MELISSA_ACTOR_PREFIX = "quasar.actor.melissa-";
 const MELISSA_CONFIG_STORAGE_KEY = "quasar:melissa-actor-config:v1";
-const ACTOR_CONFIG_STORAGE_KEY = "quasar:actor-configuration:v1";
+const LEGACY_ACTOR_CONFIG_STORAGE_KEY = "quasar:actor-configuration:v1";
 
 export default function MelissaActorMigrationBridge() {
   const { settings, persistSettings } = useQuasar();
 
   useEffect(() => {
     localStorage.removeItem(MELISSA_CONFIG_STORAGE_KEY);
-    localStorage.removeItem(ACTOR_CONFIG_STORAGE_KEY);
+    localStorage.removeItem(LEGACY_ACTOR_CONFIG_STORAGE_KEY);
   }, []);
 
   useEffect(() => {
