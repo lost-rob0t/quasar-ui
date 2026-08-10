@@ -77,7 +77,7 @@ Configure Melissa credentials on the backend. The default Quasar startup path re
 QUASAR_MELISSA_LICENSE_KEY
 ```
 
-Browser actors that need privileged or configured behavior must cross the backend/control-plane boundary instead of receiving secrets or arbitrary configuration from `localStorage`.
+There is no browser actor-configuration registry. Browser actors receive only their ordinary execution context and capability API. Anything requiring configuration or secrets must cross the backend/control-plane boundary.
 
 ## Legacy browser migration
 
