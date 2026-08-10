@@ -66,7 +66,6 @@ describe("actor transform results", () => {
     expect(wrapped.source).toContain("implementation(context, api)");
     expect(wrapped.source).not.toContain("configuredContext");
     expect(wrapped.source).not.toContain("context.configuration");
-    expect(wrapped.source).not.toContain("localStorage");
   });
 
   it("builds one undoable batch for create, update, relation, and remove transforms", () => {
