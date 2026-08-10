@@ -6,7 +6,6 @@ import {
   loadActorConfiguration,
   saveActorConfiguration
 } from "./actor-configuration";
-import { MELISSA_CONFIG_STORAGE_KEY } from "./melissa-browser-config";
 
 class MemoryStorage {
   constructor() {
@@ -41,7 +40,7 @@ afterEach(() => {
 });
 
 describe("actor configuration", () => {
-  it("stores arbitrary actor JSON by actor id", () => {
+  it("stores arbitrary browser actor JSON by actor id", () => {
     const actor = { id: "quasar.actor.custom", label: "Custom" };
     saveActorConfiguration(actor, { endpoint: "https://example.test", retries: 3 });
 
@@ -55,23 +54,19 @@ describe("actor configuration", () => {
     expect(loadActorConfiguration(actor)).toEqual({});
   });
 
-  it("shares Melissa configuration across every Melissa actor", () => {
-    const first = { id: "quasar.actor.melissa-global-email" };
-    const second = { id: "quasar.actor.melissa-property" };
-    saveActorConfiguration(first, { licenseKey: "TEST-KEY", defaultCountry: "ca" });
+  it("keeps configuration isolated per browser actor", () => {
+    const first = { id: "quasar.actor.first" };
+    const second = { id: "quasar.actor.second" };
+    saveActorConfiguration(first, { token: "FIRST" });
 
-    expect(loadActorConfiguration(second)).toMatchObject({
-      licenseKey: "TEST-KEY",
-      defaultCountry: "CA"
-    });
-    expect(localStorage.getItem(MELISSA_CONFIG_STORAGE_KEY)).toContain("TEST-KEY");
-    expect(actorConfigurationStatus(second)).toMatchObject({ configured: true, missing: [] });
+    expect(loadActorConfiguration(first)).toEqual({ token: "FIRST" });
+    expect(loadActorConfiguration(second)).toEqual({});
   });
 
-  it("reports the missing Melissa license key", () => {
-    expect(actorConfigurationStatus({ id: "quasar.actor.melissa-global-ip" })).toMatchObject({
-      configured: false,
-      missing: ["Melissa license key"]
+  it("reports generic actor configuration as available", () => {
+    expect(actorConfigurationStatus({ id: "quasar.actor.custom" })).toMatchObject({
+      configured: true,
+      missing: []
     });
   });
 });
