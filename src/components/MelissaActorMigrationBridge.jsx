@@ -18,7 +18,8 @@ export default function MelissaActorMigrationBridge() {
     );
     const hadMelissaActors = actors.length !== (settings.actors || []).length;
     const hadMelissaFlags =
-      settings.melissaActorPackInstalled !== false || Number(settings.melissaActorPackVersion || 0) !== 0;
+      settings.melissaActorPackInstalled !== false ||
+      Number(settings.melissaActorPackVersion || 0) !== 0;
     if (!hadMelissaActors && !hadMelissaFlags) return;
     persistSettings({
       actors,
