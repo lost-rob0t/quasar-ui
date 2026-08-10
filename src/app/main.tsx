@@ -5,7 +5,7 @@ import App from "../App.jsx";
 import ActorConfigurationBridge from "../components/ActorConfigurationBridge.jsx";
 import GraphContextRadialBridge from "../components/GraphContextRadialBridge.jsx";
 import GraphObjectTypePickerBridge from "../components/GraphObjectTypePickerBridge.jsx";
-import MelissaActorBridge from "../components/MelissaActorBridge.jsx";
+import MelissaActorMigrationBridge from "../components/MelissaActorMigrationBridge.jsx";
 import MobileGraphToolTray from "../components/MobileGraphToolTray.jsx";
 import OperatorUiEnhancer from "../components/OperatorUiEnhancer.jsx";
 import ProviderBrandIcons from "../components/ProviderBrandIcons.jsx";
@@ -14,7 +14,7 @@ import ReviewActorBridge from "../components/ReviewActorBridge.jsx";
 import RunAllTransformationsBridge from "../components/RunAllTransformationsBridge.jsx";
 import { QuasarProvider } from "../store.jsx";
 import { registerServiceWorker } from "../lib/service-worker-registration.js";
-import { initializeTheme } from "../lib/themes.js";
+import { initializeTheme } from "./base-path";
 import { routerBasename } from "./base-path";
 import "../styles.css";
 import "../document-search.css";
@@ -32,7 +32,6 @@ import "../graph-editors.css";
 import "../graph-editors-extra.css";
 import "../graph-workspace-shell.css";
 import "../graph-full-viewport-modern.css";
-import "../melissa-actors.css";
 import "../actor-configuration.css";
 import "../agent-tab-icons.css";
 import "../kinpaku-shell.css";
@@ -53,7 +52,7 @@ createRoot(rootElement).render(
         <OperatorUiEnhancer />
         <ProviderBrandIcons />
         <PwaInstallBridge />
-        <MelissaActorBridge />
+        <MelissaActorMigrationBridge />
         <ReviewActorBridge />
         <ActorConfigurationBridge />
         <RunAllTransformationsBridge />
