@@ -36,6 +36,7 @@ import "../melissa-actors.css";
 import "../actor-configuration.css";
 import "../agent-tab-icons.css";
 import "../kinpaku-shell.css";
+import "../workbench-unified.css";
 
 initializeTheme();
 
