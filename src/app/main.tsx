@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "../App.jsx";
 import ActorConfigurationBridge from "../components/ActorConfigurationBridge.jsx";
+import AgentDisclosureBridge from "../components/AgentDisclosureBridge.jsx";
 import GraphContextRadialBridge from "../components/GraphContextRadialBridge.jsx";
 import GraphObjectTypePickerBridge from "../components/GraphObjectTypePickerBridge.jsx";
 import MelissaActorBridge from "../components/MelissaActorBridge.jsx";
@@ -49,6 +50,7 @@ createRoot(rootElement).render(
       <UiRuntimeProvider adapter={standaloneAdapter}>
         <QuasarProvider>
           <App />
+          <AgentDisclosureBridge />
           <ProviderBrandIcons />
           <PwaInstallBridge />
           <MelissaActorBridge />
