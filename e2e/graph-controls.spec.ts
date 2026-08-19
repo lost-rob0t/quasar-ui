@@ -75,7 +75,7 @@ test("uses left click select, left drag pan, and right drag box select", async (
   const dismissNotice = page.getByRole("button", { name: "Dismiss notification" });
   if (await dismissNotice.isVisible()) await dismissNotice.click();
 
-  await page.getByRole("button", { name: "Focus selection" }).click();
+  await page.getByRole("button", { name: "Focus", exact: true }).click();
   await page.waitForTimeout(400);
 
   const bounds = await canvas.boundingBox();
@@ -114,7 +114,9 @@ test("uses left click select, left drag pan, and right drag box select", async (
       ? { x: 180, y: height - 170 }
       : { x: width - 180, y: height - 170 };
   const panEnd =
-    beforePan.node.x >= width / 2 ? { x: 480, y: height - 50 } : { x: width - 480, y: height - 50 };
+    beforePan.node.x >= width / 2
+      ? { x: 480, y: height - 50 }
+      : { x: width - 480, y: height - 50 };
   const expectedShift = {
     x: panEnd.x - panStart.x,
     y: panEnd.y - panStart.y
