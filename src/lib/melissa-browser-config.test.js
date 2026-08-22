@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearMelissaConfig,
+  fetchMelissaDirect,
   installMelissaFetchInterceptor,
   loadMelissaConfig,
   MELISSA_CONFIG_STORAGE_KEY,
@@ -118,6 +119,26 @@ describe("Melissa browser configuration", () => {
     const url = new URL(requested);
     expect(url.searchParams.get("id")).toBe("CR+ED/IT==");
     expect(requested).toContain("id=CR%2BED%2FIT%3D%3D");
+  });
+
+  it("can bypass all interceptor defaults for the manual credential test", async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true }));
+    globalThis.fetch = fetchMock;
+    saveMelissaConfig({
+      licenseKey: "SAVED-KEY",
+      personatorColumns: "PreviousAddress",
+      personatorOptions: "RecordsPerPage:10"
+    });
+    installMelissaFetchInterceptor();
+
+    await fetchMelissaDirect(
+      "https://personatorsearch.melissadata.net/WEB/doPersonatorSearch?id=EXACT-KEY&format=JSON"
+    );
+
+    const requested = new URL(fetchMock.mock.calls[0][0]);
+    expect(requested.searchParams.get("id")).toBe("EXACT-KEY");
+    expect(requested.searchParams.has("cols")).toBe(false);
+    expect(requested.searchParams.has("opt")).toBe(false);
   });
 
   it("supports a persisted CORS proxy template", async () => {

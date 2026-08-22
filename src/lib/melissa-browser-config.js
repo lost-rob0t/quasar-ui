@@ -206,6 +206,12 @@ function proxiedUrl(url, template) {
   return template.replaceAll("{url}", encodeURIComponent(url.href));
 }
 
+export function fetchMelissaDirect(input, init) {
+  const fetchImpl = originalFetch || globalThis.fetch;
+  if (typeof fetchImpl !== "function") throw new Error("Browser fetch is unavailable");
+  return fetchImpl(input, init);
+}
+
 export function installMelissaFetchInterceptor() {
   if (installed || typeof globalThis.fetch !== "function") return;
   originalFetch = globalThis.fetch.bind(globalThis);
