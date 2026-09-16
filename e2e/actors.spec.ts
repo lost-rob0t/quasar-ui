@@ -2,13 +2,13 @@ import { expect, test } from "@playwright/test";
 
 test("configures and starts a tenant actor with a one-run key", async ({ page }) => {
   const requests: Array<{ method: string; url: string; body: unknown }> = [];
-  await page.route("http://star.test/api/v1/**", async (route) => {
+  await page.route("http://star.test/v1/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const body = request.postDataJSON?.() || null;
     requests.push({ method: request.method(), url: url.pathname, body });
 
-    if (url.pathname === "/api/v1/actors" && request.method() === "GET") {
+    if (url.pathname === "/v1/actors" && request.method() === "GET") {
       return route.fulfill({
         json: {
           actors: [
@@ -22,7 +22,7 @@ test("configures and starts a tenant actor with a one-run key", async ({ page })
         }
       });
     }
-    if (url.pathname === "/api/v1/actor-configs/fediwatch") {
+    if (url.pathname === "/v1/actor-configs/fediwatch") {
       return route.fulfill({
         json:
           request.method() === "PUT"
@@ -35,10 +35,10 @@ test("configures and starts a tenant actor with a one-run key", async ({ page })
               }
       });
     }
-    if (url.pathname === "/api/v1/actor-keys" && request.method() === "GET") {
+    if (url.pathname === "/v1/actor-keys" && request.method() === "GET") {
       return route.fulfill({ json: { keys: [] } });
     }
-    if (url.pathname === "/api/v1/actor-keys" && request.method() === "POST") {
+    if (url.pathname === "/v1/actor-keys" && request.method() === "POST") {
       return route.fulfill({
         status: 201,
         json: {
@@ -53,7 +53,7 @@ test("configures and starts a tenant actor with a one-run key", async ({ page })
         }
       });
     }
-    if (url.pathname === "/api/v1/actor-quotas") {
+    if (url.pathname === "/v1/actor-quotas") {
       return route.fulfill({
         json: {
           quotas: [
@@ -69,7 +69,7 @@ test("configures and starts a tenant actor with a one-run key", async ({ page })
         }
       });
     }
-    if (url.pathname === "/api/v1/actors/fediwatch/runs") {
+    if (url.pathname === "/v1/actors/fediwatch/runs") {
       return route.fulfill({ status: 202, json: { run_id: "run-fediwatch-1" } });
     }
     return route.fulfill({ status: 404, json: { message: "Unhandled test endpoint" } });
@@ -103,7 +103,7 @@ test("configures and starts a tenant actor with a one-run key", async ({ page })
 
   expect(requests).toContainEqual({
     method: "PUT",
-    url: "/api/v1/actor-configs/fediwatch",
+    url: "/v1/actor-configs/fediwatch",
     body: {
       schema_version: "0.9.1.2",
       doctype: "actor-config",
@@ -114,7 +114,7 @@ test("configures and starts a tenant actor with a one-run key", async ({ page })
   });
   expect(requests).toContainEqual({
     method: "POST",
-    url: "/api/v1/actor-keys",
+    url: "/v1/actor-keys",
     body: {
       actor_id: "fediwatch",
       name: "Fediwatch key",

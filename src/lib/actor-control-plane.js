@@ -2,6 +2,15 @@ import { starIntelRequest } from "./starintel-server";
 
 export const ACTOR_CONFIGURATION_SCHEMA = "0.9.1.2";
 
+async function actorRequest(configuration, path, options = {}) {
+  try {
+    return await starIntelRequest(configuration, `/v1${path}`, options);
+  } catch (error) {
+    if (!/404|not found/i.test(error.message)) throw error;
+    return starIntelRequest(configuration, `/api/v1${path}`, options);
+  }
+}
+
 function collection(body, ...keys) {
   if (Array.isArray(body)) return body;
   for (const key of keys) {
@@ -90,42 +99,36 @@ export function normalizeActorQuota(quota) {
 }
 
 export async function listServerActors(configuration, options = {}) {
-  const body = await starIntelRequest(configuration, "/api/v1/actors", {
+  const body = await actorRequest(configuration, "/actors", {
     signal: options.signal
   });
   return collection(body, "actors", "items", "results").map(normalizeServerActor);
 }
 
 export async function getActorConfiguration(configuration, actor, options = {}) {
-  const body = await starIntelRequest(
-    configuration,
-    `/api/v1/actor-configs/${encodeURIComponent(actor.id)}`,
-    { signal: options.signal }
-  );
+  const body = await actorRequest(configuration, `/actor-configs/${encodeURIComponent(actor.id)}`, {
+    signal: options.signal
+  });
   return normalizeActorConfiguration(body, actor);
 }
 
 export async function saveActorConfiguration(configuration, actor, value, options = {}) {
-  const body = await starIntelRequest(
-    configuration,
-    `/api/v1/actor-configs/${encodeURIComponent(actor.id)}`,
-    {
-      method: "PUT",
-      signal: options.signal,
-      body: JSON.stringify({
-        schema_version: ACTOR_CONFIGURATION_SCHEMA,
-        doctype: "actor-config",
-        actor_id: actor.id,
-        enabled: value.enabled !== false,
-        configuration: value.configuration || {}
-      })
-    }
-  );
+  const body = await actorRequest(configuration, `/actor-configs/${encodeURIComponent(actor.id)}`, {
+    method: "PUT",
+    signal: options.signal,
+    body: JSON.stringify({
+      schema_version: ACTOR_CONFIGURATION_SCHEMA,
+      doctype: "actor-config",
+      actor_id: actor.id,
+      enabled: value.enabled !== false,
+      configuration: value.configuration || {}
+    })
+  });
   return normalizeActorConfiguration(body, actor);
 }
 
 export function startServerActor(configuration, actor, payload = {}, options = {}) {
-  return starIntelRequest(configuration, `/api/v1/actors/${encodeURIComponent(actor.id)}/runs`, {
+  return actorRequest(configuration, `/actors/${encodeURIComponent(actor.id)}/runs`, {
     method: "POST",
     signal: options.signal,
     body: JSON.stringify(payload)
@@ -134,14 +137,14 @@ export function startServerActor(configuration, actor, payload = {}, options = {
 
 export async function listActorKeys(configuration, actorId, options = {}) {
   const query = new URLSearchParams({ actor_id: actorId });
-  const body = await starIntelRequest(configuration, `/api/v1/actor-keys?${query}`, {
+  const body = await actorRequest(configuration, `/actor-keys?${query}`, {
     signal: options.signal
   });
   return collection(body, "keys", "actor_keys", "items", "results").map(normalizeActorKey);
 }
 
 export async function createActorKey(configuration, value, options = {}) {
-  const body = await starIntelRequest(configuration, "/api/v1/actor-keys", {
+  const body = await actorRequest(configuration, "/actor-keys", {
     method: "POST",
     signal: options.signal,
     body: JSON.stringify({
@@ -159,7 +162,7 @@ export async function createActorKey(configuration, value, options = {}) {
 }
 
 export function revokeActorKey(configuration, keyId, options = {}) {
-  return starIntelRequest(configuration, `/api/v1/actor-keys/${encodeURIComponent(keyId)}`, {
+  return actorRequest(configuration, `/actor-keys/${encodeURIComponent(keyId)}`, {
     method: "DELETE",
     signal: options.signal
   });
@@ -167,7 +170,7 @@ export function revokeActorKey(configuration, keyId, options = {}) {
 
 export async function listActorQuotas(configuration, actorId, options = {}) {
   const query = new URLSearchParams({ actor_id: actorId });
-  const body = await starIntelRequest(configuration, `/api/v1/actor-quotas?${query}`, {
+  const body = await actorRequest(configuration, `/actor-quotas?${query}`, {
     signal: options.signal
   });
   return collection(body, "quotas", "items", "results").map(normalizeActorQuota);

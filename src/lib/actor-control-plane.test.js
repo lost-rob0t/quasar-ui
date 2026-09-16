@@ -64,7 +64,23 @@ describe("actor control plane client", () => {
         remote: true
       })
     ]);
-    expect(fetch.mock.calls[0][0]).toBe("https://star.example/api/v1/actors");
+    expect(fetch.mock.calls[0][0]).toBe("https://star.example/v1/actors");
+  });
+
+  it("falls back to deprecated api/v1 aliases only when v1 is missing", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(json({ message: "not found" }, 404))
+      .mockResolvedValueOnce(json({ actors: [{ actor_id: "legacy-actor" }] }));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(listServerActors({ serverUrl: "https://star.example" })).resolves.toEqual([
+      expect.objectContaining({ id: "legacy-actor" })
+    ]);
+    expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+      "https://star.example/v1/actors",
+      "https://star.example/api/v1/actors"
+    ]);
   });
 
   it("loads and persists actor-config documents at schema 0.9.1.2", async () => {
@@ -163,13 +179,9 @@ describe("actor control plane client", () => {
       })
     ]);
 
-    expect(fetch.mock.calls[0][0]).toBe("https://star.example/api/v1/actors/fediwatch/runs");
-    expect(fetch.mock.calls[1][0]).toBe(
-      "https://star.example/api/v1/actor-keys?actor_id=fediwatch"
-    );
+    expect(fetch.mock.calls[0][0]).toBe("https://star.example/v1/actors/fediwatch/runs");
+    expect(fetch.mock.calls[1][0]).toBe("https://star.example/v1/actor-keys?actor_id=fediwatch");
     expect(fetch.mock.calls[3][1].method).toBe("DELETE");
-    expect(fetch.mock.calls[4][0]).toBe(
-      "https://star.example/api/v1/actor-quotas?actor_id=fediwatch"
-    );
+    expect(fetch.mock.calls[4][0]).toBe("https://star.example/v1/actor-quotas?actor_id=fediwatch");
   });
 });
