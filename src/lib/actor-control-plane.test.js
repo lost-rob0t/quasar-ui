@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  ACTOR_CONFIGURATION_SCHEMA,
+  ACTOR_CONFIGURATION_PROFILE,
+  STARINTEL_RELEASE_VERSION,
+  STARINTEL_SCHEMA_VERSION,
   createActorKey,
   getActorConfiguration,
   listActorKeys,
@@ -83,7 +85,7 @@ describe("actor control plane client", () => {
     ]);
   });
 
-  it("loads and persists actor-config documents at schema 0.9.1.2", async () => {
+  it("keeps actor-config release, base schema, and profile versions distinct", async () => {
     const fetch = vi
       .fn()
       .mockResolvedValueOnce(
@@ -98,7 +100,9 @@ describe("actor control plane client", () => {
       .mockResolvedValueOnce(
         json({
           actor_id: "fediwatch",
-          schema_version: ACTOR_CONFIGURATION_SCHEMA,
+          release_version: STARINTEL_RELEASE_VERSION,
+          schema_version: STARINTEL_SCHEMA_VERSION,
+          profile_version: ACTOR_CONFIGURATION_PROFILE,
           configuration: { hashtags: ["osint", "fediverse"] }
         })
       );
@@ -116,8 +120,10 @@ describe("actor control plane client", () => {
     const [, put] = fetch.mock.calls[1];
     expect(put.method).toBe("PUT");
     expect(JSON.parse(put.body)).toEqual({
-      schema_version: "0.9.1.2",
-      doctype: "actor-config",
+      release_version: "0.9.1.2",
+      schema_version: "0.9.0",
+      profile_version: "0.9.2",
+      dtype: "actor-config",
       actor_id: "fediwatch",
       enabled: true,
       configuration: { hashtags: ["osint", "fediverse"] }

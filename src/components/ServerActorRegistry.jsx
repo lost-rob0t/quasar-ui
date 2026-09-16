@@ -12,7 +12,9 @@ import {
   X
 } from "lucide-react";
 import {
-  ACTOR_CONFIGURATION_SCHEMA,
+  ACTOR_CONFIGURATION_PROFILE,
+  STARINTEL_RELEASE_VERSION,
+  STARINTEL_SCHEMA_VERSION,
   createActorKey,
   getActorConfiguration,
   listActorKeys,
@@ -37,7 +39,9 @@ function blankConfiguration(actor) {
     actorId: actor.id,
     tenantId: actor.tenantId,
     enabled: true,
-    schemaVersion: ACTOR_CONFIGURATION_SCHEMA,
+    schemaVersion: STARINTEL_SCHEMA_VERSION,
+    profileVersion: ACTOR_CONFIGURATION_PROFILE,
+    releaseVersion: STARINTEL_RELEASE_VERSION,
     configuration: {}
   };
 }
@@ -318,7 +322,9 @@ export default function ServerActorRegistry() {
                 <ShieldCheck size={14} /> tenant {selectedActor.tenantId}
               </span>
               <span>{selectedActor.status}</span>
-              <span>actor-config {configuration.schemaVersion}</span>
+              <span>actor-config profile {configuration.profileVersion}</span>
+              <span>schema {configuration.schemaVersion}</span>
+              <span>release {configuration.releaseVersion}</span>
             </div>
 
             <label className="actor-runtime-toggle">

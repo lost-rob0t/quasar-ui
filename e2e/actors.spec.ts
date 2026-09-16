@@ -105,8 +105,10 @@ test("configures and starts a tenant actor with a one-run key", async ({ page })
     method: "PUT",
     url: "/v1/actor-configs/fediwatch",
     body: {
-      schema_version: "0.9.1.2",
-      doctype: "actor-config",
+      release_version: "0.9.1.2",
+      schema_version: "0.9.0",
+      profile_version: "0.9.2",
+      dtype: "actor-config",
       actor_id: "fediwatch",
       enabled: true,
       configuration: { profiles: ["bob@example.social"], hashtags: ["fediverse"] }

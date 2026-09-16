@@ -1,6 +1,8 @@
 import { starIntelRequest } from "./starintel-server";
 
-export const ACTOR_CONFIGURATION_SCHEMA = "0.9.1.2";
+export const STARINTEL_SCHEMA_VERSION = "0.9.0";
+export const ACTOR_CONFIGURATION_PROFILE = "0.9.2";
+export const STARINTEL_RELEASE_VERSION = "0.9.1.2";
 
 async function actorRequest(configuration, path, options = {}) {
   try {
@@ -42,13 +44,28 @@ export function normalizeServerActor(actor) {
 
 export function normalizeActorConfiguration(body, actor) {
   const record = body?.actor_config || body?.actorConfig || body?.config || body || {};
-  const configuration = record.configuration || record.settings || record.values || {};
+  const data = record.data && typeof record.data === "object" ? record.data : {};
+  const configuration =
+    record.configuration || record.settings || record.values || data.parameters || {};
   return {
     id: record.id || record._id || `actor-config:${actor.id}`,
-    actorId: record.actor_id || record.actorId || actor.id,
-    tenantId: record.tenant_id || record.tenantId || actor.tenantId,
-    enabled: record.enabled !== false,
-    schemaVersion: record.schema_version || record.schemaVersion || ACTOR_CONFIGURATION_SCHEMA,
+    actorId: record.actor_id || record.actorId || data.actor_id || actor.id,
+    tenantId: record.tenant_id || record.tenantId || data.tenant_id || actor.tenantId,
+    actorGroup:
+      record.actor_group ||
+      record.actorGroup ||
+      data.actor_group ||
+      actor.actorGroup ||
+      actor.group ||
+      "",
+    enabled: (data.enabled ?? record.enabled) !== false,
+    schemaVersion: record.schema_version || record.schemaVersion || STARINTEL_SCHEMA_VERSION,
+    profileVersion:
+      record.profile_version ||
+      record.profileVersion ||
+      data.profile_version ||
+      ACTOR_CONFIGURATION_PROFILE,
+    releaseVersion: record.release_version || record.releaseVersion || STARINTEL_RELEASE_VERSION,
     configuration: configuration && typeof configuration === "object" ? configuration : {},
     revision: record.revision || record._rev || ""
   };
@@ -117,8 +134,10 @@ export async function saveActorConfiguration(configuration, actor, value, option
     method: "PUT",
     signal: options.signal,
     body: JSON.stringify({
-      schema_version: ACTOR_CONFIGURATION_SCHEMA,
-      doctype: "actor-config",
+      release_version: STARINTEL_RELEASE_VERSION,
+      schema_version: STARINTEL_SCHEMA_VERSION,
+      profile_version: ACTOR_CONFIGURATION_PROFILE,
+      dtype: "actor-config",
       actor_id: actor.id,
       enabled: value.enabled !== false,
       configuration: value.configuration || {}
