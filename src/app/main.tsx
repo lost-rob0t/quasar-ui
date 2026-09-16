@@ -32,6 +32,7 @@ import "../graph-workspace-shell.css";
 import "../graph-full-viewport-modern.css";
 import "../melissa-actors.css";
 import "../actor-configuration.css";
+import "../actor-manager.css";
 
 initializeTheme();
 

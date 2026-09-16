@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { BUILTIN_ACTORS, isBuiltinActor, normalizeActorManifest } from "../lib/actors";
 import { useQuasar } from "../store";
+import ServerActorRegistry from "./ServerActorRegistry";
 import "../actor-manager.css";
 
 const NEW_ACTOR = "__new_actor__";
@@ -216,6 +217,15 @@ export default function ActorManager() {
           <button className="button primary" type="button" disabled={!editable} onClick={saveActor}>
             <Save size={16} /> Save
           </button>
+        </div>
+      </header>
+
+      <ServerActorRegistry />
+
+      <header className="section-heading local-actor-heading">
+        <div>
+          <h2>Local browser actors</h2>
+          <p>Built-in and custom actors that execute inside Quasar&apos;s browser sandbox.</p>
         </div>
       </header>
 

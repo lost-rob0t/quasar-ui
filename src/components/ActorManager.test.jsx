@@ -37,6 +37,9 @@ describe("ActorManager", () => {
     const html = renderToStaticMarkup(<ActorManager />);
 
     expect(html).toContain("Actor studio");
+    expect(html).toContain("Server actor registry");
+    expect(html).toContain("tenant-scoped actors");
+    expect(html).toContain("Local browser actors");
     expect(html).toContain("Create actor");
     expect(html).toContain("New actor");
     expect(html).toContain("Custom test actor");

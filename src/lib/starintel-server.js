@@ -16,7 +16,7 @@ function authorization(configuration) {
   return null;
 }
 
-async function request(configuration, path, options = {}) {
+export async function starIntelRequest(configuration, path, options = {}) {
   const headers = new Headers(options.headers || {});
   headers.set("Accept", "application/json");
   if (options.body != null) headers.set("Content-Type", "application/json");
@@ -43,10 +43,10 @@ async function request(configuration, path, options = {}) {
 
 export async function probeStarIntelServer(configuration) {
   try {
-    const capabilities = await request(configuration, "/api/v1/capabilities");
+    const capabilities = await starIntelRequest(configuration, "/api/v1/capabilities");
     return { mode: "v1", capabilities };
   } catch (error) {
-    const legacy = await request(configuration, "/");
+    const legacy = await starIntelRequest(configuration, "/");
     return {
       mode: "legacy",
       capabilities: {
@@ -70,14 +70,14 @@ export async function submitTargetToServer(configuration, target) {
   const actor = document.data?.actor;
   if (!actor) throw new Error("Target actor is required");
   try {
-    return await request(configuration, "/api/v1/targets", {
+    return await starIntelRequest(configuration, "/api/v1/targets", {
       method: "POST",
       headers: { "Idempotency-Key": document._id },
       body: JSON.stringify(document)
     });
   } catch (error) {
     if (!/404|not found/i.test(error.message)) throw error;
-    return request(configuration, `/new/target/${encodeURIComponent(actor)}`, {
+    return starIntelRequest(configuration, `/new/target/${encodeURIComponent(actor)}`, {
       method: "POST",
       body: JSON.stringify(document)
     });
