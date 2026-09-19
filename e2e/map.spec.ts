@@ -45,77 +45,76 @@ test("opens the full-screen StarIntel Gotham map workspace", async ({ page }) =>
   await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
 });
 
-test(
-  "accepts investigation selections only from the configured renderer window",
-  async ({ page }) => {
-    await page.goto("/map");
-    const frame = page.getByTitle("StarIntel map");
-    await expect(frame).toBeVisible();
+test("accepts investigation selections only from the configured renderer window", async ({
+  page
+}) => {
+  await page.goto("/map");
+  const frame = page.getByTitle("StarIntel map");
+  await expect(frame).toBeVisible();
 
-    const projection = {
-      type: "STARINTEL_MAP_SELECTION",
-      version: 1,
-      semanticsVersion: "starintel.geo/1",
-      anchorId: "location:columbus",
-      participation: "anchored",
-      primaryDocumentId: "person:alice",
-      relatedDocumentIds: ["person:alice", "event:meeting"],
-      authorizedRelatedCount: 2,
-      provenanceCount: 3,
-      approximate: true,
-      stale: false,
-      contested: true
-    };
+  const projection = {
+    type: "STARINTEL_MAP_SELECTION",
+    version: 1,
+    semanticsVersion: "starintel.geo/1",
+    anchorId: "location:columbus",
+    participation: "anchored",
+    primaryDocumentId: "person:alice",
+    relatedDocumentIds: ["person:alice", "event:meeting"],
+    authorizedRelatedCount: 2,
+    provenanceCount: 3,
+    approximate: true,
+    stale: false,
+    contested: true
+  };
 
-    await page.evaluate((data) => {
-      window.dispatchEvent(
-        new MessageEvent("message", {
-          origin: window.location.origin,
-          source: window,
-          data
-        })
-      );
-    }, projection);
-    await expect(
-      page.getByRole("complementary", { name: "Map investigation selection" })
-    ).toHaveCount(0);
-
-    await page.evaluate((data) => {
-      const iframe = document.querySelector<HTMLIFrameElement>('iframe[title="StarIntel map"]');
-      if (!iframe?.contentWindow) throw new Error("map renderer frame missing");
-      window.dispatchEvent(
-        new MessageEvent("message", {
-          origin: window.location.origin,
-          source: iframe.contentWindow,
-          data
-        })
-      );
-    }, projection);
-
-    const selection = page.getByRole("complementary", { name: "Map investigation selection" });
-    await expect(selection).toBeVisible();
-    await expect(selection.getByText("Anchored projection")).toBeVisible();
-    await expect(selection.getByText("location:columbus")).toBeVisible();
-    await expect(selection.getByText("Approximate", { exact: true })).toBeVisible();
-    await expect(selection.getByText("Contested", { exact: true })).toBeVisible();
-    await expect(selection.getByText("2", { exact: true })).toBeVisible();
-    await expect(selection.getByText("3", { exact: true })).toBeVisible();
-    await expect(selection.getByRole("link", { name: "Open primary document" })).toHaveAttribute(
-      "href",
-      "/documents/person%3Aalice"
+  await page.evaluate((data) => {
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        origin: window.location.origin,
+        source: window,
+        data
+      })
     );
-    await expect(selection.getByRole("link", { name: "person:alice" })).toHaveAttribute(
-      "href",
-      "/documents/person%3Aalice"
-    );
-    await expect(selection.getByRole("link", { name: "Inspect in graph" })).toHaveAttribute(
-      "href",
-      "/graph?node=person%3Aalice&review=all"
-    );
-    await expect(page).toHaveURL(/anchor=location%3Acolumbus/);
+  }, projection);
+  await expect(
+    page.getByRole("complementary", { name: "Map investigation selection" })
+  ).toHaveCount(0);
 
-    await page.getByRole("button", { name: "Clear map selection" }).click();
-    await expect(selection).toHaveCount(0);
-    await expect(page).not.toHaveURL(/anchor=/);
-  }
-);
+  await page.evaluate((data) => {
+    const iframe = document.querySelector<HTMLIFrameElement>('iframe[title="StarIntel map"]');
+    if (!iframe?.contentWindow) throw new Error("map renderer frame missing");
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        origin: window.location.origin,
+        source: iframe.contentWindow,
+        data
+      })
+    );
+  }, projection);
+
+  const selection = page.getByRole("complementary", { name: "Map investigation selection" });
+  await expect(selection).toBeVisible();
+  await expect(selection.getByText("Anchored projection")).toBeVisible();
+  await expect(selection.getByText("location:columbus")).toBeVisible();
+  await expect(selection.getByText("Approximate", { exact: true })).toBeVisible();
+  await expect(selection.getByText("Contested", { exact: true })).toBeVisible();
+  await expect(selection.getByText("2", { exact: true })).toBeVisible();
+  await expect(selection.getByText("3", { exact: true })).toBeVisible();
+  await expect(selection.getByRole("link", { name: "Open primary document" })).toHaveAttribute(
+    "href",
+    "/documents/person%3Aalice"
+  );
+  await expect(selection.getByRole("link", { name: "person:alice" })).toHaveAttribute(
+    "href",
+    "/documents/person%3Aalice"
+  );
+  await expect(selection.getByRole("link", { name: "Inspect in graph" })).toHaveAttribute(
+    "href",
+    "/graph?node=person%3Aalice&review=all"
+  );
+  await expect(page).toHaveURL(/anchor=location%3Acolumbus/);
+
+  await page.getByRole("button", { name: "Clear map selection" }).click();
+  await expect(selection).toHaveCount(0);
+  await expect(page).not.toHaveURL(/anchor=/);
+});
