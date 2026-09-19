@@ -91,9 +91,18 @@ function SidebarGraphs({ graphs, activeGraph, switchGraph, createGraph }) {
 function Notice({ notice, onDismiss }) {
   if (!notice) return null;
   return (
-    <div className={`notice notice-${notice.kind || "info"}`} role="status">
+    <div
+      className={`notice notice-${notice.kind || "info"}`}
+      role="status"
+      style={{ pointerEvents: "none" }}
+    >
       <span>{notice.message}</span>
-      <button type="button" onClick={onDismiss} aria-label="Dismiss notification">
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss notification"
+        style={{ pointerEvents: "auto" }}
+      >
         ×
       </button>
     </div>
