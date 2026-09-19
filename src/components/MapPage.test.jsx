@@ -85,6 +85,19 @@ describe("StarIntel map surface", () => {
       participation: "anchored",
       primaryDocumentId: "person:alice",
       relatedDocumentIds: ["person:alice", "event:meeting"],
+      relationPaths: [
+        {
+          kind: "asserted",
+          documents: ["person:alice", "event:meeting", "location:columbus"],
+          predicates: ["attended", "observedAt"]
+        },
+        {
+          kind: "candidate",
+          documents: ["person:alice", "location:columbus"],
+          predicates: ["associatedWithPlace"]
+        }
+      ],
+      bloomDocumentIds: ["person:alice", "event:meeting", "person:alice"],
       authorizedRelatedCount: 2,
       provenanceCount: 3,
       approximate: true,
@@ -97,6 +110,19 @@ describe("StarIntel map surface", () => {
       participation: "anchored",
       primaryDocumentId: "person:alice",
       relatedDocumentIds: ["person:alice", "event:meeting"],
+      relationPaths: [
+        {
+          kind: "asserted",
+          documents: ["person:alice", "event:meeting", "location:columbus"],
+          predicates: ["attended", "observedAt"]
+        },
+        {
+          kind: "candidate",
+          documents: ["person:alice", "location:columbus"],
+          predicates: ["associatedWithPlace"]
+        }
+      ],
+      bloomDocumentIds: ["person:alice", "event:meeting"],
       authorizedRelatedCount: 2,
       provenanceCount: 3,
       approximate: true,
@@ -162,6 +188,70 @@ describe("StarIntel map surface", () => {
         participation: "direct",
         relatedDocumentIds: ["document:one", "document:two"],
         authorizedRelatedCount: 1
+      })
+    ).toBeNull();
+    expect(
+      normalizeMapSelectionMessage({
+        type: "STARINTEL_MAP_SELECTION",
+        version: 1,
+        semanticsVersion: "starintel.geo/1",
+        anchorId: "location:columbus",
+        participation: "anchored",
+        primaryDocumentId: "person:alice",
+        relatedDocumentIds: ["person:alice"],
+        relationPaths: [
+          {
+            kind: "asserted",
+            documents: ["person:alice", "private:hidden", "location:columbus"],
+            predicates: ["knows", "observedAt"]
+          }
+        ]
+      })
+    ).toBeNull();
+    expect(
+      normalizeMapSelectionMessage({
+        type: "STARINTEL_MAP_SELECTION",
+        version: 1,
+        semanticsVersion: "starintel.geo/1",
+        anchorId: "location:columbus",
+        participation: "anchored",
+        primaryDocumentId: "person:alice",
+        relatedDocumentIds: ["person:alice"],
+        relationPaths: [
+          {
+            kind: "inferred",
+            documents: ["person:alice", "location:columbus"],
+            predicates: []
+          }
+        ]
+      })
+    ).toBeNull();
+    expect(
+      normalizeMapSelectionMessage({
+        type: "STARINTEL_MAP_SELECTION",
+        version: 1,
+        semanticsVersion: "starintel.geo/1",
+        anchorId: "location:columbus",
+        participation: "anchored",
+        primaryDocumentId: "person:alice",
+        relatedDocumentIds: ["person:alice"],
+        relationPaths: Array.from({ length: 9 }, () => ({
+          kind: "candidate",
+          documents: ["person:alice", "location:columbus"],
+          predicates: ["associatedWithPlace"]
+        }))
+      })
+    ).toBeNull();
+    expect(
+      normalizeMapSelectionMessage({
+        type: "STARINTEL_MAP_SELECTION",
+        version: 1,
+        semanticsVersion: "starintel.geo/1",
+        anchorId: "location:columbus",
+        participation: "anchored",
+        primaryDocumentId: "person:alice",
+        relatedDocumentIds: ["person:alice"],
+        bloomDocumentIds: ["private:hidden"]
       })
     ).toBeNull();
   });
