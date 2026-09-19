@@ -22,12 +22,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Check formatting
-        shell: bash
-        run: |
-          npx prettier e2e/map.spec.ts > /tmp/map.spec.ts
-          diff -u e2e/map.spec.ts /tmp/map.spec.ts || true
-          npm run format:check
+      - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run check:boundaries
