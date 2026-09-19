@@ -6,6 +6,7 @@ test("opens the full-screen StarIntel Gotham map workspace", async ({ page }) =>
   const workspace = page.locator(".map-workspace");
   await expect(workspace).toBeVisible();
   await expect(workspace).toHaveAttribute("data-map-profile", "gotham");
+  await expect(workspace).toHaveAttribute("data-map-semantics-version", "starintel.geo/1");
   await expect(page.getByTitle("StarIntel map")).toHaveAttribute(
     "src",
     /\/maps\/\?embed=1&profile=gotham$/
@@ -14,12 +15,18 @@ test("opens the full-screen StarIntel Gotham map workspace", async ({ page }) =>
   await expect(page.getByText("promoted layers")).toBeVisible();
   await expect(page.getByText("provenance retained")).toBeVisible();
 
-  await expect(page.getByText("Explicit relation")).toBeVisible();
+  await expect(page.getByText("Direct geometry")).toBeVisible();
+  await expect(page.getByText("Anchored projection")).toBeVisible();
+  await expect(page.getByText("Derived projection")).toBeVisible();
+  await expect(page.getByText("Asserted relation")).toBeVisible();
   await expect(page.getByText("Inferred relation")).toBeVisible();
   await expect(page.getByText("Candidate relation")).toBeVisible();
+  await expect(page.getByText("Approximate geometry")).toBeVisible();
   await expect(page.getByText("Uncertainty halo")).toBeVisible();
   await expect(page.getByText("Recent-event pulse")).toBeVisible();
   await expect(page.getByText("Movement trail")).toBeVisible();
+  await expect(page.getByText("Stale")).toBeVisible();
+  await expect(page.getByText("Contested")).toBeVisible();
 
   await page.getByRole("button", { name: "Investigation" }).click();
   await expect(workspace).toHaveAttribute("data-map-mode", "investigation");
