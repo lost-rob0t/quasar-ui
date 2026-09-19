@@ -5,6 +5,7 @@ import {
   FolderInput,
   House,
   Layers3,
+  Map as MapIcon,
   Network,
   Search,
   Settings
@@ -18,6 +19,12 @@ export const navigation = Object.freeze([
     mobileLabel: "Graph",
     Icon: Network,
     match: (path) => path === "/graph" || path.startsWith("/graph/")
+  },
+  {
+    to: "/map",
+    label: "Map",
+    Icon: MapIcon,
+    match: (path) => path === "/map" || path.startsWith("/map/")
   },
   {
     to: "/datasets",
