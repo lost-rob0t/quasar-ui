@@ -26,7 +26,11 @@ describe("StarIntel map surface", () => {
       "investigation",
       "detective"
     ]);
-    expect(GEO_PARTICIPATION_KINDS.map(({ id }) => id)).toEqual(["direct", "anchored", "derived"]);
+    expect(GEO_PARTICIPATION_KINDS.map(({ id }) => id)).toEqual([
+      "direct",
+      "anchored",
+      "derived"
+    ]);
     expect(normalizeMapMode("investigation")).toBe("investigation");
     expect(normalizeMapMode("unknown")).toBe("sparse");
     expect(normalizeTemporalCursor(-20)).toBe(0);
