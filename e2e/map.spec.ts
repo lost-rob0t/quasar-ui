@@ -6,7 +6,10 @@ test("opens the full-screen StarIntel Gotham map workspace", async ({ page }) =>
   const workspace = page.locator(".map-workspace");
   await expect(workspace).toBeVisible();
   await expect(workspace).toHaveAttribute("data-map-profile", "gotham");
-  await expect(workspace).toHaveAttribute("data-map-semantics-version", "starintel.geo/1");
+  await expect(workspace).toHaveAttribute(
+    "data-map-semantics-version",
+    "starintel.geo/1"
+  );
   await expect(page.getByTitle("StarIntel map")).toHaveAttribute(
     "src",
     /\/maps\/\?embed=1&profile=gotham$/
