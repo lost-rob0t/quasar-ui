@@ -121,7 +121,8 @@ test("accepts investigation selections only from the configured renderer window"
     "href",
     "/documents/person%3Aalice"
   );
-  await expect(selection.getByRole("link", { name: "person:alice" })).toHaveAttribute(
+  const relatedDocuments = selection.locator(".map-selection-related");
+  await expect(relatedDocuments.getByRole("link", { name: "person:alice" })).toHaveAttribute(
     "href",
     "/documents/person%3Aalice"
   );
