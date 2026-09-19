@@ -17,8 +17,13 @@ export const GEO_PARTICIPATION_KINDS = Object.freeze([
 
 const MAP_PRESENTATION_MODE_IDS = new Set(MAP_PRESENTATION_MODES.map(({ id }) => id));
 const GEO_PARTICIPATION_KIND_IDS = new Set(GEO_PARTICIPATION_KINDS.map(({ id }) => id));
+const RELATION_EVIDENCE_KIND_IDS = new Set(["asserted", "inferred", "candidate"]);
 const MAX_MAP_DOCUMENT_ID_LENGTH = 256;
 const MAX_RELATED_DOCUMENTS = 24;
+const MAX_RELATION_PATHS = 8;
+const MAX_RELATION_HOPS = 6;
+const MAX_RELATION_PREDICATE_LENGTH = 96;
+const MAX_BLOOM_DOCUMENTS = 24;
 const MAX_PROJECTION_COUNT = 1_000_000;
 const ASCII_CONTROL_OR_DEL = /[\u0000-\u001f\u007f]/;
 
@@ -56,6 +61,64 @@ function normalizeProjectionFlag(value) {
   return typeof value === "boolean" ? value : null;
 }
 
+function normalizeRelationPredicate(value) {
+  if (typeof value !== "string") return null;
+  if (!value.length || value.length > MAX_RELATION_PREDICATE_LENGTH) return null;
+  if (value !== value.trim() || ASCII_CONTROL_OR_DEL.test(value)) return null;
+  return value;
+}
+
+function normalizeRelationPaths(value, { anchorId, visibleDocumentIds }) {
+  const sourcePaths = value === undefined ? [] : value;
+  if (!Array.isArray(sourcePaths) || sourcePaths.length > MAX_RELATION_PATHS) return null;
+
+  const relationPaths = [];
+  for (const sourcePath of sourcePaths) {
+    if (!sourcePath || typeof sourcePath !== "object" || Array.isArray(sourcePath)) return null;
+    if (!RELATION_EVIDENCE_KIND_IDS.has(sourcePath.kind)) return null;
+    if (
+      !Array.isArray(sourcePath.documents) ||
+      sourcePath.documents.length < 2 ||
+      sourcePath.documents.length > MAX_RELATION_HOPS + 1 ||
+      !Array.isArray(sourcePath.predicates) ||
+      sourcePath.predicates.length !== sourcePath.documents.length - 1
+    )
+      return null;
+
+    const documents = [];
+    for (const candidate of sourcePath.documents) {
+      const id = normalizeMapDocumentId(candidate);
+      if (!id || !visibleDocumentIds.has(id)) return null;
+      documents.push(id);
+    }
+    if (!documents.includes(anchorId) || new Set(documents).size !== documents.length) return null;
+
+    const predicates = [];
+    for (const candidate of sourcePath.predicates) {
+      const predicate = normalizeRelationPredicate(candidate);
+      if (!predicate) return null;
+      predicates.push(predicate);
+    }
+
+    relationPaths.push({ kind: sourcePath.kind, documents, predicates });
+  }
+
+  return relationPaths;
+}
+
+function normalizeBloomDocumentIds(value, visibleDocumentIds) {
+  const sourceBloom = value === undefined ? [] : value;
+  if (!Array.isArray(sourceBloom) || sourceBloom.length > MAX_BLOOM_DOCUMENTS) return null;
+
+  const bloomDocumentIds = [];
+  for (const candidate of sourceBloom) {
+    const id = normalizeMapDocumentId(candidate);
+    if (!id || !visibleDocumentIds.has(id)) return null;
+    if (!bloomDocumentIds.includes(id)) bloomDocumentIds.push(id);
+  }
+  return bloomDocumentIds;
+}
+
 export function normalizeMapSelectionMessage(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   if (value.type !== "STARINTEL_MAP_SELECTION" || value.version !== 1) return null;
@@ -79,6 +142,15 @@ export function normalizeMapSelectionMessage(value) {
     if (!relatedDocumentIds.includes(id)) relatedDocumentIds.push(id);
   }
 
+  const visibleDocumentIds = new Set([anchorId, ...relatedDocumentIds]);
+  if (primaryDocumentId) visibleDocumentIds.add(primaryDocumentId);
+  const relationPaths = normalizeRelationPaths(value.relationPaths, {
+    anchorId,
+    visibleDocumentIds
+  });
+  const bloomDocumentIds = normalizeBloomDocumentIds(value.bloomDocumentIds, visibleDocumentIds);
+  if (relationPaths === null || bloomDocumentIds === null) return null;
+
   const authorizedRelatedCount = normalizeProjectionCount(
     value.authorizedRelatedCount,
     relatedDocumentIds.length
@@ -101,6 +173,8 @@ export function normalizeMapSelectionMessage(value) {
     participation: value.participation,
     primaryDocumentId,
     relatedDocumentIds,
+    relationPaths,
+    bloomDocumentIds,
     authorizedRelatedCount,
     provenanceCount,
     approximate,
@@ -175,6 +249,14 @@ function participationLabel(id) {
   return GEO_PARTICIPATION_KINDS.find((kind) => kind.id === id)?.label || id;
 }
 
+function relationPathText(path) {
+  return path.documents
+    .map((documentId, index) =>
+      index === 0 ? documentId : ` —${path.predicates[index - 1]}→ ${documentId}`
+    )
+    .join("");
+}
+
 function MapInvestigationSelection({ selection, onClear }) {
   if (!selection) return null;
   const graphFocusId = selection.primaryDocumentId || selection.anchorId;
@@ -243,6 +325,34 @@ function MapInvestigationSelection({ selection, onClear }) {
         </div>
       )}
 
+      {!!selection.relationPaths.length && (
+        <div className="map-selection-paths" aria-label="Relation path inspector">
+          <strong>Relation paths</strong>
+          <ol>
+            {selection.relationPaths.map((path, index) => (
+              <li key={`${path.kind}-${index}`}>
+                <span className={`map-path-kind map-path-kind-${path.kind}`}>{path.kind}</span>
+                <code>{relationPathText(path)}</code>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {!!selection.bloomDocumentIds.length && (
+        <div className="map-selection-bloom" aria-label="Authorized graph bloom">
+          <strong>Graph bloom</strong>
+          <div className="map-bloom-nodes">
+            {selection.bloomDocumentIds.map((id) => (
+              <a key={id} href={`/graph?node=${encodeURIComponent(id)}&review=all`}>
+                {id}
+              </a>
+            ))}
+          </div>
+          <small>{selection.bloomDocumentIds.length} authorized nodes in this neighborhood.</small>
+        </div>
+      )}
+
       <a
         className="map-selection-action"
         href={`/graph?node=${encodeURIComponent(graphFocusId)}&review=all`}
@@ -250,7 +360,8 @@ function MapInvestigationSelection({ selection, onClear }) {
         Inspect in graph
       </a>
       <small>
-        Counts and evidence state are renderer projections for the current authorized view.
+        Counts, paths, neighborhood, and evidence state are renderer projections for the current
+        authorized view.
       </small>
     </aside>
   );
