@@ -4,9 +4,7 @@
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 50% 42%, #17324a44, transparent 32rem),
-    #02070c;
+  background: radial-gradient(circle at 50% 42%, #17324a44, transparent 32rem), #02070c;
 }
 
 .map-renderer {
