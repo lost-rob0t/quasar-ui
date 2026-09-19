@@ -179,7 +179,9 @@ function MapInvestigationSelection({ selection, onClear }) {
       <div className="map-selection-heading">
         <div>
           <strong>Investigation selection</strong>
-          <span className={`map-participation-badge map-participation-badge-${selection.participation}`}>
+          <span
+            className={`map-participation-badge map-participation-badge-${selection.participation}`}
+          >
             {participationLabel(selection.participation)}
           </span>
         </div>
@@ -215,7 +217,10 @@ function MapInvestigationSelection({ selection, onClear }) {
       </div>
 
       {selection.primaryDocumentId && (
-        <a className="map-selection-action" href={`/documents/${encodeURIComponent(selection.primaryDocumentId)}`}>
+        <a
+          className="map-selection-action"
+          href={`/documents/${encodeURIComponent(selection.primaryDocumentId)}`}
+        >
           Open primary document
         </a>
       )}
@@ -239,7 +244,9 @@ function MapInvestigationSelection({ selection, onClear }) {
       >
         Inspect in graph
       </a>
-      <small>Counts and evidence state are renderer projections for the current authorized view.</small>
+      <small>
+        Counts and evidence state are renderer projections for the current authorized view.
+      </small>
     </aside>
   );
 }
@@ -290,7 +297,8 @@ export default function MapPage({
     if (!targetOrigin) return undefined;
 
     const receiveSelection = (event) => {
-      if (event.origin !== targetOrigin || event.source !== rendererRef.current?.contentWindow) return;
+      if (event.origin !== targetOrigin || event.source !== rendererRef.current?.contentWindow)
+        return;
       const projected = normalizeMapSelectionMessage(event.data);
       if (!projected) return;
       setSelection(projected);
