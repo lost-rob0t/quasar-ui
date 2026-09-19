@@ -226,7 +226,10 @@ export default function MapPage({
         <ul className="map-participation-legend" aria-label="Geo participation semantics">
           {GEO_PARTICIPATION_KINDS.map(({ id, label }) => (
             <li key={id}>
-              <span className={`map-participation-sample map-participation-${id}`} aria-hidden="true" />
+              <span
+                className={`map-participation-sample map-participation-${id}`}
+                aria-hidden="true"
+              />
               {label}
             </li>
           ))}
