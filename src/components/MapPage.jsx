@@ -1,4 +1,4 @@
-import { ExternalLink, Layers3, MapPinned, ShieldCheck } from "lucide-react";
+import { ExternalLink, Layers3, MapPinned, ShieldCheck, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export const DEFAULT_MAP_SERVICE_URL = "/maps/";
@@ -16,6 +16,11 @@ export const GEO_PARTICIPATION_KINDS = Object.freeze([
 ]);
 
 const MAP_PRESENTATION_MODE_IDS = new Set(MAP_PRESENTATION_MODES.map(({ id }) => id));
+const GEO_PARTICIPATION_KIND_IDS = new Set(GEO_PARTICIPATION_KINDS.map(({ id }) => id));
+const MAX_MAP_DOCUMENT_ID_LENGTH = 256;
+const MAX_RELATED_DOCUMENTS = 24;
+const MAX_PROJECTION_COUNT = 1_000_000;
+const ASCII_CONTROL_OR_DEL = /[\u0000-\u001f\u007f]/;
 
 export function normalizeMapMode(value) {
   const normalized = String(value || "").trim();
@@ -26,6 +31,77 @@ export function normalizeTemporalCursor(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 100;
   return Math.min(100, Math.max(0, Math.round(numeric)));
+}
+
+export function normalizeMapDocumentId(value) {
+  if (typeof value !== "string") return null;
+  if (!value.length || value.length > MAX_MAP_DOCUMENT_ID_LENGTH) return null;
+  if (value !== value.trim() || ASCII_CONTROL_OR_DEL.test(value)) return null;
+  return value;
+}
+
+function normalizeProjectionCount(value, fallback) {
+  if (value === undefined) return fallback;
+  if (!Number.isSafeInteger(value) || value < fallback || value > MAX_PROJECTION_COUNT) return null;
+  return value;
+}
+
+function normalizeProjectionFlag(value) {
+  if (value === undefined) return false;
+  return typeof value === "boolean" ? value : null;
+}
+
+export function normalizeMapSelectionMessage(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  if (value.type !== "STARINTEL_MAP_SELECTION" || value.version !== 1) return null;
+  if (value.semanticsVersion !== MAP_SEMANTICS_VERSION) return null;
+
+  const anchorId = normalizeMapDocumentId(value.anchorId);
+  if (!anchorId || !GEO_PARTICIPATION_KIND_IDS.has(value.participation)) return null;
+
+  let primaryDocumentId = null;
+  if (value.primaryDocumentId !== undefined && value.primaryDocumentId !== null) {
+    primaryDocumentId = normalizeMapDocumentId(value.primaryDocumentId);
+    if (!primaryDocumentId) return null;
+  }
+
+  const sourceRelated = value.relatedDocumentIds === undefined ? [] : value.relatedDocumentIds;
+  if (!Array.isArray(sourceRelated) || sourceRelated.length > MAX_RELATED_DOCUMENTS) return null;
+  const relatedDocumentIds = [];
+  for (const candidate of sourceRelated) {
+    const id = normalizeMapDocumentId(candidate);
+    if (!id) return null;
+    if (!relatedDocumentIds.includes(id)) relatedDocumentIds.push(id);
+  }
+
+  const authorizedRelatedCount = normalizeProjectionCount(
+    value.authorizedRelatedCount,
+    relatedDocumentIds.length
+  );
+  const provenanceCount = normalizeProjectionCount(value.provenanceCount, 0);
+  const approximate = normalizeProjectionFlag(value.approximate);
+  const stale = normalizeProjectionFlag(value.stale);
+  const contested = normalizeProjectionFlag(value.contested);
+  if (
+    authorizedRelatedCount === null ||
+    provenanceCount === null ||
+    approximate === null ||
+    stale === null ||
+    contested === null
+  )
+    return null;
+
+  return {
+    anchorId,
+    participation: value.participation,
+    primaryDocumentId,
+    relatedDocumentIds,
+    authorizedRelatedCount,
+    provenanceCount,
+    approximate,
+    stale,
+    contested
+  };
 }
 
 function withQueryParams(value, entries) {
@@ -51,7 +127,7 @@ export function mapEmbedUrl(serviceUrl = DEFAULT_MAP_SERVICE_URL) {
   ]);
 }
 
-export function buildMapControlMessage({ mode, temporalCursor, playing } = {}) {
+export function buildMapControlMessage({ mode, temporalCursor, playing, anchorId } = {}) {
   return {
     type: "STARINTEL_MAP_CONTROL",
     version: 1,
@@ -59,7 +135,8 @@ export function buildMapControlMessage({ mode, temporalCursor, playing } = {}) {
     semanticsVersion: MAP_SEMANTICS_VERSION,
     mode: normalizeMapMode(mode),
     temporalCursor: normalizeTemporalCursor(temporalCursor),
-    playing: Boolean(playing)
+    playing: Boolean(playing),
+    anchorId: normalizeMapDocumentId(anchorId)
   };
 }
 
@@ -72,6 +149,108 @@ function rendererOrigin(embedUrl) {
   }
 }
 
+function mapAnchorFromLocation() {
+  if (typeof window === "undefined") return null;
+  try {
+    return normalizeMapDocumentId(new URL(window.location.href).searchParams.get("anchor"));
+  } catch {
+    return null;
+  }
+}
+
+function replaceMapAnchorInLocation(anchorId) {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  if (anchorId) url.searchParams.set("anchor", anchorId);
+  else url.searchParams.delete("anchor");
+  window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
+function participationLabel(id) {
+  return GEO_PARTICIPATION_KINDS.find((kind) => kind.id === id)?.label || id;
+}
+
+function MapInvestigationSelection({ selection, onClear }) {
+  if (!selection) return null;
+  const graphFocusId = selection.primaryDocumentId || selection.anchorId;
+
+  return (
+    <aside className="map-overlay map-overlay-selection" aria-label="Map investigation selection">
+      <div className="map-selection-heading">
+        <div>
+          <strong>Investigation selection</strong>
+          <span
+            className={`map-participation-badge map-participation-badge-${selection.participation}`}
+          >
+            {participationLabel(selection.participation)}
+          </span>
+        </div>
+        <button type="button" aria-label="Clear map selection" onClick={onClear}>
+          <X size={14} aria-hidden="true" />
+        </button>
+      </div>
+
+      <code className="map-selection-anchor">{selection.anchorId}</code>
+
+      <div className="map-selection-metrics" aria-label="Authorized selection counts">
+        <span>
+          <strong>{selection.authorizedRelatedCount}</strong>
+          related visible
+        </span>
+        <span>
+          <strong>{selection.provenanceCount}</strong>
+          provenance records
+        </span>
+      </div>
+
+      <div className="map-selection-states" aria-label="Geo evidence state">
+        {selection.approximate && (
+          <span className="map-state-chip map-state-chip-approximate">Approximate</span>
+        )}
+        {selection.stale && <span className="map-state-chip">Stale</span>}
+        {selection.contested && (
+          <span className="map-state-chip map-state-chip-contested">Contested</span>
+        )}
+        {!selection.approximate && !selection.stale && !selection.contested && (
+          <span className="map-state-chip">Current</span>
+        )}
+      </div>
+
+      {selection.primaryDocumentId && (
+        <a
+          className="map-selection-action"
+          href={`/documents/${encodeURIComponent(selection.primaryDocumentId)}`}
+        >
+          Open primary document
+        </a>
+      )}
+
+      {!!selection.relatedDocumentIds.length && (
+        <div className="map-selection-related">
+          <strong>Related documents</strong>
+          <ul>
+            {selection.relatedDocumentIds.map((id) => (
+              <li key={id}>
+                <a href={`/documents/${encodeURIComponent(id)}`}>{id}</a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <a
+        className="map-selection-action"
+        href={`/graph?node=${encodeURIComponent(graphFocusId)}&review=all`}
+      >
+        Inspect in graph
+      </a>
+      <small>
+        Counts and evidence state are renderer projections for the current authorized view.
+      </small>
+    </aside>
+  );
+}
+
 export default function MapPage({
   serviceUrl = import.meta.env.VITE_STARINTEL_MAP_URL || DEFAULT_MAP_SERVICE_URL
 }) {
@@ -80,11 +259,13 @@ export default function MapPage({
   const [mode, setMode] = useState("sparse");
   const [temporalCursor, setTemporalCursor] = useState(100);
   const [playing, setPlaying] = useState(false);
+  const [requestedAnchor, setRequestedAnchor] = useState(mapAnchorFromLocation);
+  const [selection, setSelection] = useState(null);
   const rendererRef = useRef(null);
   const embedUrl = useMemo(() => mapEmbedUrl(serviceUrl), [serviceUrl]);
   const controlMessage = useMemo(
-    () => buildMapControlMessage({ mode, temporalCursor, playing }),
-    [mode, temporalCursor, playing]
+    () => buildMapControlMessage({ mode, temporalCursor, playing, anchorId: requestedAnchor }),
+    [mode, temporalCursor, playing, requestedAnchor]
   );
 
   useEffect(() => {
@@ -110,9 +291,34 @@ export default function MapPage({
     rendererRef.current.contentWindow.postMessage(controlMessage, targetOrigin);
   }, [controlMessage, embedUrl, loaded]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const targetOrigin = rendererOrigin(embedUrl);
+    if (!targetOrigin) return undefined;
+
+    const receiveSelection = (event) => {
+      if (event.origin !== targetOrigin || event.source !== rendererRef.current?.contentWindow)
+        return;
+      const projected = normalizeMapSelectionMessage(event.data);
+      if (!projected) return;
+      setSelection(projected);
+      setRequestedAnchor(projected.anchorId);
+      replaceMapAnchorInLocation(projected.anchorId);
+    };
+
+    window.addEventListener("message", receiveSelection);
+    return () => window.removeEventListener("message", receiveSelection);
+  }, [embedUrl]);
+
   const togglePlayback = () => {
     if (!playing && temporalCursor >= 100) setTemporalCursor(0);
     setPlaying((current) => !current);
+  };
+
+  const clearSelection = () => {
+    setSelection(null);
+    setRequestedAnchor(null);
+    replaceMapAnchorInLocation(null);
   };
 
   return (
@@ -123,6 +329,7 @@ export default function MapPage({
       data-map-semantics-version={MAP_SEMANTICS_VERSION}
       data-map-mode={mode}
       data-map-temporal-cursor={temporalCursor}
+      data-map-requested-anchor={requestedAnchor || undefined}
     >
       <iframe
         ref={rendererRef}
@@ -217,6 +424,8 @@ export default function MapPage({
           <small>Normalized history → present cursor sent to the renderer.</small>
         </div>
       </aside>
+
+      <MapInvestigationSelection selection={selection} onClear={clearSelection} />
 
       <aside className="map-overlay map-overlay-legend" aria-label="Map semantic grammar">
         <div className="map-control-heading">

@@ -7,7 +7,9 @@ import MapPage, {
   MAP_SEMANTICS_VERSION,
   buildMapControlMessage,
   mapEmbedUrl,
+  normalizeMapDocumentId,
   normalizeMapMode,
+  normalizeMapSelectionMessage,
   normalizeTemporalCursor
 } from "./MapPage";
 import { activeNavigationItem } from "../ui-core/navigation";
@@ -34,9 +36,23 @@ describe("StarIntel map surface", () => {
     expect(normalizeTemporalCursor(200)).toBe(100);
   });
 
-  it("emits a versioned renderer-control message without mutating evidence semantics", () => {
+  it("accepts only exact bounded document identities at the map boundary", () => {
+    expect(normalizeMapDocumentId("location:columbus")).toBe("location:columbus");
+    expect(normalizeMapDocumentId(" location:columbus")).toBeNull();
+    expect(normalizeMapDocumentId("location:columbus ")).toBeNull();
+    expect(normalizeMapDocumentId("location:\u0007columbus")).toBeNull();
+    expect(normalizeMapDocumentId("x".repeat(257))).toBeNull();
+    expect(normalizeMapDocumentId(42)).toBeNull();
+  });
+
+  it("emits a versioned renderer-control message with an optional bounded anchor", () => {
     expect(
-      buildMapControlMessage({ mode: "detective", temporalCursor: 42, playing: true })
+      buildMapControlMessage({
+        mode: "detective",
+        temporalCursor: 42,
+        playing: true,
+        anchorId: "location:columbus"
+      })
     ).toEqual({
       type: "STARINTEL_MAP_CONTROL",
       version: 1,
@@ -44,8 +60,100 @@ describe("StarIntel map surface", () => {
       semanticsVersion: "starintel.geo/1",
       mode: "detective",
       temporalCursor: 42,
-      playing: true
+      playing: true,
+      anchorId: "location:columbus"
     });
+    expect(buildMapControlMessage({ anchorId: " location:columbus" }).anchorId).toBeNull();
+  });
+
+  it("accepts only bounded starintel.geo/1 renderer selection projections", () => {
+    const projected = normalizeMapSelectionMessage({
+      type: "STARINTEL_MAP_SELECTION",
+      version: 1,
+      semanticsVersion: "starintel.geo/1",
+      anchorId: "location:columbus",
+      participation: "anchored",
+      primaryDocumentId: "person:alice",
+      relatedDocumentIds: ["person:alice", "event:meeting"],
+      authorizedRelatedCount: 2,
+      provenanceCount: 3,
+      approximate: true,
+      stale: false,
+      contested: true
+    });
+
+    expect(projected).toEqual({
+      anchorId: "location:columbus",
+      participation: "anchored",
+      primaryDocumentId: "person:alice",
+      relatedDocumentIds: ["person:alice", "event:meeting"],
+      authorizedRelatedCount: 2,
+      provenanceCount: 3,
+      approximate: true,
+      stale: false,
+      contested: true
+    });
+
+    expect(
+      normalizeMapSelectionMessage({ ...projected, type: "STARINTEL_MAP_SELECTION" })
+    ).toBeNull();
+    expect(
+      normalizeMapSelectionMessage({
+        type: "STARINTEL_MAP_SELECTION",
+        version: 2,
+        semanticsVersion: "starintel.geo/1",
+        anchorId: "location:columbus",
+        participation: "direct"
+      })
+    ).toBeNull();
+    expect(
+      normalizeMapSelectionMessage({
+        type: "STARINTEL_MAP_SELECTION",
+        version: 1,
+        semanticsVersion: "starintel.geo/2",
+        anchorId: "location:columbus",
+        participation: "direct"
+      })
+    ).toBeNull();
+    expect(
+      normalizeMapSelectionMessage({
+        type: "STARINTEL_MAP_SELECTION",
+        version: 1,
+        semanticsVersion: "starintel.geo/1",
+        anchorId: " location:columbus",
+        participation: "direct"
+      })
+    ).toBeNull();
+    expect(
+      normalizeMapSelectionMessage({
+        type: "STARINTEL_MAP_SELECTION",
+        version: 1,
+        semanticsVersion: "starintel.geo/1",
+        anchorId: "location:columbus",
+        participation: "asserted"
+      })
+    ).toBeNull();
+    expect(
+      normalizeMapSelectionMessage({
+        type: "STARINTEL_MAP_SELECTION",
+        version: 1,
+        semanticsVersion: "starintel.geo/1",
+        anchorId: "location:columbus",
+        participation: "direct",
+        relatedDocumentIds: Array.from({ length: 25 }, (_, index) => `document:${index}`)
+      })
+    ).toBeNull();
+    expect(
+      normalizeMapSelectionMessage({
+        type: "STARINTEL_MAP_SELECTION",
+        version: 1,
+        semanticsVersion: "starintel.geo/1",
+        anchorId: "location:columbus",
+        participation: "direct",
+        relatedDocumentIds: ["document:one", "document:two"],
+        authorizedRelatedCount: 1
+      })
+    ).toBeNull();
   });
 
   it("renders the configured renderer with explicit Geo evidence grammar and temporal controls", () => {
