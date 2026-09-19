@@ -74,9 +74,9 @@ test("accepts investigation selections only from the configured renderer window"
       })
     );
   }, projection);
-  await expect(page.getByRole("complementary", { name: "Map investigation selection" })).toHaveCount(
-    0
-  );
+  await expect(
+    page.getByRole("complementary", { name: "Map investigation selection" })
+  ).toHaveCount(0);
 
   await page.evaluate((data) => {
     const iframe = document.querySelector<HTMLIFrameElement>('iframe[title="StarIntel map"]');
