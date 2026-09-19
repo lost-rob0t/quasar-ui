@@ -291,11 +291,7 @@ export default function QuasarShell({ children }) {
       </section>
 
       <nav className="mobile-nav" aria-label="Mobile navigation">
-        <NavigationLinks
-          mobile
-          pathname={location.pathname}
-          mapAnchorId={mapAnchorId}
-        />
+        <NavigationLinks mobile pathname={location.pathname} mapAnchorId={mapAnchorId} />
       </nav>
       <MobileGestureMenu open={mobileNavigationOpen} onOpenChange={setMobileNavigationOpen} />
     </div>
