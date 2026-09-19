@@ -43,6 +43,14 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - name: Upload map UI evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: map-ui-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/**/map-*.png
+          if-no-files-found: error
+          retention-days: 7
       - name: Upload failure diagnostics
         if: ${{ failure() }}
         uses: actions/upload-artifact@v7
