@@ -112,7 +112,7 @@ test("accepts investigation selections only from the configured renderer window"
   const selection = page.getByRole("complementary", { name: "Map investigation selection" });
   await expect(selection).toBeVisible();
   await expect(selection.getByText("Anchored projection")).toBeVisible();
-  await expect(selection.getByText("location:columbus")).toBeVisible();
+  await expect(selection.getByText("location:columbus", { exact: true })).toBeVisible();
   await expect(selection.getByText("Approximate", { exact: true })).toBeVisible();
   await expect(selection.getByText("Contested", { exact: true })).toBeVisible();
   await expect(selection.getByText("2", { exact: true })).toBeVisible();
