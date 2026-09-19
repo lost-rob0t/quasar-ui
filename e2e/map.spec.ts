@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("opens the full-screen StarIntel Gotham map workspace", async ({ page }) => {
+test("opens the full-screen StarIntel Gotham map workspace", async ({ page }, testInfo) => {
   await page.goto("/map");
 
   const workspace = page.locator(".map-workspace");
@@ -28,6 +28,10 @@ test("opens the full-screen StarIntel Gotham map workspace", async ({ page }) =>
   await expect(page.getByText("Stale")).toBeVisible();
   await expect(page.getByText("Contested")).toBeVisible();
 
+  const normalEvidence = testInfo.outputPath("map-normal.png");
+  await page.screenshot({ path: normalEvidence });
+  await testInfo.attach("map-normal", { path: normalEvidence, contentType: "image/png" });
+
   await page.getByRole("button", { name: "Investigation" }).click();
   await expect(workspace).toHaveAttribute("data-map-mode", "investigation");
 
@@ -47,7 +51,7 @@ test("opens the full-screen StarIntel Gotham map workspace", async ({ page }) =>
 
 test("accepts investigation selections only from the configured renderer window", async ({
   page
-}) => {
+}, testInfo) => {
   await page.goto("/map");
   const frame = page.getByTitle("StarIntel map");
   await expect(frame).toBeVisible();
@@ -60,6 +64,19 @@ test("accepts investigation selections only from the configured renderer window"
     participation: "anchored",
     primaryDocumentId: "person:alice",
     relatedDocumentIds: ["person:alice", "event:meeting"],
+    relationPaths: [
+      {
+        kind: "asserted",
+        documents: ["person:alice", "event:meeting", "location:columbus"],
+        predicates: ["attended", "observedAt"]
+      },
+      {
+        kind: "candidate",
+        documents: ["person:alice", "location:columbus"],
+        predicates: ["associatedWithPlace"]
+      }
+    ],
+    bloomDocumentIds: ["person:alice", "event:meeting"],
     authorizedRelatedCount: 2,
     provenanceCount: 3,
     approximate: true,
@@ -95,7 +112,7 @@ test("accepts investigation selections only from the configured renderer window"
   const selection = page.getByRole("complementary", { name: "Map investigation selection" });
   await expect(selection).toBeVisible();
   await expect(selection.getByText("Anchored projection")).toBeVisible();
-  await expect(selection.getByText("location:columbus")).toBeVisible();
+  await expect(selection.getByText("location:columbus", { exact: true })).toBeVisible();
   await expect(selection.getByText("Approximate", { exact: true })).toBeVisible();
   await expect(selection.getByText("Contested", { exact: true })).toBeVisible();
   await expect(selection.getByText("2", { exact: true })).toBeVisible();
@@ -104,15 +121,38 @@ test("accepts investigation selections only from the configured renderer window"
     "href",
     "/documents/person%3Aalice"
   );
-  await expect(selection.getByRole("link", { name: "person:alice" })).toHaveAttribute(
+  const relatedDocuments = selection.locator(".map-selection-related");
+  await expect(relatedDocuments.getByRole("link", { name: "person:alice" })).toHaveAttribute(
     "href",
     "/documents/person%3Aalice"
+  );
+  await expect(selection.getByLabel("Relation path inspector")).toContainText(
+    "person:alice —attended→ event:meeting —observedAt→ location:columbus"
+  );
+  await expect(selection.getByText("asserted", { exact: true })).toBeVisible();
+  await expect(selection.getByText("candidate", { exact: true })).toBeVisible();
+  const bloom = selection.getByLabel("Authorized graph bloom");
+  await expect(bloom).toContainText("2 authorized nodes in this neighborhood.");
+  await expect(bloom.getByRole("link", { name: "person:alice" })).toHaveAttribute(
+    "href",
+    "/graph?node=person%3Aalice&review=all"
+  );
+  await expect(bloom.getByRole("link", { name: "event:meeting" })).toHaveAttribute(
+    "href",
+    "/graph?node=event%3Ameeting&review=all"
   );
   await expect(selection.getByRole("link", { name: "Inspect in graph" })).toHaveAttribute(
     "href",
     "/graph?node=person%3Aalice&review=all"
   );
   await expect(page).toHaveURL(/anchor=location%3Acolumbus/);
+
+  const expandedEvidence = testInfo.outputPath("map-investigation-expanded.png");
+  await page.screenshot({ path: expandedEvidence });
+  await testInfo.attach("map-investigation-expanded", {
+    path: expandedEvidence,
+    contentType: "image/png"
+  });
 
   await page.getByRole("button", { name: "Clear map selection" }).click();
   await expect(selection).toHaveCount(0);

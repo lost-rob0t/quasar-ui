@@ -206,8 +206,8 @@
   left: 0.7rem;
   display: grid;
   gap: 0.55rem;
-  width: min(330px, calc(100% - 1.4rem));
-  max-height: min(48vh, 420px);
+  width: min(360px, calc(100% - 1.4rem));
+  max-height: min(56vh, 520px);
   padding: 0.65rem;
   overflow: auto;
 }
@@ -227,7 +227,9 @@
 }
 
 .map-selection-heading strong,
-.map-selection-related > strong {
+.map-selection-related > strong,
+.map-selection-paths > strong,
+.map-selection-bloom > strong {
   color: #e8eef4;
   font-size: 0.65rem;
   letter-spacing: 0.045em;
@@ -315,12 +317,15 @@
   gap: 0.3rem;
 }
 
-.map-selection-related {
+.map-selection-related,
+.map-selection-paths,
+.map-selection-bloom {
   display: grid;
   gap: 0.32rem;
 }
 
-.map-selection-related ul {
+.map-selection-related ul,
+.map-selection-paths ol {
   display: grid;
   gap: 0.22rem;
   margin: 0;
@@ -337,6 +342,82 @@
   text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.map-selection-paths li {
+  display: grid;
+  gap: 0.24rem;
+  padding: 0.4rem;
+  border: 1px solid #24394c;
+  border-radius: 6px;
+  background: #07131f;
+}
+
+.map-selection-paths code {
+  overflow-wrap: anywhere;
+  color: #aebdca;
+  font-size: 0.56rem;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.map-path-kind {
+  justify-self: start;
+  padding: 0.1rem 0.28rem;
+  border: 1px solid #5c6d7d;
+  border-radius: 999px;
+  color: #a4b5c4;
+  font-size: 0.49rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.map-path-kind-asserted {
+  border-color: #8b7846;
+  color: #f1d98f;
+}
+
+.map-path-kind-inferred {
+  border-style: dashed;
+  border-color: #58758b;
+  color: #a9c7dc;
+}
+
+.map-path-kind-candidate {
+  border-style: dotted;
+  border-color: #65788a;
+  color: #9babb9;
+}
+
+.map-bloom-nodes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+}
+
+.map-bloom-nodes a {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0.24rem 0.36rem;
+  border: 1px solid #34516a;
+  border-radius: 999px;
+  background: #0a1724;
+  color: #b8cad9;
+  font-size: 0.54rem;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-bloom-nodes a:hover {
+  border-color: #8b7846;
+  color: #f1d98f;
+}
+
+.map-selection-bloom small {
+  color: #657a8e;
+  font-size: 0.52rem;
 }
 
 .map-selection-action {
@@ -565,7 +646,7 @@
     bottom: auto;
     left: 0.5rem;
     width: auto;
-    max-height: min(36vh, 300px);
+    max-height: min(42vh, 360px);
   }
 
   .map-overlay-legend {
@@ -611,7 +692,7 @@
 
   .map-overlay-selection {
     top: 14.7rem;
-    max-height: 13rem;
+    max-height: 14rem;
     padding: 0.48rem;
   }
 
