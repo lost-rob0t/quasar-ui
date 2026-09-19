@@ -261,9 +261,7 @@ export default function MapPage({
             <i className="map-signal map-signal-movement" aria-hidden="true" />
             Movement trail
           </span>
-          <span className="map-state-chip map-state-chip-approximate">
-            Approximate geometry
-          </span>
+          <span className="map-state-chip map-state-chip-approximate">Approximate geometry</span>
           <span className="map-state-chip">Stale</span>
           <span className="map-state-chip map-state-chip-contested">Contested</span>
         </div>
