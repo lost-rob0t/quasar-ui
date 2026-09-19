@@ -6,6 +6,7 @@ import MapPage, {
   MAP_PRESENTATION_MODES,
   MAP_SEMANTICS_VERSION,
   buildMapControlMessage,
+  mapAnchorHref,
   mapEmbedUrl,
   normalizeMapDocumentId,
   normalizeMapMode,
@@ -43,6 +44,15 @@ describe("StarIntel map surface", () => {
     expect(normalizeMapDocumentId("location:\u0007columbus")).toBeNull();
     expect(normalizeMapDocumentId("x".repeat(257))).toBeNull();
     expect(normalizeMapDocumentId(42)).toBeNull();
+  });
+
+  it("builds graph-to-map handoff URLs through the same bounded anchor contract", () => {
+    expect(mapAnchorHref("location:columbus")).toBe("/map?anchor=location%3Acolumbus");
+    expect(mapAnchorHref("document:alpha/beta?x=1&y=2")).toBe(
+      "/map?anchor=document%3Aalpha%2Fbeta%3Fx%3D1%26y%3D2"
+    );
+    expect(mapAnchorHref(" location:columbus")).toBe("/map");
+    expect(mapAnchorHref("x".repeat(257))).toBe("/map");
   });
 
   it("emits a versioned renderer-control message with an optional bounded anchor", () => {
