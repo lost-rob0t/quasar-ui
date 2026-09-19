@@ -25,7 +25,10 @@ test("opens the full-screen StarIntel Gotham map workspace", async ({ page }) =>
   await expect(workspace).toHaveAttribute("data-map-mode", "investigation");
 
   const temporalCursor = page.getByRole("slider", { name: "Temporal cursor" });
-  await temporalCursor.fill("42");
+  await temporalCursor.evaluate((element) => {
+    element.value = "42";
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+  });
   await expect(workspace).toHaveAttribute("data-map-temporal-cursor", "42");
 
   await page.getByRole("button", { name: "Play" }).click();
