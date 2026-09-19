@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { mapAnchorHref } from "../components/MapPage";
 import MobileGestureMenu from "../components/MobileGestureMenu";
 import { useQuasar } from "../store";
 import { navigation } from "./navigation";
@@ -27,15 +28,16 @@ function loadSidebarCollapsed() {
   }
 }
 
-function NavigationLinks({ mobile = false, pathname }) {
+function NavigationLinks({ mobile = false, pathname, mapAnchorId = null }) {
   return navigation
     .filter((item) => !mobile || item.mobileLabel)
     .map(({ to, label, mobileLabel, Icon, match }) => {
       const active = match(pathname);
+      const destination = to === "/map" && mapAnchorId ? mapAnchorHref(mapAnchorId) : to;
       return (
         <Link
           key={to}
-          to={to}
+          to={destination}
           className={active ? "nav-link active" : "nav-link"}
           aria-current={active ? "page" : undefined}
         >
@@ -122,6 +124,7 @@ export default function QuasarShell({ children }) {
     undo,
     redo,
     documents = [],
+    selectedIds = [],
     graphs = [],
     activeGraph,
     switchGraph,
@@ -132,6 +135,7 @@ export default function QuasarShell({ children }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed);
   const graphRoute = location.pathname === "/graph" || location.pathname.startsWith("/graph/");
   const mapRoute = location.pathname === "/map" || location.pathname.startsWith("/map/");
+  const mapAnchorId = graphRoute && selectedIds.length === 1 ? selectedIds[0] : null;
 
   function submitSearch(event) {
     event.preventDefault();
@@ -185,7 +189,7 @@ export default function QuasarShell({ children }) {
 
         <div className="sidebar-section-label">Navigation</div>
         <nav aria-label="Primary navigation">
-          <NavigationLinks pathname={location.pathname} />
+          <NavigationLinks pathname={location.pathname} mapAnchorId={mapAnchorId} />
         </nav>
 
         {graphRoute && (
@@ -287,7 +291,11 @@ export default function QuasarShell({ children }) {
       </section>
 
       <nav className="mobile-nav" aria-label="Mobile navigation">
-        <NavigationLinks mobile pathname={location.pathname} />
+        <NavigationLinks
+          mobile
+          pathname={location.pathname}
+          mapAnchorId={mapAnchorId}
+        />
       </nav>
       <MobileGestureMenu open={mobileNavigationOpen} onOpenChange={setMobileNavigationOpen} />
     </div>
