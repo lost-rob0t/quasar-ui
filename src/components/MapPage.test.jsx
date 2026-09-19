@@ -13,9 +13,7 @@ import { activeNavigationItem } from "../ui-core/navigation";
 describe("StarIntel map surface", () => {
   it("builds an embedded Gotham renderer URL without selecting a third-party host", () => {
     expect(mapEmbedUrl("/maps/")).toBe("/maps/?embed=1&profile=gotham");
-    expect(mapEmbedUrl("/maps/?theme=dark")).toBe(
-      "/maps/?theme=dark&embed=1&profile=gotham"
-    );
+    expect(mapEmbedUrl("/maps/?theme=dark")).toBe("/maps/?theme=dark&embed=1&profile=gotham");
   });
 
   it("normalizes bounded Gotham presentation controls", () => {
@@ -34,11 +32,7 @@ describe("StarIntel map surface", () => {
 
   it("emits a versioned renderer-control message without mutating evidence semantics", () => {
     expect(
-      buildMapControlMessage({
-        mode: "detective",
-        temporalCursor: 42,
-        playing: true
-      })
+      buildMapControlMessage({ mode: "detective", temporalCursor: 42, playing: true })
     ).toEqual({
       type: "STARINTEL_MAP_CONTROL",
       version: 1,
