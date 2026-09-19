@@ -34,7 +34,11 @@ describe("StarIntel map surface", () => {
 
   it("emits a versioned renderer-control message without mutating evidence semantics", () => {
     expect(
-      buildMapControlMessage({ mode: "detective", temporalCursor: 42, playing: true })
+      buildMapControlMessage({
+        mode: "detective",
+        temporalCursor: 42,
+        playing: true
+      })
     ).toEqual({
       type: "STARINTEL_MAP_CONTROL",
       version: 1,
