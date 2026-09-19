@@ -22,13 +22,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Diagnose map formatting
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx prettier e2e/map.spec.ts --write
-          git diff -- e2e/map.spec.ts
-          exit 1
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
