@@ -69,13 +69,16 @@ test("uses left click select, left drag pan, and right drag box select", async (
   await editor.getByRole("button", { name: "Save" }).click();
 
   const selectionHeading = page.locator(".graph-inspector h2").first();
+  const primaryNavigation = page.getByRole("navigation", { name: "Primary navigation" });
+  const mapLink = primaryNavigation.getByRole("link", { name: "Map" });
   await expect(page.locator(".graph-count")).toContainText("nodes");
   await expect(selectionHeading).toContainText("1");
+  await expect(mapLink).toHaveAttribute("href", /^\/map\?anchor=/);
 
   const dismissNotice = page.getByRole("button", { name: "Dismiss notification" });
   if (await dismissNotice.isVisible()) await dismissNotice.click();
 
-  await page.getByRole("button", { name: "Focus selection" }).click();
+  await page.getByRole("button", { name: "Focus", exact: true }).click();
   await page.waitForTimeout(400);
 
   const bounds = await canvas.boundingBox();
@@ -98,15 +101,18 @@ test("uses left click select, left drag pan, and right drag box select", async (
   let background = backgroundPoint(settledZoom.node, width, height);
   await clickGraphPoint(page, origin, background);
   await expect(selectionHeading).toContainText("0");
+  await expect(mapLink).toHaveAttribute("href", "/map");
 
   const nodeAfterBackground = await graphSnapshot(canvas);
   await clickGraphPoint(page, origin, nodeAfterBackground.node);
   await expect(selectionHeading).toContainText("1");
+  await expect(mapLink).toHaveAttribute("href", /^\/map\?anchor=/);
 
   const nodeBeforePan = await graphSnapshot(canvas);
   background = backgroundPoint(nodeBeforePan.node, width, height);
   await clickGraphPoint(page, origin, background);
   await expect(selectionHeading).toContainText("0");
+  await expect(mapLink).toHaveAttribute("href", "/map");
 
   const beforePan = await graphSnapshot(canvas);
   const panStart =
@@ -143,12 +149,14 @@ test("uses left click select, left drag pan, and right drag box select", async (
   await clickGraphPoint(page, origin, currentNode.node, "right");
   await expect(page.getByRole("menu", { name: "node actions" })).toBeVisible();
   await expect(selectionHeading).toContainText("1");
+  await expect(mapLink).toHaveAttribute("href", /^\/map\?anchor=/);
   await page.keyboard.press("Escape");
 
   const nodeBeforeBox = await graphSnapshot(canvas);
   background = backgroundPoint(nodeBeforeBox.node, width, height);
   await clickGraphPoint(page, origin, background);
   await expect(selectionHeading).toContainText("0");
+  await expect(mapLink).toHaveAttribute("href", "/map");
 
   const boxStart = {
     x: Math.max(5, nodeBeforeBox.node.x - 70),
@@ -166,5 +174,6 @@ test("uses left click select, left drag pan, and right drag box select", async (
   await page.mouse.up({ button: "right" });
 
   await expect(selectionHeading).toContainText("1");
+  await expect(mapLink).toHaveAttribute("href", /^\/map\?anchor=/);
   await expect(page.locator(".graph-context-menu")).toBeHidden();
 });

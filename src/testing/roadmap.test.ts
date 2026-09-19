@@ -39,7 +39,7 @@ describe("deployment roadmap", () => {
     }
   });
 
-  it("documents every issue and the immutable deployment constraints", async () => {
+  it("documents every issue, standalone constraints, and the connected runtime boundary", async () => {
     const document = await readFile(new URL("../../docs/ROADMAP.md", import.meta.url), "utf8");
 
     for (const issueNumber of issueNumbers) {
@@ -48,19 +48,22 @@ describe("deployment roadmap", () => {
 
     for (const requiredDecision of [
       "TypeScript, React, and Vite",
-      "IndexedDB is the only canonical local workspace store",
+      "IndexedDB is the target canonical **browser-local** workspace store",
       "Cytoscape.js is accessible only through a strict graph adapter",
       "Web Workers",
       "XState",
       "TanStack Query",
       "static, installable PWA",
-      "no deployment path through a Common Lisp backend",
-      "Rust or Tauri",
-      "GraphQL",
-      "Socket.IO",
-      "Release promotion uses one immutable artifact"
+      "runtime-backed connected path",
+      "quasar-ui -> quasar -> starintel-server / external actor services",
+      "star-bbpd",
+      "persistent Sento actors",
+      "capability-gated",
+      "Standalone release promotion uses one immutable static artifact"
     ]) {
       expect(document).toContain(requiredDecision);
     }
+
+    expect(document).not.toContain("no deployment path through a Common Lisp backend");
   });
 });
