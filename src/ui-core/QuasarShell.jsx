@@ -268,7 +268,11 @@ export default function QuasarShell({ children }) {
 
         <Notice notice={notice} onDismiss={() => setNotice(null)} />
 
-        <main className={graphRoute ? "content content-graph" : mapRoute ? "content content-map" : "content"}>
+        <main
+          className={
+            graphRoute ? "content content-graph" : mapRoute ? "content content-map" : "content"
+          }
+        >
           {loading ? <div className="loading-panel">Opening workspace…</div> : children}
         </main>
       </section>
