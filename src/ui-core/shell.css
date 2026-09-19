@@ -440,7 +440,8 @@ body {
   padding: 1.55rem clamp(1rem, 2.1vw, 2rem) 4rem;
 }
 
-.quasar-shell .content.content-graph {
+.quasar-shell .content.content-graph,
+.quasar-shell .content.content-map {
   position: relative;
   width: 100%;
   max-width: none;

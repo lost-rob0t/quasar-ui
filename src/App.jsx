@@ -10,6 +10,7 @@ import GraphLayoutControl from "./components/GraphLayoutControl";
 import GraphPage from "./components/GraphPage";
 import GraphWorkspaceChrome from "./components/GraphWorkspaceChrome";
 import { ImportPage, SettingsPage } from "./components/ImportSettings";
+import MapPage from "./components/MapPage";
 import StatsPage from "./components/StatsPage";
 import QuasarShell from "./ui-core/QuasarShell";
 
@@ -49,6 +50,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<StatsPage />} />
           <Route path="/graph" element={<GraphWorkspace />} />
+          <Route path="/map" element={<MapPage />} />
           <Route path="/datasets" element={<DatasetsPage />} />
           <Route path="/documents" element={<DocumentsRoute />} />
           <Route path="/documents/new" element={<DocumentEditor mode="create" />} />

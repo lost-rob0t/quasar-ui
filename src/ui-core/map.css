@@ -1,0 +1,161 @@
+.map-workspace {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 42%, #17324a44, transparent 32rem), #02070c;
+}
+
+.map-renderer {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #02070c;
+}
+
+.map-loading,
+.map-error {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-content: center;
+  gap: 0.35rem;
+  padding: 2rem;
+  background: #02070cf0;
+  color: #aebfd0;
+  text-align: center;
+}
+
+.map-error strong {
+  color: #ff9eb0;
+}
+
+.map-error span {
+  max-width: 34rem;
+  color: #8da2b8;
+  font-size: 0.78rem;
+}
+
+.map-overlay {
+  position: absolute;
+  z-index: 5;
+  border: 1px solid #294059;
+  border-radius: 8px;
+  background: #07111de8;
+  box-shadow: 0 14px 34px #0008;
+  backdrop-filter: blur(14px);
+}
+
+.map-overlay-primary {
+  top: 0.7rem;
+  left: 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: calc(100% - 1.4rem);
+  padding: 0.5rem 0.65rem;
+}
+
+.map-title {
+  display: flex;
+  align-items: center;
+  gap: 0.48rem;
+  color: var(--quasar-brand);
+}
+
+.map-title > span {
+  display: grid;
+}
+
+.map-title strong {
+  color: #f2f6fa;
+  font-size: 0.78rem;
+}
+
+.map-title small {
+  color: #73899f;
+  font-size: 0.6rem;
+}
+
+.map-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.map-badges span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  min-height: 25px;
+  padding: 0 0.42rem;
+  border: 1px solid #294059;
+  border-radius: 999px;
+  background: #0b1927;
+  color: #9fb2c4;
+  font-size: 0.6rem;
+  white-space: nowrap;
+}
+
+.map-overlay-source {
+  right: 0.7rem;
+  bottom: 0.7rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: min(680px, calc(100% - 1.4rem));
+  padding: 0.45rem 0.55rem;
+}
+
+.map-source-label {
+  color: #687d91;
+  font-size: 0.57rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.map-overlay-source code {
+  overflow: hidden;
+  color: #bdcad6;
+  font-size: 0.62rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-overlay-source a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  color: var(--quasar-brand);
+  font-size: 0.62rem;
+  text-decoration: none;
+}
+
+@media (max-width: 850px) {
+  .map-overlay-primary {
+    right: 0.5rem;
+    left: 0.5rem;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .map-badges {
+    width: 100%;
+  }
+
+  .map-overlay-source {
+    right: 0.5rem;
+    bottom: 0.5rem;
+    left: 0.5rem;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .map-overlay-source a {
+    grid-column: 1 / -1;
+  }
+}

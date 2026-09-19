@@ -37,6 +37,7 @@ import "../kinpaku-shell.css";
 import "../ui-core/shell.css";
 import "../ui-core/surfaces.css";
 import "../ui-core/graph.css";
+import "../ui-core/map.css";
 import "../ui-core/responsive.css";
 
 initializeTheme();

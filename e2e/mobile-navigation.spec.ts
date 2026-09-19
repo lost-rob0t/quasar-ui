@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 const expectedLinks = [
   ["Home", "/"],
   ["Graphs", "/graph"],
+  ["Map", "/map"],
   ["Datasets", "/datasets"],
   ["Documents", "/documents"],
   ["Add document", "/documents/new"],

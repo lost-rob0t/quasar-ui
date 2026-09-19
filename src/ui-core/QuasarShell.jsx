@@ -91,9 +91,18 @@ function SidebarGraphs({ graphs, activeGraph, switchGraph, createGraph }) {
 function Notice({ notice, onDismiss }) {
   if (!notice) return null;
   return (
-    <div className={`notice notice-${notice.kind || "info"}`} role="status">
+    <div
+      className={`notice notice-${notice.kind || "info"}`}
+      role="status"
+      style={{ pointerEvents: "none" }}
+    >
       <span>{notice.message}</span>
-      <button type="button" onClick={onDismiss} aria-label="Dismiss notification">
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss notification"
+        style={{ pointerEvents: "auto" }}
+      >
         ×
       </button>
     </div>
@@ -122,6 +131,7 @@ export default function QuasarShell({ children }) {
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed);
   const graphRoute = location.pathname === "/graph" || location.pathname.startsWith("/graph/");
+  const mapRoute = location.pathname === "/map" || location.pathname.startsWith("/map/");
 
   function submitSearch(event) {
     event.preventDefault();
@@ -267,7 +277,11 @@ export default function QuasarShell({ children }) {
 
         <Notice notice={notice} onDismiss={() => setNotice(null)} />
 
-        <main className={graphRoute ? "content content-graph" : "content"}>
+        <main
+          className={
+            graphRoute ? "content content-graph" : mapRoute ? "content content-map" : "content"
+          }
+        >
           {loading ? <div className="loading-panel">Opening workspace…</div> : children}
         </main>
       </section>
