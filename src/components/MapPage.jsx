@@ -3,10 +3,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 export const DEFAULT_MAP_SERVICE_URL = "/maps/";
 export const GOTHAM_MAP_PROFILE = "gotham";
+export const MAP_SEMANTICS_VERSION = "starintel.geo/1";
 export const MAP_PRESENTATION_MODES = Object.freeze([
   Object.freeze({ id: "sparse", label: "Sparse" }),
   Object.freeze({ id: "investigation", label: "Investigation" }),
   Object.freeze({ id: "detective", label: "Detective" })
+]);
+export const GEO_PARTICIPATION_KINDS = Object.freeze([
+  Object.freeze({ id: "direct", label: "Direct geometry" }),
+  Object.freeze({ id: "anchored", label: "Anchored projection" }),
+  Object.freeze({ id: "derived", label: "Derived projection" })
 ]);
 
 const MAP_PRESENTATION_MODE_IDS = new Set(MAP_PRESENTATION_MODES.map(({ id }) => id));
@@ -50,6 +56,7 @@ export function buildMapControlMessage({ mode, temporalCursor, playing } = {}) {
     type: "STARINTEL_MAP_CONTROL",
     version: 1,
     profile: GOTHAM_MAP_PROFILE,
+    semanticsVersion: MAP_SEMANTICS_VERSION,
     mode: normalizeMapMode(mode),
     temporalCursor: normalizeTemporalCursor(temporalCursor),
     playing: Boolean(playing)
@@ -113,6 +120,7 @@ export default function MapPage({
       className="map-workspace"
       data-map-service={serviceUrl}
       data-map-profile={GOTHAM_MAP_PROFILE}
+      data-map-semantics-version={MAP_SEMANTICS_VERSION}
       data-map-mode={mode}
       data-map-temporal-cursor={temporalCursor}
     >
@@ -212,13 +220,21 @@ export default function MapPage({
 
       <aside className="map-overlay map-overlay-legend" aria-label="Map semantic grammar">
         <div className="map-control-heading">
-          <strong>Relation semantics</strong>
+          <strong>Geo evidence</strong>
           <small>Presentation never upgrades evidence</small>
         </div>
-        <ul className="map-edge-legend">
+        <ul className="map-participation-legend" aria-label="Geo participation semantics">
+          {GEO_PARTICIPATION_KINDS.map(({ id, label }) => (
+            <li key={id}>
+              <span className={`map-participation-sample map-participation-${id}`} aria-hidden="true" />
+              {label}
+            </li>
+          ))}
+        </ul>
+        <ul className="map-edge-legend" aria-label="Relation evidence semantics">
           <li>
-            <span className="map-edge-sample map-edge-explicit" aria-hidden="true" />
-            Explicit relation
+            <span className="map-edge-sample map-edge-asserted" aria-hidden="true" />
+            Asserted relation
           </li>
           <li>
             <span className="map-edge-sample map-edge-inferred" aria-hidden="true" />
@@ -242,6 +258,7 @@ export default function MapPage({
             <i className="map-signal map-signal-movement" aria-hidden="true" />
             Movement trail
           </span>
+          <span className="map-state-chip map-state-chip-approximate">Approximate geometry</span>
           <span className="map-state-chip">Stale</span>
           <span className="map-state-chip map-state-chip-contested">Contested</span>
         </div>
