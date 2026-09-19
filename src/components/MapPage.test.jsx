@@ -26,11 +26,7 @@ describe("StarIntel map surface", () => {
       "investigation",
       "detective"
     ]);
-    expect(GEO_PARTICIPATION_KINDS.map(({ id }) => id)).toEqual([
-      "direct",
-      "anchored",
-      "derived"
-    ]);
+    expect(GEO_PARTICIPATION_KINDS.map(({ id }) => id)).toEqual(["direct", "anchored", "derived"]);
     expect(normalizeMapMode("investigation")).toBe("investigation");
     expect(normalizeMapMode("unknown")).toBe("sparse");
     expect(normalizeTemporalCursor(-20)).toBe(0);
@@ -52,32 +48,35 @@ describe("StarIntel map surface", () => {
     });
   });
 
-  it("renders the configured renderer with explicit Geo evidence grammar and temporal controls", () => {
-    const html = renderToStaticMarkup(<MapPage serviceUrl="/maps/" />);
+  it(
+    "renders the configured renderer with explicit Geo evidence grammar and temporal controls",
+    () => {
+      const html = renderToStaticMarkup(<MapPage serviceUrl="/maps/" />);
 
-    expect(html).toContain('data-map-service="/maps/"');
-    expect(html).toContain('data-map-profile="gotham"');
-    expect(html).toContain('data-map-semantics-version="starintel.geo/1"');
-    expect(html).toContain('data-map-mode="sparse"');
-    expect(html).toContain('title="StarIntel map"');
-    expect(html).toContain('src="/maps/?embed=1&amp;profile=gotham"');
-    expect(html).toContain("promoted layers");
-    expect(html).toContain("provenance retained");
-    expect(html).toContain('aria-label="Map presentation mode"');
-    expect(html).toContain('aria-label="Temporal cursor"');
-    expect(html).toContain("Direct geometry");
-    expect(html).toContain("Anchored projection");
-    expect(html).toContain("Derived projection");
-    expect(html).toContain("Asserted relation");
-    expect(html).toContain("Inferred relation");
-    expect(html).toContain("Candidate relation");
-    expect(html).toContain("Approximate geometry");
-    expect(html).toContain("Uncertainty halo");
-    expect(html).toContain("Recent-event pulse");
-    expect(html).toContain("Movement trail");
-    expect(html).toContain("Stale");
-    expect(html).toContain("Contested");
-  });
+      expect(html).toContain('data-map-service="/maps/"');
+      expect(html).toContain('data-map-profile="gotham"');
+      expect(html).toContain('data-map-semantics-version="starintel.geo/1"');
+      expect(html).toContain('data-map-mode="sparse"');
+      expect(html).toContain('title="StarIntel map"');
+      expect(html).toContain('src="/maps/?embed=1&amp;profile=gotham"');
+      expect(html).toContain("promoted layers");
+      expect(html).toContain("provenance retained");
+      expect(html).toContain('aria-label="Map presentation mode"');
+      expect(html).toContain('aria-label="Temporal cursor"');
+      expect(html).toContain("Direct geometry");
+      expect(html).toContain("Anchored projection");
+      expect(html).toContain("Derived projection");
+      expect(html).toContain("Asserted relation");
+      expect(html).toContain("Inferred relation");
+      expect(html).toContain("Candidate relation");
+      expect(html).toContain("Approximate geometry");
+      expect(html).toContain("Uncertainty halo");
+      expect(html).toContain("Recent-event pulse");
+      expect(html).toContain("Movement trail");
+      expect(html).toContain("Stale");
+      expect(html).toContain("Contested");
+    }
+  );
 
   it("treats /map as a primary workspace route", () => {
     expect(activeNavigationItem("/map")?.label).toBe("Map");
