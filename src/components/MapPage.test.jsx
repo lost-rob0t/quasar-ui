@@ -94,7 +94,9 @@ describe("StarIntel map surface", () => {
       contested: true
     });
 
-    expect(normalizeMapSelectionMessage({ ...projected, type: "STARINTEL_MAP_SELECTION" })).toBeNull();
+    expect(
+      normalizeMapSelectionMessage({ ...projected, type: "STARINTEL_MAP_SELECTION" })
+    ).toBeNull();
     expect(
       normalizeMapSelectionMessage({
         type: "STARINTEL_MAP_SELECTION",
