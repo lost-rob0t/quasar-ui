@@ -40,6 +40,11 @@ export function normalizeMapDocumentId(value) {
   return value;
 }
 
+export function mapAnchorHref(value) {
+  const anchorId = normalizeMapDocumentId(value);
+  return anchorId ? `/map?anchor=${encodeURIComponent(anchorId)}` : "/map";
+}
+
 function normalizeProjectionCount(value, fallback) {
   if (value === undefined) return fallback;
   if (!Number.isSafeInteger(value) || value < fallback || value > MAX_PROJECTION_COUNT) return null;
