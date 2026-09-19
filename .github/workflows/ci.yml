@@ -44,7 +44,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - name: Upload map UI evidence
-        if: ${{ always() }}
+        if: ${{ success() }}
         uses: actions/upload-artifact@v7
         with:
           name: map-ui-evidence-${{ github.run_id }}-${{ github.run_attempt }}
